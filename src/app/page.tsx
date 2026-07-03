@@ -322,7 +322,7 @@ export default function Home() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-4 md:p-6 pb-4 space-y-6">
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -486,7 +486,10 @@ export default function Home() {
         </div>
 
         {/* User Profile / Logout */}
-        <div className="p-4 border-t border-hairline mt-auto shrink-0">
+        <div 
+          className="p-4 border-t border-hairline mt-auto shrink-0 bg-sidebar"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="w-8 h-8 rounded-full bg-primary-accent/20 text-primary-accent flex items-center justify-center shrink-0 font-bold text-sm">
