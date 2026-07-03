@@ -445,29 +445,29 @@ export default function Home() {
                       className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
                     />
                   ) : (
-                    <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight pr-6">
+                    <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight pr-[96px] md:pr-6">
                       {entry.results?.[0]?.title || 'Untitled'}
                     </h3>
                   )}
 
-                  {/* Hover actions */}
+                  {/* Actions (Always visible on mobile, hover on desktop) */}
                   {editingEntryId !== entry.id && (
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-[#1A1714] group-hover:from-card pl-4 md:pl-2">
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 md:gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity md:bg-gradient-to-l md:from-[#1A1714] md:group-hover:from-card pl-2">
                       <button
                         onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
-                        className="p-2 md:p-1 text-muted-text hover:text-primary-text rounded transition-colors"
+                        className="p-3 md:p-1 text-muted-text hover:text-primary-text rounded transition-colors"
                         title="Rename"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
                           <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                         </svg>
                       </button>
                       <button
                         onClick={(e) => handleDelete(e, entry.id)}
-                        className="p-2 md:p-1 text-muted-text hover:text-red-400 rounded transition-colors"
+                        className="p-3 md:p-1 text-muted-text hover:text-red-400 rounded transition-colors"
                         title="Delete"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                       </button>
