@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import TaskView from '@/components/TaskView';
 import NoteView from '@/components/NoteView';
 import TableView from '@/components/TableView';
+import TagManager from '@/components/TagManager';
 
 interface Entry {
   id: string;
   createdAt: number;
   results: any[];
+  pinned?: boolean;
+  tags?: string[];
 }
 
 export default function Home() {
@@ -29,7 +32,62 @@ export default function Home() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const router = useRouter();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false; // Stop naturally on pause
+        recognition.interimResults = false; // Wait for final result
+
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setInputText(prev => prev + (prev && !prev.endsWith(' ') ? ' ' : '') + transcript);
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            setError('Microphone permission denied.');
+          } else if (event.error !== 'no-speech') {
+            setError(`Microphone error: ${event.error}`);
+          }
+          setTimeout(() => setError(null), 3000);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      setError(null);
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (err) {
+        console.error('Failed to start listening', err);
+      }
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,6 +122,7 @@ export default function Home() {
           .from('entries')
           .select('*')
           .eq('user_id', session.user.id)
+          .order('pinned', { ascending: false, nullsFirst: false })
           .order('created_at', { ascending: false });
           
         if (error) throw error;
@@ -72,7 +131,9 @@ export default function Home() {
           const formattedEntries = data.map(row => ({
             id: row.id,
             createdAt: new Date(row.created_at).getTime(),
-            results: row.results
+            results: row.results,
+            pinned: row.pinned || false,
+            tags: row.tags || []
           }));
           setEntries(formattedEntries);
         }
@@ -125,6 +186,7 @@ export default function Home() {
         id: insertedData.id,
         createdAt: new Date(insertedData.created_at).getTime(),
         results: insertedData.results,
+        tags: []
       };
 
       setEntries([newEntry, ...entries]);
@@ -141,6 +203,31 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateResult = (resultIndex: number, newResultData: any) => {
+    if (!activeEntryId) return;
+    
+    const entryIndex = entries.findIndex(e => e.id === activeEntryId);
+    if (entryIndex === -1) return;
+
+    const entry = entries[entryIndex];
+    const updatedResults = [...entry.results];
+    updatedResults[resultIndex] = newResultData;
+
+    const newEntries = [...entries];
+    newEntries[entryIndex] = { ...entry, results: updatedResults };
+    setEntries(newEntries);
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      supabase.from('entries').update({
+        results: updatedResults,
+        updated_at: new Date().toISOString()
+      }).eq('id', entry.id).then(({error}) => {
+        if (error) console.error('Failed to update entry content', error);
+      });
+    }, 800);
   };
 
   const handleToggle = (resultIndex: number, taskIndex: number) => {
@@ -187,6 +274,72 @@ export default function Home() {
         if (error) console.error('Failed to delete entry', error);
       });
     }
+  };
+
+  const handleAddTag = (id: string, tag: string) => {
+    const entryToUpdate = entries.find(e => e.id === id);
+    if (!entryToUpdate) return;
+    
+    const cleanTag = tag.trim().toLowerCase();
+    if (!cleanTag) return;
+    
+    const currentTags = entryToUpdate.tags || [];
+    if (currentTags.includes(cleanTag)) return;
+    
+    const newTags = [...currentTags, cleanTag];
+    const newEntries = entries.map((entry) => {
+      if (entry.id === id) {
+        return { ...entry, tags: newTags };
+      }
+      return entry;
+    });
+    setEntries(newEntries);
+    
+    supabase.from('entries').update({
+      tags: newTags,
+      updated_at: new Date().toISOString()
+    }).eq('id', id).then(({error}) => {
+      if (error) console.error('Failed to add tag', error);
+    });
+  };
+
+  const handleRemoveTag = (id: string, tag: string) => {
+    const entryToUpdate = entries.find(e => e.id === id);
+    if (!entryToUpdate) return;
+    
+    const currentTags = entryToUpdate.tags || [];
+    const newTags = currentTags.filter(t => t !== tag);
+    
+    const newEntries = entries.map((entry) => {
+      if (entry.id === id) {
+        return { ...entry, tags: newTags };
+      }
+      return entry;
+    });
+    setEntries(newEntries);
+    
+    supabase.from('entries').update({
+      tags: newTags,
+      updated_at: new Date().toISOString()
+    }).eq('id', id).then(({error}) => {
+      if (error) console.error('Failed to remove tag', error);
+    });
+  };
+
+  const handleTogglePin = (e: React.MouseEvent, id: string, currentPinned: boolean) => {
+    e.stopPropagation();
+    const newPinnedState = !currentPinned;
+    
+    setEntries(entries.map(entry => 
+      entry.id === id ? { ...entry, pinned: newPinnedState } : entry
+    ));
+    
+    supabase.from('entries').update({
+      pinned: newPinnedState,
+      updated_at: new Date().toISOString()
+    }).eq('id', id).then(({error}) => {
+      if (error) console.error('Failed to update pinned state', error);
+    });
   };
 
   const startRename = (e: React.MouseEvent, id: string, currentTitle: string) => {
@@ -243,12 +396,34 @@ export default function Home() {
     router.push('/login');
   };
 
-  const activeEntry = entries.find(e => e.id === activeEntryId);
-  
+  const allUniqueTags = Array.from(new Set(entries.flatMap(e => e.tags || []))).sort();
+
+  const q = searchQuery.toLowerCase();
   const filteredEntries = entries.filter(entry => {
-    const title = entry.results?.[0]?.title || 'Untitled';
-    return title.toLowerCase().includes(searchQuery.toLowerCase());
+    // Tag filter
+    if (activeTagFilter && !(entry.tags || []).includes(activeTagFilter)) {
+      return false;
+    }
+    
+    // Search filter
+    if (!q) return true;
+    return entry.results?.some((res: any) => {
+      if (res.title && res.title.toLowerCase().includes(q)) return true;
+      if (res.body && res.body.toLowerCase().includes(q)) return true;
+      if (res.items && res.items.some((task: any) => task.text.toLowerCase().includes(q))) return true;
+      if (res.embeddedTasks && res.embeddedTasks.some((task: any) => task.text.toLowerCase().includes(q))) return true;
+      return false;
+    });
+  }).sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return b.createdAt - a.createdAt;
   });
+
+  const pinnedEntries = filteredEntries.filter(e => e.pinned);
+  const unpinnedEntries = filteredEntries.filter(e => !e.pinned);
+
+  const activeEntry = entries.find(e => e.id === activeEntryId);
 
   const getBadgeStyle = (type: string) => {
     switch (type) {
@@ -372,11 +547,28 @@ export default function Home() {
               className="w-full pl-10 pr-4 py-2.5 bg-background border border-hairline rounded-xl text-sm focus:outline-none focus:border-muted-text transition-all placeholder:text-muted-text text-primary-text"
             />
           </div>
+
+          {/* Tags Filter Row */}
+          {allUniqueTags.length > 0 && (
+            <div className="flex overflow-x-auto gap-2 pb-2 -mx-4 px-4 md:-mx-6 md:px-6 scrollbar-hide snap-x">
+              {allUniqueTags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
+                  className={`shrink-0 snap-start px-3 py-1.5 rounded-full text-[11px] font-mono tracking-wide transition-all border ${
+                    activeTagFilter === tag 
+                      ? 'bg-primary-text text-background border-primary-text'
+                      : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         
-        <div className="px-6 pb-2">
-          <span className="text-[10px] font-mono tracking-[0.2em] text-muted-text uppercase">Recent</span>
-        </div>
+        {/* Empty placeholder for search bar padding to avoid shifting */}
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 custom-scrollbar">
           {entriesLoading ? (
@@ -395,93 +587,246 @@ export default function Home() {
               No entries found.
             </p>
           ) : (
-            filteredEntries.map((entry) => (
-              <div
-                key={entry.id}
-                onClick={() => {
-                  if (editingEntryId !== entry.id) {
-                    setActiveEntryId(entry.id);
-                    setIsMobileMenuOpen(false);
-                  }
-                }}
-                className={`group relative w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 ${
-                  activeEntryId === entry.id
-                    ? 'bg-primary-accent/5 border-primary-accent'
-                    : 'hover:bg-card border-transparent'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    {entry.results?.map((res: any, idx: number) => (
-                      <span key={idx} className={`font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${getBadgeStyle(res.type)}`}>
-                        {res.type === 'note' && (
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        )}
-                        {res.type === 'tasks' && (
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                        )}
-                        {res.type === 'table' && (
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                        )}
-                        {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
-                      </span>
-                    ))}
+            <>
+              {pinnedEntries.length > 0 && (
+                <div className="mb-4 space-y-1">
+                  <div className="px-2 pb-1">
+                    <span className="text-[10px] font-mono tracking-[0.2em] text-primary-accent uppercase flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Pinned
+                    </span>
                   </div>
-                  <span className="font-mono text-muted-text text-[10px] tracking-wide shrink-0 ml-2 mt-0.5">
-                    {formatDate(entry.createdAt)}
-                  </span>
-                </div>
+                  {pinnedEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      onClick={() => {
+                        if (editingEntryId !== entry.id) {
+                          setActiveEntryId(entry.id);
+                          setIsMobileMenuOpen(false);
+                        }
+                      }}
+                      className={`group relative w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 ${
+                        activeEntryId === entry.id
+                          ? 'bg-primary-accent/5 border-primary-accent'
+                          : 'hover:bg-card border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {entry.results?.map((res: any, idx: number) => (
+                            <span key={idx} className={`font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${getBadgeStyle(res.type)}`}>
+                              {res.type === 'note' && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                              )}
+                              {res.type === 'tasks' && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                              )}
+                              {res.type === 'table' && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                              )}
+                              {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="font-mono text-muted-text text-[10px] tracking-wide shrink-0 ml-2 mt-0.5">
+                          {formatDate(entry.createdAt)}
+                        </span>
+                      </div>
 
-                <div className="relative">
-                  {editingEntryId === entry.id ? (
-                    <input
-                      type="text"
-                      autoFocus
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
-                      onBlur={() => saveRename(entry.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
-                    />
-                  ) : (
-                    <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight pr-[96px] md:pr-6">
-                      {entry.results?.[0]?.title || 'Untitled'}
-                    </h3>
-                  )}
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className="flex-1 min-w-0">
+                          {editingEntryId === entry.id ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
+                              onBlur={() => saveRename(entry.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
+                            />
+                          ) : (
+                            <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
+                              {entry.results?.[0]?.title || 'Untitled'}
+                            </h3>
+                          )}
+                        </div>
 
-                  {/* Actions (Always visible on mobile, hover on desktop) */}
-                  {editingEntryId !== entry.id && (
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 md:gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity md:bg-gradient-to-l md:from-[#1A1714] md:group-hover:from-card pl-2">
-                      <button
-                        onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
-                        className="p-3 md:p-1 text-muted-text hover:text-primary-text rounded transition-colors"
-                        title="Rename"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(e, entry.id)}
-                        className="p-3 md:p-1 text-muted-text hover:text-red-400 rounded transition-colors"
-                        title="Delete"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </button>
+                        {/* Actions (Always visible on mobile, hover on desktop) */}
+                        {editingEntryId !== entry.id && (
+                          <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => handleTogglePin(e, entry.id, !!entry.pinned)}
+                              className={`p-3 md:p-2 rounded transition-colors ${entry.pinned ? 'text-primary-accent' : 'text-muted-text hover:text-primary-text hover:bg-background/50'}`}
+                              title={entry.pinned ? "Unpin" : "Pin"}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
+                              className="p-3 md:p-2 text-muted-text hover:text-primary-text hover:bg-background/50 rounded transition-colors"
+                              title="Rename"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(e, entry.id)}
+                              className="p-3 md:p-2 text-muted-text hover:text-red-400 hover:bg-background/50 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {editingEntryId !== entry.id && (
+                        <>
+                          {entry.tags && entry.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
+                              {entry.tags.map(tag => (
+                                <span key={tag} className="text-[10px] font-mono bg-background/50 text-muted-text px-1.5 py-0.5 rounded border border-hairline/50">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
+                            {getSnippet(entry)}
+                          </p>
+                        </>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-                
-                {editingEntryId !== entry.id && (
-                  <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
-                    {getSnippet(entry)}
-                  </p>
-                )}
-              </div>
-            ))
+              )}
+              
+              {unpinnedEntries.length > 0 && (
+                <div className="space-y-1">
+                  <div className="px-2 pb-1">
+                    <span className="text-[10px] font-mono tracking-[0.2em] text-muted-text uppercase">Recent</span>
+                  </div>
+                  {unpinnedEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      onClick={() => {
+                        if (editingEntryId !== entry.id) {
+                          setActiveEntryId(entry.id);
+                          setIsMobileMenuOpen(false);
+                        }
+                      }}
+                      className={`group relative w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 ${
+                        activeEntryId === entry.id
+                          ? 'bg-primary-accent/5 border-primary-accent'
+                          : 'hover:bg-card border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {entry.results?.map((res: any, idx: number) => (
+                            <span key={idx} className={`font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${getBadgeStyle(res.type)}`}>
+                              {res.type === 'note' && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                              )}
+                              {res.type === 'tasks' && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                              )}
+                              {res.type === 'table' && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                              )}
+                              {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="font-mono text-muted-text text-[10px] tracking-wide shrink-0 ml-2 mt-0.5">
+                          {formatDate(entry.createdAt)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className="flex-1 min-w-0">
+                          {editingEntryId === entry.id ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
+                              onBlur={() => saveRename(entry.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
+                            />
+                          ) : (
+                            <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
+                              {entry.results?.[0]?.title || 'Untitled'}
+                            </h3>
+                          )}
+                        </div>
+
+                        {/* Actions (Always visible on mobile, hover on desktop) */}
+                        {editingEntryId !== entry.id && (
+                          <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => handleTogglePin(e, entry.id, !!entry.pinned)}
+                              className={`p-3 md:p-2 rounded transition-colors ${entry.pinned ? 'text-primary-accent' : 'text-muted-text hover:text-primary-text hover:bg-background/50'}`}
+                              title={entry.pinned ? "Unpin" : "Pin"}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
+                              className="p-3 md:p-2 text-muted-text hover:text-primary-text hover:bg-background/50 rounded transition-colors"
+                              title="Rename"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(e, entry.id)}
+                              className="p-3 md:p-2 text-muted-text hover:text-red-400 hover:bg-background/50 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {editingEntryId !== entry.id && (
+                        <>
+                          {entry.tags && entry.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
+                              {entry.tags.map(tag => (
+                                <span key={tag} className="text-[10px] font-mono bg-background/50 text-muted-text px-1.5 py-0.5 rounded border border-hairline/50">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
+                            {getSnippet(entry)}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -579,7 +924,23 @@ export default function Home() {
                   disabled={loading}
                 />
                 
-                <div className="shrink-0 md:pr-1 flex">
+                <div className="shrink-0 md:pr-1 flex items-center gap-1">
+                  {speechSupported && (
+                    <button
+                      onClick={toggleListening}
+                      disabled={loading}
+                      className={`p-3 rounded-full transition-all ${
+                        isListening
+                          ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
+                          : 'text-muted-text hover:text-primary-text hover:bg-background/50'
+                      }`}
+                      title={isListening ? "Stop listening" : "Start voice input"}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     onClick={handleStructureIt}
                     disabled={loading || !inputText.trim()}
@@ -615,6 +976,13 @@ export default function Home() {
           </div>
         ) : (
           <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 transition-all space-y-6 md:space-y-8">
+            <TagManager 
+              entryId={activeEntry.id}
+              tags={activeEntry.tags || []}
+              allUniqueTags={allUniqueTags}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
+            />
             {activeEntry.results?.map((res: any, idx: number) => {
               if (res.type === 'tasks') {
                 return (
@@ -623,6 +991,7 @@ export default function Home() {
                     title={res.title} 
                     items={res.items} 
                     onToggle={(taskIdx) => handleToggle(idx, taskIdx)}
+                    onUpdate={(newData) => handleUpdateResult(idx, newData)}
                   />
                 );
               }
@@ -635,6 +1004,7 @@ export default function Home() {
                     body={res.body} 
                     embeddedTasks={res.embeddedTasks} 
                     onToggle={(taskIdx) => handleToggle(idx, taskIdx)}
+                    onUpdate={(newData) => handleUpdateResult(idx, newData)}
                   />
                 );
               }
@@ -644,8 +1014,9 @@ export default function Home() {
                   <TableView 
                     key={idx}
                     title={res.title} 
-                    columns={res.columns} 
-                    rows={res.rows} 
+                    columns={res.columns || []} 
+                    rows={res.rows || []} 
+                    onUpdate={(newData) => handleUpdateResult(idx, newData)}
                   />
                 );
               }
