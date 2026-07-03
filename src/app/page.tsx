@@ -28,6 +28,7 @@ export default function Home() {
   const [entriesLoading, setEntriesLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -311,10 +312,18 @@ export default function Home() {
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
   return (
-    <div className="min-h-screen bg-background text-primary-text flex font-sans">
+    <div className="min-h-screen bg-background text-primary-text flex font-sans relative">
+      {/* Mobile Drawer Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-[272px] bg-sidebar border-r border-hairline flex flex-col h-screen sticky top-0 shrink-0">
-        <div className="p-6 pb-4 space-y-6">
+      <aside className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-4 md:p-6 pb-4 space-y-6">
           {/* Logo */}
           <div className="flex items-center gap-3">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -341,6 +350,7 @@ export default function Home() {
               setActiveEntryId(null);
               setInputText('');
               setError(null);
+              setIsMobileMenuOpen(false);
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-accent text-primary-text font-medium rounded-xl hover:brightness-110 transition-all shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]"
           >
@@ -391,6 +401,7 @@ export default function Home() {
                 onClick={() => {
                   if (editingEntryId !== entry.id) {
                     setActiveEntryId(entry.id);
+                    setIsMobileMenuOpen(false);
                   }
                 }}
                 className={`group relative w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 ${
@@ -441,22 +452,22 @@ export default function Home() {
 
                   {/* Hover actions */}
                   {editingEntryId !== entry.id && (
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-[#1A1714] group-hover:from-card pl-4">
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-[#1A1714] group-hover:from-card pl-4 md:pl-2">
                       <button
                         onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
-                        className="p-1 text-muted-text hover:text-primary-text rounded transition-colors"
+                        className="p-2 md:p-1 text-muted-text hover:text-primary-text rounded transition-colors"
                         title="Rename"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
                           <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                         </svg>
                       </button>
                       <button
                         onClick={(e) => handleDelete(e, entry.id)}
-                        className="p-1 text-muted-text hover:text-red-400 rounded transition-colors"
+                        className="p-2 md:p-1 text-muted-text hover:text-red-400 rounded transition-colors"
                         title="Delete"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                       </button>
@@ -499,27 +510,61 @@ export default function Home() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto flex flex-col items-center">
-        {!activeEntry ? (
-          <div className="w-full max-w-[800px] px-8 py-20 flex flex-col items-center justify-center min-h-screen">
-            <div className="flex flex-col items-center mb-12 text-center w-full">
-
-              
-              <h1 className="font-serif italic font-bold text-6xl md:text-7xl lg:text-[5.5rem] tracking-tight leading-[1.1] mb-6 flex flex-col items-center">
-                <span className="text-primary-text">What's on your</span>
-                <span className="text-primary-accent mt-1">mind?</span>
-              </h1>
-              
-              <p className="text-lg md:text-xl text-muted-text font-medium max-w-2xl mx-auto">
-                Dump anything here — I'll turn it into notes, tasks, and tables.
-              </p>
+      <main className="flex-1 overflow-y-auto flex flex-col w-full min-w-0">
+        
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-hairline bg-background sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 -ml-2 text-primary-text rounded-lg hover:bg-card transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="flex items-center gap-2">
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="8" fill="url(#logo-grad-mobile)"/>
+                <defs>
+                  <linearGradient id="logo-grad-mobile" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#FF6B3D"/>
+                    <stop offset="1" stopColor="#FF3B1D"/>
+                  </linearGradient>
+                </defs>
+                <path d="M14.5 22.5L9 11.5H13L16 18L21 9H25L17.5 22.5H14.5Z" fill="white"/>
+                <circle cx="8" cy="14" r="1.5" fill="white"/>
+                <circle cx="10" cy="20" r="1" fill="white"/>
+                <circle cx="7" cy="18" r="1" fill="white"/>
+                <polygon points="10,8 13,10 9,11" fill="white"/>
+                <polygon points="8,21 12,23 9,24" fill="white"/>
+                <polygon points="12,14 15,16 12,17" fill="white"/>
+              </svg>
+              <span className="font-serif italic font-bold text-2xl tracking-tight leading-none text-[#F5EDD9] pt-1">Venote</span>
             </div>
+          </div>
+        </div>
 
-            <div className="w-full max-w-3xl relative">
-              <div className="bg-card border border-hairline rounded-full shadow-2xl relative flex flex-row items-center p-2 transition-all duration-300 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50">
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent outline-none text-primary-text text-lg placeholder:text-muted-text font-sans pl-6 pr-4 py-3"
+        <div className="flex-1 flex flex-col items-center">
+          {!activeEntry ? (
+            <div className="w-full max-w-[800px] px-4 py-8 pb-32 md:px-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] md:min-h-screen">
+              <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
+                <h1 className="font-serif italic font-bold text-4xl md:text-6xl lg:text-[5.5rem] tracking-tight leading-[1.1] mb-4 md:mb-6 flex flex-col items-center">
+                  <span className="text-primary-text">What's on your</span>
+                  <span className="text-primary-accent mt-1">mind?</span>
+                </h1>
+              
+                <p className="text-lg md:text-xl text-muted-text font-medium max-w-2xl mx-auto">
+                  Dump anything here — I'll turn it into notes, tasks, and tables.
+                </p>
+              </div>
+
+              <div className="w-full max-w-3xl relative">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
+                  <div className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-2 md:p-2 transition-all duration-300 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
+                    <input
+                      type="text"
+                      className="flex-1 bg-transparent outline-none text-primary-text text-base md:text-lg placeholder:text-muted-text font-sans px-4 py-3 md:pl-6 md:pr-4"
                   placeholder="Paste a brain dump, a transcript, a raw list of ideas, a URL, or a voice note..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
@@ -531,11 +576,11 @@ export default function Home() {
                   disabled={loading}
                 />
                 
-                <div className="shrink-0 pr-1">
+                <div className="shrink-0 md:pr-1 flex">
                   <button
                     onClick={handleStructureIt}
                     disabled={loading || !inputText.trim()}
-                    className={`px-6 py-3 bg-[#3A221C] text-primary-accent font-medium rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
+                    className={`w-full md:w-auto px-6 py-3.5 md:py-3 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
                       (!inputText.trim() || loading) ? 'opacity-40 cursor-not-allowed' : 'opacity-100 hover:shadow-[0_0_15px_rgba(255,92,56,0.3)]'
                     }`}
                   >
@@ -553,9 +598,10 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+              </div>
               
               {error && (
-                <div className="absolute top-full left-0 right-0 mt-4 p-4 text-sm text-red-300 bg-red-950/40 rounded-xl border border-red-900/50 flex items-center gap-2 backdrop-blur-md">
+                <div className="absolute bottom-[100%] left-0 right-0 mb-4 p-4 text-sm text-red-300 bg-red-950/40 rounded-xl border border-red-900/50 flex items-center gap-2 backdrop-blur-md z-10 mx-4 md:mx-0">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
@@ -565,7 +611,7 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-4xl px-8 py-16 transition-all space-y-8">
+          <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 transition-all space-y-6 md:space-y-8">
             {activeEntry.results?.map((res: any, idx: number) => {
               if (res.type === 'tasks') {
                 return (
@@ -609,6 +655,7 @@ export default function Home() {
             })}
           </div>
         )}
+        </div>
       </main>
     </div>
   );

@@ -20,23 +20,23 @@ export default function TaskView({ title, items, onToggle }: TaskViewProps) {
 
   return (
     <div className="w-full bg-card rounded-[24px] border border-hairline overflow-hidden shadow-2xl">
-      <div className="p-8 md:p-10">
-        <div className="flex items-center gap-3 mb-8">
+      <div className="p-6 md:p-8 lg:p-10">
+        <div className="flex items-center gap-3 mb-6 md:mb-8">
           <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-1 rounded bg-primary-accent/10 text-primary-accent flex items-center gap-1.5 font-bold">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
             TASK
           </span>
         </div>
 
-        <h2 className="font-serif italic font-bold text-4xl text-primary-text mb-8 tracking-tight leading-snug">
+        <h2 className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug">
           {title}
         </h2>
         
         <ul className="space-y-2">
           {items.map((task, index) => (
             <li key={index}>
-              <label className="flex items-start gap-4 p-3 -mx-3 rounded-xl hover:bg-background cursor-pointer transition-colors group">
-                <div className="relative flex items-center justify-center pt-1 shrink-0">
+              <label className="flex items-start gap-4 p-4 -mx-4 md:p-3 md:-mx-3 rounded-xl hover:bg-background cursor-pointer transition-colors group">
+                <div className="relative flex items-center justify-center pt-0.5 md:pt-1 shrink-0">
                   <input
                     type="checkbox"
                     checked={task.done}
