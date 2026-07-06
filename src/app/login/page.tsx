@@ -31,7 +31,7 @@ export default function Login() {
         });
         if (error) throw error;
         // On success, redirect to home
-        router.push('/');
+        router.push('/app');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -39,7 +39,7 @@ export default function Login() {
         });
         if (error) throw error;
         // On success, redirect to home
-        router.push('/');
+        router.push('/app');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during authentication.');
