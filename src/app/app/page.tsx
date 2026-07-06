@@ -515,7 +515,7 @@ export default function Home() {
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-4 md:p-6 pb-4 space-y-6">
+        <div className="p-4 md:p-5 pb-3 space-y-4">
           {/* Logo */}
           <div className="flex items-center gap-3">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -572,7 +572,7 @@ export default function Home() {
                 <button
                   key={tag}
                   onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
-                  className={`shrink-0 snap-start px-3 py-1.5 rounded-full text-[11px] font-mono tracking-wide transition-all border ${
+                  className={`shrink-0 snap-start px-2.5 py-1 rounded-full text-[10px] font-mono tracking-wide transition-all border ${
                     activeTagFilter === tag 
                       ? 'bg-primary-text text-background border-primary-text'
                       : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
@@ -606,7 +606,7 @@ export default function Home() {
           ) : (
             <>
               {pinnedEntries.length > 0 && (
-                <div className="mb-4 space-y-1">
+                <div className="mb-3 space-y-0.5">
                   <div className="px-2 pb-1">
                     <span className="text-[10px] font-mono tracking-[0.2em] text-primary-accent uppercase flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -624,7 +624,7 @@ export default function Home() {
                           setIsMobileMenuOpen(false);
                         }
                       }}
-                      className={`group relative w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 ${
+                      className={`group relative w-full text-left p-2.5 rounded-xl transition-all cursor-pointer border-l-2 ${
                         activeEntryId === entry.id
                           ? 'bg-primary-accent/5 border-primary-accent'
                           : 'hover:bg-card border-transparent'
@@ -728,7 +728,7 @@ export default function Home() {
               )}
               
               {unpinnedEntries.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="px-2 pb-1">
                     <span className="text-[10px] font-mono tracking-[0.2em] text-muted-text uppercase">Recent</span>
                   </div>
@@ -741,7 +741,7 @@ export default function Home() {
                           setIsMobileMenuOpen(false);
                         }
                       }}
-                      className={`group relative w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 ${
+                      className={`group relative w-full text-left p-2.5 rounded-xl transition-all cursor-pointer border-l-2 ${
                         activeEntryId === entry.id
                           ? 'bg-primary-accent/5 border-primary-accent'
                           : 'hover:bg-card border-transparent'
@@ -914,22 +914,22 @@ export default function Home() {
           {!activeEntry ? (
             <div className="w-full max-w-[800px] px-4 py-8 pb-32 md:px-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] md:min-h-screen">
               <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
-                <h1 className="font-serif italic font-bold text-4xl md:text-6xl lg:text-[5.5rem] tracking-tight leading-[1.1] mb-4 md:mb-6 flex flex-col items-center">
+                <h1 className="font-serif italic font-bold text-4xl md:text-[40px] lg:text-[44px] tracking-tight leading-[1.1] mb-3 flex flex-col items-center">
                   <span className="text-primary-text">What's on your</span>
                   <span className="text-primary-accent mt-1">mind?</span>
                 </h1>
               
-                <p className="text-lg md:text-xl text-muted-text font-medium max-w-2xl mx-auto">
+                <p className="text-base md:text-lg text-muted-text font-medium max-w-2xl mx-auto">
                   Dump anything here — I'll turn it into notes, tasks, and tables.
                 </p>
               </div>
 
               <div className="w-full max-w-3xl relative">
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
-                  <div className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-2 md:p-2 transition-all duration-300 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
+                  <div className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 md:p-1.5 transition-all duration-300 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
                     <input
                       type="text"
-                      className="flex-1 bg-transparent outline-none text-primary-text text-base md:text-lg placeholder:text-muted-text font-sans px-4 py-3 md:pl-6 md:pr-4"
+                      className="flex-1 bg-transparent outline-none text-primary-text text-base placeholder:text-muted-text font-sans px-4 py-2.5 md:pl-5 md:pr-3"
                   placeholder="Paste a brain dump, a transcript, a raw list of ideas, a URL, or a voice note..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
@@ -961,7 +961,7 @@ export default function Home() {
                   <button
                     onClick={handleStructureIt}
                     disabled={loading || !inputText.trim()}
-                    className={`w-full md:w-auto px-6 py-3.5 md:py-3 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
+                    className={`w-full md:w-auto px-5 py-2.5 md:py-2 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
                       (!inputText.trim() || loading) ? 'opacity-40 cursor-not-allowed' : 'opacity-100 hover:shadow-[0_0_15px_rgba(255,92,56,0.3)]'
                     }`}
                   >

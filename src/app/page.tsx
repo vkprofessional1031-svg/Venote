@@ -117,9 +117,6 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <main className="pt-32 pb-20 px-6 md:px-12 max-w-5xl mx-auto flex flex-col items-center text-center mt-10 md:mt-20">
-        <div className="inline-block mb-6 px-3 py-1 rounded-full bg-primary-accent/10 border border-primary-accent/20 text-primary-accent font-mono text-xs font-bold tracking-widest uppercase">
-          AI-Powered Organization
-        </div>
         <h1 className="font-serif italic font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[1.1] mb-8">
           What's on your mind?<br />
           <span className="text-primary-accent">We'll organize it.</span>
