@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 export default function LandingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [detectedOS, setDetectedOS] = useState<'mac' | 'windows' | 'other'>('other');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -17,7 +18,65 @@ export default function LandingPage() {
         setLoading(false);
       }
     });
+
+    const platform = window.navigator.platform.toLowerCase();
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    if (platform.includes('mac') || userAgent.includes('mac')) {
+      setDetectedOS('mac');
+    } else if (platform.includes('win') || userAgent.includes('win')) {
+      setDetectedOS('windows');
+    }
   }, [router]);
+
+  const ActionButtons = () => (
+    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mt-4">
+      {/* Main Web App CTA */}
+      <Link 
+        href="/login"
+        className="px-10 py-4 bg-primary-accent text-white font-bold rounded-2xl hover:brightness-110 transition-all shadow-[0_8px_24px_0_rgba(255,92,56,0.3)] text-xl w-full sm:w-auto text-center"
+      >
+        Get Started in Browser
+      </Link>
+
+      <div className="flex items-center gap-4 w-full">
+        <div className="h-px bg-hairline flex-1"></div>
+        <span className="text-muted-text text-xs font-mono uppercase tracking-widest">or download app</span>
+        <div className="h-px bg-hairline flex-1"></div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+        <a
+          href="https://github.com/vkprofessional1031-svg/Venote/releases/download/v1.0.0/Venote-1.0.0-arm64.dmg"
+          download
+          className={`w-full sm:w-auto px-6 py-3.5 rounded-xl font-medium transition-all flex items-center justify-center gap-2 border ${
+            detectedOS === 'mac' || detectedOS === 'other'
+              ? 'bg-card border-hairline hover:border-primary-accent text-primary-text'
+              : 'bg-background border-hairline/50 text-muted-text hover:text-primary-text'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+          Download for Mac
+        </a>
+        
+        <a
+          href="https://github.com/vkprofessional1031-svg/Venote/releases/download/v1.0.0/Venote.Setup.1.0.0.exe"
+          download
+          className={`w-full sm:w-auto px-6 py-3.5 rounded-xl font-medium transition-all flex items-center justify-center gap-2 border ${
+            detectedOS === 'windows'
+              ? 'bg-card border-hairline hover:border-primary-accent text-primary-text'
+              : 'bg-background border-hairline/50 text-muted-text hover:text-primary-text'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+          Download for Windows
+        </a>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center text-primary-text"></div>;
@@ -47,7 +106,10 @@ export default function LandingPage() {
           <span className="font-serif italic font-bold text-2xl tracking-tight leading-none pt-1">Venote</span>
         </div>
         <div>
-          <Link href="/login" className="text-sm font-medium hover:text-primary-accent transition-colors">
+          <Link 
+            href="/login" 
+            className="text-sm font-medium text-primary-text bg-[#1A1614] hover:bg-[#2A2421] border border-hairline px-4 py-2 rounded-xl transition-all shadow-sm"
+          >
             Sign In
           </Link>
         </div>
@@ -62,15 +124,10 @@ export default function LandingPage() {
           What's on your mind?<br />
           <span className="text-primary-accent">We'll organize it.</span>
         </h1>
-        <p className="text-lg md:text-xl text-muted-text max-w-2xl mb-12 leading-relaxed">
+        <p className="text-lg md:text-xl text-muted-text max-w-2xl mb-8 leading-relaxed">
           Type, speak, or brain dump anything. Our AI automatically turns your messy thoughts into beautifully structured tasks, notes, tables, and roadmaps.
         </p>
-        <Link 
-          href="/login"
-          className="px-8 py-4 bg-primary-accent text-white font-medium rounded-2xl hover:brightness-110 transition-all shadow-[0_8px_24px_0_rgba(255,92,56,0.3)] text-lg"
-        >
-          Get Started
-        </Link>
+        <ActionButtons />
       </main>
 
       {/* Feature Highlights */}
@@ -140,14 +197,9 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6 text-center">
+      <section className="py-24 px-6 text-center flex flex-col items-center">
         <h2 className="font-serif italic font-bold text-4xl md:text-5xl tracking-tight mb-8">Ready to clear your mind?</h2>
-        <Link 
-          href="/login"
-          className="inline-block px-10 py-4 bg-primary-accent text-white font-bold rounded-2xl hover:brightness-110 transition-all shadow-[0_8px_24px_0_rgba(255,92,56,0.3)] text-lg"
-        >
-          Get Started For Free
-        </Link>
+        <ActionButtons />
       </section>
       
       <footer className="border-t border-hairline py-8 text-center text-muted-text text-sm">

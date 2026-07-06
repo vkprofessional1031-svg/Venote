@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+public/downloads/*Venote-1.0.0-arm64.dmg
+public/downloads/*Venote Setup 1.0.0.exe
