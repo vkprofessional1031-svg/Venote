@@ -171,6 +171,36 @@ export default function QuickNotesPage() {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm('Delete this entry?')) {
+      const noteToDelete = notes.find(n => n.id === id);
+      
+      const newNotes = notes.filter((note) => note.id !== id);
+      setNotes(newNotes);
+      if (activeNoteId === id) {
+        setActiveNoteId(null);
+      }
+      
+      if (noteToDelete && noteToDelete.imageUrls && noteToDelete.imageUrls.length > 0) {
+        const pathsToRemove = noteToDelete.imageUrls.map(url => {
+          const parts = url.split('/note-images/');
+          return parts.length > 1 ? parts[1] : null;
+        }).filter(Boolean) as string[];
+        
+        if (pathsToRemove.length > 0) {
+          supabase.storage.from('note-images').remove(pathsToRemove).then(({ error }) => {
+            if (error) console.error('Failed to delete images:', error);
+          });
+        }
+      }
+      
+      supabase.from('quick_notes').delete().eq('id', id).then(({error}) => {
+        if (error) console.error('Failed to delete note', error);
+      });
+    }
+  };
+
   // Handle Update Note
   const handleUpdate = (id: string, updates: Partial<QuickNote>) => {
     const noteIndex = notes.findIndex(n => n.id === id);
@@ -451,7 +481,7 @@ export default function QuickNotesPage() {
                   </p>
                 </div>
 
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                   <button
                     type="button"
                     onClick={(e) => handleArchiveToggle(e, note.id, !!note.isArchived)}
@@ -468,6 +498,16 @@ export default function QuickNotesPage() {
                         <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
                       </svg>
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDelete(e, note.id)}
+                    className="p-2 text-muted-text hover:text-red-400 hover:bg-background/50 rounded transition-colors"
+                    title="Delete"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
                   </button>
                 </div>
               </div>
