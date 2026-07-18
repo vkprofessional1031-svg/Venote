@@ -1,21 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import TaskView from '@/components/TaskView';
 import NoteView from '@/components/NoteView';
 import TableView from '@/components/TableView';
 import TagManager from '@/components/TagManager';
 import RoadmapView from '@/components/RoadmapView';
+import { useToast } from '@/components/ToastProvider';
 
-interface Entry {
-  id: string;
-  createdAt: number;
-  results: any[];
-  pinned?: boolean;
-  tags?: string[];
-}
+import EntriesList, { Entry, SortOption } from '@/components/EntriesList';
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -26,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
 
@@ -33,9 +30,13 @@ export default function Home() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const router = useRouter();
+  const { showToast } = useToast();
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const organizeInputRef = useRef<HTMLInputElement>(null);
 
   const [speechSupported, setSpeechSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -143,9 +144,12 @@ export default function Home() {
           const formattedEntries = data.map(row => ({
             id: row.id,
             createdAt: new Date(row.created_at).getTime(),
+            updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : new Date(row.created_at).getTime(),
             results: row.results,
             pinned: row.pinned || false,
-            tags: row.tags || []
+            tags: row.tags || [],
+            isArchived: row.is_archived || false,
+            imageUrls: row.image_urls || []
           }));
           setEntries(formattedEntries);
         }
@@ -160,6 +164,7 @@ export default function Home() {
   }, [session?.user?.id, authLoading]);
 
   const handleStructureIt = async () => {
+    console.log("ORGANIZE HANDLER FIRED");
     if (!inputText.trim()) return;
     
     setLoading(true);
@@ -197,6 +202,7 @@ export default function Home() {
       const newEntry: Entry = {
         id: insertedData.id,
         createdAt: new Date(insertedData.created_at).getTime(),
+        updatedAt: insertedData.updated_at ? new Date(insertedData.updated_at).getTime() : new Date(insertedData.created_at).getTime(),
         results: insertedData.results,
         tags: []
       };
@@ -217,8 +223,25 @@ export default function Home() {
     }
   };
 
+  const handleStructureSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void handleStructureIt();
+  };
+
+  const handleNewNote = () => {
+    setIsMobileMenuOpen(false);
+    setActiveEntryId(null);
+    setInputText('');
+    // Use timeout to ensure the empty state is rendered before focusing
+    setTimeout(() => {
+      organizeInputRef.current?.focus();
+    }, 0);
+  };
+
   const handleUpdateResult = (resultIndex: number, newResultData: any) => {
     if (!activeEntryId) return;
+
+    setSaveState('saving');
     
     const entryIndex = entries.findIndex(e => e.id === activeEntryId);
     if (entryIndex === -1) return;
@@ -228,7 +251,7 @@ export default function Home() {
     updatedResults[resultIndex] = newResultData;
 
     const newEntries = [...entries];
-    newEntries[entryIndex] = { ...entry, results: updatedResults };
+    newEntries[entryIndex] = { ...entry, results: updatedResults, updatedAt: Date.now() };
     setEntries(newEntries);
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -237,7 +260,15 @@ export default function Home() {
         results: updatedResults,
         updated_at: new Date().toISOString()
       }).eq('id', entry.id).then(({error}) => {
-        if (error) console.error('Failed to update entry content', error);
+        if (error) {
+          console.error('Failed to update entry content', error);
+          setSaveState('idle');
+          showToast('Could not save note, try again', 'error');
+        } else {
+          setSaveState('saved');
+          setTimeout(() => setSaveState('idle'), 2000);
+          showToast('Note saved');
+        }
       });
     }, 800);
   };
@@ -260,7 +291,7 @@ export default function Home() {
     }
 
     const newEntries = [...entries];
-    newEntries[entryIndex] = { ...entry, results: updatedResults };
+    newEntries[entryIndex] = { ...entry, results: updatedResults, updatedAt: Date.now() };
     setEntries(newEntries);
     
     // Background update
@@ -283,7 +314,12 @@ export default function Home() {
       
       // Background delete
       supabase.from('entries').delete().eq('id', id).then(({error}) => {
-        if (error) console.error('Failed to delete entry', error);
+        if (error) {
+          console.error('Failed to delete entry', error);
+          showToast('Could not delete note, try again', 'error');
+        } else {
+          showToast('Note deleted');
+        }
       });
     }
   };
@@ -301,7 +337,7 @@ export default function Home() {
     const newTags = [...currentTags, cleanTag];
     const newEntries = entries.map((entry) => {
       if (entry.id === id) {
-        return { ...entry, tags: newTags };
+        return { ...entry, tags: newTags, updatedAt: Date.now() };
       }
       return entry;
     });
@@ -311,7 +347,12 @@ export default function Home() {
       tags: newTags,
       updated_at: new Date().toISOString()
     }).eq('id', id).then(({error}) => {
-      if (error) console.error('Failed to add tag', error);
+      if (error) {
+        console.error('Failed to add tag', error);
+        showToast('Could not add tag, try again', 'error');
+      } else {
+        showToast('Tag added');
+      }
     });
   };
 
@@ -324,7 +365,7 @@ export default function Home() {
     
     const newEntries = entries.map((entry) => {
       if (entry.id === id) {
-        return { ...entry, tags: newTags };
+        return { ...entry, tags: newTags, updatedAt: Date.now() };
       }
       return entry;
     });
@@ -334,7 +375,12 @@ export default function Home() {
       tags: newTags,
       updated_at: new Date().toISOString()
     }).eq('id', id).then(({error}) => {
-      if (error) console.error('Failed to remove tag', error);
+      if (error) {
+        console.error('Failed to remove tag', error);
+        showToast('Could not remove tag, try again', 'error');
+      } else {
+        showToast('Tag removed');
+      }
     });
   };
 
@@ -351,6 +397,43 @@ export default function Home() {
       updated_at: new Date().toISOString()
     }).eq('id', id).then(({error}) => {
       if (error) console.error('Failed to update pinned state', error);
+    });
+  };
+
+  const handleArchiveToggle = (e: React.MouseEvent, id: string, currentArchived: boolean) => {
+    e.stopPropagation();
+    const newArchivedState = !currentArchived;
+    
+    setEntries(entries.map(entry => 
+      entry.id === id ? { ...entry, isArchived: newArchivedState } : entry
+    ));
+    
+    supabase.from('entries').update({
+      is_archived: newArchivedState,
+      updated_at: new Date().toISOString()
+    }).eq('id', id).then(({error}) => {
+      if (error) console.error('Failed to update archive state', error);
+      else {
+        showToast(newArchivedState ? 'Entry archived' : 'Entry unarchived');
+        if (newArchivedState && activeEntryId === id) {
+          setActiveEntryId(null);
+        }
+      }
+    });
+  };
+
+  const handleUpdateImages = (id: string, newUrls: string[]) => {
+    setEntries(entries.map(entry => 
+      entry.id === id ? { ...entry, imageUrls: newUrls } : entry
+    ));
+    supabase.from('entries').update({
+      image_urls: newUrls,
+      updated_at: new Date().toISOString()
+    }).eq('id', id).then(({error}) => {
+      if (error) {
+        console.error('Failed to update images', error);
+        showToast('Failed to save image attachment', 'error');
+      }
     });
   };
 
@@ -409,81 +492,7 @@ export default function Home() {
   };
 
   const allUniqueTags = Array.from(new Set(entries.flatMap(e => e.tags || []))).sort();
-
-  const q = searchQuery.toLowerCase();
-  const filteredEntries = entries.filter(entry => {
-    // Tag filter
-    if (activeTagFilter && !(entry.tags || []).includes(activeTagFilter)) {
-      return false;
-    }
-    
-    // Search filter
-    if (!q) return true;
-    return entry.results?.some((res: any) => {
-      if (res.title && res.title.toLowerCase().includes(q)) return true;
-      if (res.body && res.body.toLowerCase().includes(q)) return true;
-      if (res.items && res.items.some((task: any) => task.text.toLowerCase().includes(q))) return true;
-      if (res.embeddedTasks && res.embeddedTasks.some((task: any) => task.text.toLowerCase().includes(q))) return true;
-      if (res.milestones && res.milestones.some((m: any) => m.label.toLowerCase().includes(q) || m.description.toLowerCase().includes(q))) return true;
-      return false;
-    });
-  }).sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-    return b.createdAt - a.createdAt;
-  });
-
-  const pinnedEntries = filteredEntries.filter(e => e.pinned);
-  const unpinnedEntries = filteredEntries.filter(e => !e.pinned);
-
   const activeEntry = entries.find(e => e.id === activeEntryId);
-
-  const getBadgeStyle = (type: string) => {
-    switch (type) {
-      case 'tasks':
-        return 'bg-primary-accent/10 text-primary-accent';
-      case 'note':
-        return 'bg-tertiary-accent/10 text-tertiary-accent';
-      case 'table':
-        return 'bg-secondary-accent/10 text-secondary-accent';
-      case 'roadmap':
-        return 'bg-[#1D9E75]/10 text-[#1D9E75]';
-      default:
-        return 'bg-muted-text/10 text-muted-text';
-    }
-  };
-
-  // Helper to format date like "Jun 25" or "Today" or "Yesterday"
-  const formatDate = (ts: number) => {
-    const d = new Date(ts);
-    const now = new Date();
-    const isToday = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday = d.getDate() === yesterday.getDate() && d.getMonth() === yesterday.getMonth() && d.getFullYear() === yesterday.getFullYear();
-
-    if (isToday) return 'Today';
-    if (isYesterday) return 'Yesterday';
-    
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getSnippet = (entry: any) => {
-    const res = entry.results?.[0];
-    if (!res) return '';
-    if (res.type === 'note') {
-      return res.body ? res.body.substring(0, 50) + '...' : 'No content';
-    } else if (res.type === 'tasks') {
-      const total = res.items?.length || 0;
-      const done = res.items?.filter((i: any) => i.done).length || 0;
-      return `${total} items · ${done} completed`;
-    } else if (res.type === 'table') {
-      return res.columns?.join(' · ') || 'Table data';
-    } else if (res.type === 'roadmap') {
-      return `${res.milestones?.length || 0} steps to: ${res.goal || 'Goal'}`;
-    }
-    return '';
-  };
 
   if (authLoading) {
     return (
@@ -514,10 +523,10 @@ export default function Home() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none md:pointer-events-auto'}`}>
         <div className="p-4 md:p-5 pb-3 space-y-4">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <Link href="/app" className="flex items-center gap-3">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="32" height="32" rx="8" fill="url(#logo-grad)"/>
               <defs>
@@ -535,15 +544,11 @@ export default function Home() {
               <polygon points="12,14 15,16 12,17" fill="white"/>
             </svg>
             <span className="font-serif italic font-bold text-[32px] tracking-tight leading-none pt-1 text-[#F5EDD9]">Venote</span>
-          </div>
+          </Link>
 
           <button
-            onClick={() => {
-              setActiveEntryId(null);
-              setInputText('');
-              setError(null);
-              setIsMobileMenuOpen(false);
-            }}
+            type="button"
+            onClick={handleNewNote}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-accent text-primary-text font-medium rounded-xl hover:brightness-110 transition-all shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -552,17 +557,46 @@ export default function Home() {
             New note
           </button>
 
-          <div className="relative">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <Link
+            href="/app/quick-notes"
+            className="w-full flex items-center justify-start gap-2 px-4 py-2.5 bg-background/50 text-muted-text hover:text-primary-text font-medium rounded-xl hover:bg-background transition-all border border-transparent hover:border-hairline"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <input
-              type="text"
-              placeholder="Search your notes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-background border border-hairline rounded-xl text-sm focus:outline-none focus:border-muted-text transition-all placeholder:text-muted-text text-primary-text"
-            />
+            Quick Notes
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search your notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-background border border-hairline rounded-xl text-sm focus:outline-none focus:border-muted-text transition-all placeholder:text-muted-text text-primary-text"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowArchived(!showArchived);
+                setActiveEntryId(null);
+              }}
+              title="Archived"
+              className={`shrink-0 p-2.5 rounded-xl transition-colors border ${
+                showArchived 
+                  ? 'bg-primary-text text-background border-primary-text' 
+                  : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+            </button>
           </div>
 
           {/* Tags Filter Row */}
@@ -571,6 +605,7 @@ export default function Home() {
               {allUniqueTags.map(tag => (
                 <button
                   key={tag}
+                  type="button"
                   onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
                   className={`shrink-0 snap-start px-2.5 py-1 rounded-full text-[10px] font-mono tracking-wide transition-all border ${
                     activeTagFilter === tag 
@@ -583,268 +618,47 @@ export default function Home() {
               ))}
             </div>
           )}
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center justify-between pb-3 pt-1">
+            <span className="text-[10px] font-mono tracking-wide text-muted-text/50 uppercase">Sort by</span>
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as SortOption)}
+              className="bg-transparent text-muted-text hover:text-primary-text text-[11px] font-mono uppercase tracking-wide outline-none cursor-pointer border-none text-right appearance-none"
+            >
+              <option value="newest" className="bg-[#1A1714]">Newest first</option>
+              <option value="oldest" className="bg-[#1A1714]">Oldest first</option>
+              <option value="az" className="bg-[#1A1714]">A-Z</option>
+              <option value="edited" className="bg-[#1A1714]">Recently edited</option>
+            </select>
+          </div>
+
         </div>
-        
-        {/* Empty placeholder for search bar padding to avoid shifting */}
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 custom-scrollbar">
-          {entriesLoading ? (
-            <div className="flex justify-center p-4">
-              <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-          ) : entries.length === 0 ? (
-            <p className="text-sm text-muted-text text-center italic mt-4">
-              No entries yet — create your first one.
-            </p>
-          ) : filteredEntries.length === 0 ? (
-            <p className="text-sm text-muted-text text-center italic mt-4">
-              No entries found.
-            </p>
-          ) : (
-            <>
-              {pinnedEntries.length > 0 && (
-                <div className="mb-3 space-y-0.5">
-                  <div className="px-2 pb-1">
-                    <span className="text-[10px] font-mono tracking-[0.2em] text-primary-accent uppercase flex items-center gap-1.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Pinned
-                    </span>
-                  </div>
-                  {pinnedEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      onClick={() => {
-                        if (editingEntryId !== entry.id) {
-                          setActiveEntryId(entry.id);
-                          setIsMobileMenuOpen(false);
-                        }
-                      }}
-                      className={`group relative w-full text-left p-2.5 rounded-xl transition-all cursor-pointer border-l-2 ${
-                        activeEntryId === entry.id
-                          ? 'bg-primary-accent/5 border-primary-accent'
-                          : 'hover:bg-card border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex flex-wrap gap-1.5">
-                          {entry.results?.map((res: any, idx: number) => (
-                            <span key={idx} className={`font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${getBadgeStyle(res.type)}`}>
-                              {res.type === 'note' && (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                              )}
-                              {res.type === 'tasks' && (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                              )}
-                              {res.type === 'table' && (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                              )}
-                              {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
-                            </span>
-                          ))}
-                        </div>
-                        <span className="font-mono text-muted-text text-[10px] tracking-wide shrink-0 ml-2 mt-0.5">
-                          {formatDate(entry.createdAt)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 mt-0.5">
-                        <div className="flex-1 min-w-0">
-                          {editingEntryId === entry.id ? (
-                            <input
-                              type="text"
-                              autoFocus
-                              value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
-                              onBlur={() => saveRename(entry.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
-                            />
-                          ) : (
-                            <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
-                              {entry.results?.[0]?.title || 'Untitled'}
-                            </h3>
-                          )}
-                        </div>
-
-                        {/* Actions (Always visible on mobile, hover on desktop) */}
-                        {editingEntryId !== entry.id && (
-                          <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => handleTogglePin(e, entry.id, !!entry.pinned)}
-                              className={`p-3 md:p-2 rounded transition-colors ${entry.pinned ? 'text-primary-accent' : 'text-muted-text hover:text-primary-text hover:bg-background/50'}`}
-                              title={entry.pinned ? "Unpin" : "Pin"}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
-                              className="p-3 md:p-2 text-muted-text hover:text-primary-text hover:bg-background/50 rounded transition-colors"
-                              title="Rename"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => handleDelete(e, entry.id)}
-                              className="p-3 md:p-2 text-muted-text hover:text-red-400 hover:bg-background/50 rounded transition-colors"
-                              title="Delete"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {editingEntryId !== entry.id && (
-                        <>
-                          {entry.tags && entry.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
-                              {entry.tags.map(tag => (
-                                <span key={tag} className="text-[10px] font-mono bg-background/50 text-muted-text px-1.5 py-0.5 rounded border border-hairline/50">
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
-                            {getSnippet(entry)}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {unpinnedEntries.length > 0 && (
-                <div className="space-y-0.5">
-                  <div className="px-2 pb-1">
-                    <span className="text-[10px] font-mono tracking-[0.2em] text-muted-text uppercase">Recent</span>
-                  </div>
-                  {unpinnedEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      onClick={() => {
-                        if (editingEntryId !== entry.id) {
-                          setActiveEntryId(entry.id);
-                          setIsMobileMenuOpen(false);
-                        }
-                      }}
-                      className={`group relative w-full text-left p-2.5 rounded-xl transition-all cursor-pointer border-l-2 ${
-                        activeEntryId === entry.id
-                          ? 'bg-primary-accent/5 border-primary-accent'
-                          : 'hover:bg-card border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex flex-wrap gap-1.5">
-                          {entry.results?.map((res: any, idx: number) => (
-                            <span key={idx} className={`font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${getBadgeStyle(res.type)}`}>
-                              {res.type === 'note' && (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                              )}
-                              {res.type === 'tasks' && (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                              )}
-                              {res.type === 'table' && (
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                              )}
-                              {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
-                            </span>
-                          ))}
-                        </div>
-                        <span className="font-mono text-muted-text text-[10px] tracking-wide shrink-0 ml-2 mt-0.5">
-                          {formatDate(entry.createdAt)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 mt-0.5">
-                        <div className="flex-1 min-w-0">
-                          {editingEntryId === entry.id ? (
-                            <input
-                              type="text"
-                              autoFocus
-                              value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
-                              onBlur={() => saveRename(entry.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
-                            />
-                          ) : (
-                            <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
-                              {entry.results?.[0]?.title || 'Untitled'}
-                            </h3>
-                          )}
-                        </div>
-
-                        {/* Actions (Always visible on mobile, hover on desktop) */}
-                        {editingEntryId !== entry.id && (
-                          <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => handleTogglePin(e, entry.id, !!entry.pinned)}
-                              className={`p-3 md:p-2 rounded transition-colors ${entry.pinned ? 'text-primary-accent' : 'text-muted-text hover:text-primary-text hover:bg-background/50'}`}
-                              title={entry.pinned ? "Unpin" : "Pin"}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => startRename(e, entry.id, entry.results?.[0]?.title)}
-                              className="p-3 md:p-2 text-muted-text hover:text-primary-text hover:bg-background/50 rounded transition-colors"
-                              title="Rename"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => handleDelete(e, entry.id)}
-                              className="p-3 md:p-2 text-muted-text hover:text-red-400 hover:bg-background/50 rounded transition-colors"
-                              title="Delete"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {editingEntryId !== entry.id && (
-                        <>
-                          {entry.tags && entry.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
-                              {entry.tags.map(tag => (
-                                <span key={tag} className="text-[10px] font-mono bg-background/50 text-muted-text px-1.5 py-0.5 rounded border border-hairline/50">
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
-                            {getSnippet(entry)}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          <EntriesList
+            entries={entries}
+            activeTagFilter={activeTagFilter}
+            searchQuery={searchQuery}
+            sortOption={sortOption}
+            entriesLoading={entriesLoading}
+            activeEntryId={activeEntryId}
+            editingEntryId={editingEntryId}
+            editingTitle={editingTitle}
+            setActiveEntryId={(id) => {
+              setActiveEntryId(id);
+            }}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+            setEditingTitle={setEditingTitle}
+            handleRenameKeyDown={handleRenameKeyDown}
+            saveRename={saveRename}
+            handleTogglePin={handleTogglePin}
+            startRename={startRename}
+            handleDelete={handleDelete}
+            showArchived={showArchived}
+            handleArchiveToggle={handleArchiveToggle}
+          />
         </div>
 
         {/* User Profile / Logout */}
@@ -862,6 +676,7 @@ export default function Home() {
               </span>
             </div>
             <button
+              type="button"
               onClick={handleLogOut}
               className="p-1.5 text-muted-text hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors shrink-0"
               title="Log out"
@@ -879,9 +694,10 @@ export default function Home() {
         
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-hairline bg-background sticky top-0 z-30">
-          <div className="flex items-center gap-3">
+          <Link href="/app" className="flex items-center gap-3">
             <button 
-              onClick={() => setIsMobileMenuOpen(true)}
+              type="button"
+              onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(true); }}
               className="p-2 -ml-2 text-primary-text rounded-lg hover:bg-card transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -907,79 +723,82 @@ export default function Home() {
               </svg>
               <span className="font-serif italic font-bold text-2xl tracking-tight leading-none text-[#F5EDD9] pt-1">Venote</span>
             </div>
-          </div>
+          </Link>
+          {saveState !== 'idle' && (
+            <span className="text-xs font-mono text-muted-text/60">
+              {saveState === 'saving' ? 'Saving...' : 'Saved'}
+            </span>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col items-center">
           {!activeEntry ? (
             <div className="w-full max-w-[800px] px-4 py-8 pb-32 md:px-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] md:min-h-screen">
-              <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
-                <h1 className="font-serif italic font-bold text-4xl md:text-[40px] lg:text-[44px] tracking-tight leading-[1.1] mb-3 flex flex-col items-center">
-                  <span className="text-primary-text">What's on your</span>
-                  <span className="text-primary-accent mt-1">mind?</span>
-                </h1>
-              
-                <p className="text-base md:text-lg text-muted-text font-medium max-w-2xl mx-auto">
-                  Dump anything here — I'll turn it into notes, tasks, and tables.
-                </p>
-              </div>
-
-              <div className="w-full max-w-3xl relative">
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
-                  <div className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 md:p-1.5 transition-all duration-300 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
-                    <input
-                      type="text"
-                      className="flex-1 bg-transparent outline-none text-primary-text text-base placeholder:text-muted-text font-sans px-4 py-2.5 md:pl-5 md:pr-3"
-                  placeholder="Paste a brain dump, a transcript, a raw list of ideas, a URL, or a voice note..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !loading && inputText.trim()) {
-                      handleStructureIt();
-                    }
-                  }}
-                  disabled={loading}
-                />
+                <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
+                  <h1 className="font-serif italic font-bold text-4xl md:text-[40px] lg:text-[44px] tracking-tight leading-[1.1] mb-3 flex flex-col items-center">
+                    <span className="text-primary-text">What's on your</span>
+                    <span className="text-primary-accent mt-1">mind?</span>
+                  </h1>
                 
-                <div className="shrink-0 md:pr-1 flex items-center gap-1">
-                  {speechSupported && (
-                    <button
-                      onClick={toggleListening}
-                      disabled={loading}
-                      className={`p-3 rounded-full transition-all ${
-                        isListening
-                          ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
-                          : 'text-muted-text hover:text-primary-text hover:bg-background/50'
-                      }`}
-                      title={isListening ? "Stop listening" : "Start voice input"}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      </svg>
-                    </button>
-                  )}
-                  <button
-                    onClick={handleStructureIt}
-                    disabled={loading || !inputText.trim()}
-                    className={`w-full md:w-auto px-5 py-2.5 md:py-2 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
-                      (!inputText.trim() || loading) ? 'opacity-40 cursor-not-allowed' : 'opacity-100 hover:shadow-[0_0_15px_rgba(255,92,56,0.3)]'
-                    }`}
-                  >
-                    {loading ? (
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor"/>
-                      </svg>
-                    )}
-                    {loading ? 'Organizing...' : 'Organize'}
-                  </button>
+                  <p className="text-base md:text-lg text-muted-text font-medium max-w-2xl mx-auto">
+                    Dump anything here — I'll turn it into notes, tasks, and tables.
+                  </p>
                 </div>
-              </div>
-              </div>
+
+                <div className="w-full max-w-3xl relative">
+                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
+                    <form onSubmit={handleStructureSubmit} className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 md:p-1.5 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
+                      <input
+                        ref={organizeInputRef}
+                        type="text"
+                        className="flex-1 bg-transparent outline-none text-primary-text text-base placeholder:text-muted-text font-sans px-4 py-2.5 md:pl-5 md:pr-3"
+                        placeholder="Paste a brain dump, a transcript, a raw list of ideas, a URL, or a voice note..."
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        disabled={loading}
+                      />
+                      
+                      <div className="shrink-0 md:pr-1 flex items-center gap-1">
+                        {speechSupported && (
+                          <button
+                            type="button"
+                            onClick={toggleListening}
+                            disabled={loading}
+                            className={`p-3 rounded-full transition-all ${
+                              isListening
+                                ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
+                                : 'text-muted-text hover:text-primary-text hover:bg-background/50'
+                            }`}
+                            title={isListening ? "Stop listening" : "Start voice input"}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          type="submit"
+                          disabled={loading || !inputText.trim()}
+                          className={`w-full md:w-auto px-5 py-2.5 md:py-2 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
+                            (!inputText.trim() || loading) ? 'opacity-40 cursor-not-allowed' : 'opacity-100 hover:shadow-[0_0_15px_rgba(255,92,56,0.3)]'
+                          }`}
+                        >
+                          {loading ? (
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor"/>
+                            </svg>
+                          )}
+                          {loading ? 'Organizing...' : 'Organize'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               
               {error && (
                 <div className="absolute bottom-[100%] left-0 right-0 mb-4 p-4 text-sm text-red-300 bg-red-950/40 rounded-xl border border-red-900/50 flex items-center gap-2 backdrop-blur-md z-10 mx-4 md:mx-0">
@@ -990,23 +809,46 @@ export default function Home() {
                 </div>
               )}
             </div>
-          </div>
         ) : (
-          <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 transition-all space-y-6 md:space-y-8">
-            <TagManager 
-              entryId={activeEntry.id}
-              tags={activeEntry.tags || []}
-              allUniqueTags={allUniqueTags}
-              onAddTag={handleAddTag}
-              onRemoveTag={handleRemoveTag}
-            />
+          <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 space-y-6 md:space-y-8 relative">
             {activeEntry.results?.map((res: any, idx: number) => {
+              const archiveBtnNode = (
+                <button
+                  type="button"
+                  onClick={(e) => handleArchiveToggle(e, activeEntry.id, !!activeEntry.isArchived)}
+                  className="p-1.5 text-muted-text hover:text-primary-text hover:bg-white/5 rounded-lg transition-colors"
+                  title={activeEntry.isArchived ? "Unarchive" : "Archive"}
+                >
+                  {activeEntry.isArchived ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+                      <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              );
+              const tagsNode = idx === 0 ? (
+                <TagManager 
+                  entryId={activeEntry.id}
+                  tags={activeEntry.tags || []}
+                  allUniqueTags={allUniqueTags}
+                  onAddTag={handleAddTag}
+                  onRemoveTag={handleRemoveTag}
+                />
+              ) : null;
               if (res.type === 'tasks') {
                 return (
                   <TaskView 
                     key={idx}
                     title={res.title} 
                     items={res.items} 
+                    headerAddon={tagsNode}
+                    saveState={idx === 0 ? saveState : 'idle'}
+                    archiveButton={idx === 0 ? archiveBtnNode : undefined}
                     onToggle={(taskIdx) => handleToggle(idx, taskIdx)}
                     onUpdate={(newData) => handleUpdateResult(idx, newData)}
                   />
@@ -1016,12 +858,18 @@ export default function Home() {
               if (res.type === 'note') {
                 return (
                   <NoteView 
-                    key={idx}
+                    key={`${activeEntry.createdAt}-${idx}`}
                     title={res.title} 
                     body={res.body} 
                     embeddedTasks={res.embeddedTasks} 
+                    headerAddon={tagsNode}
+                    saveState={idx === 0 ? saveState : 'idle'}
+                    archiveButton={idx === 0 ? archiveBtnNode : undefined}
                     onToggle={(taskIdx) => handleToggle(idx, taskIdx)}
                     onUpdate={(newData) => handleUpdateResult(idx, newData)}
+                    imageUrls={activeEntry.imageUrls}
+                    onUpdateImages={(newUrls) => handleUpdateImages(activeEntry.id, newUrls)}
+                    uploadPathPrefix={`${session?.user?.id}/${activeEntry.id}`}
                   />
                 );
               }
@@ -1033,6 +881,7 @@ export default function Home() {
                     title={res.title} 
                     columns={res.columns || []} 
                     rows={res.rows || []} 
+                    archiveButton={idx === 0 ? archiveBtnNode : undefined}
                     onUpdate={(newData) => handleUpdateResult(idx, newData)}
                   />
                 );

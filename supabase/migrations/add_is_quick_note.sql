@@ -1,0 +1,1 @@
+ALTER TABLE entries ADD COLUMN is_quick_note BOOLEAN DEFAULT false NOT NULL;

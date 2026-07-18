@@ -48,7 +48,7 @@ export default function TagManager({ entryId, tags, allUniqueTags, onAddTag, onR
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-6" ref={containerRef}>
+    <div className="flex flex-wrap items-center gap-2" ref={containerRef}>
       {/* Existing Tags */}
       {tags.map(tag => (
         <span 
@@ -56,7 +56,8 @@ export default function TagManager({ entryId, tags, allUniqueTags, onAddTag, onR
           className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-card border border-hairline text-sm font-mono tracking-wide text-primary-text transition-colors hover:border-primary-accent"
         >
           #{tag}
-          <button 
+          <button
+            type="button" 
             onClick={() => onRemoveTag(entryId, tag)}
             className="text-muted-text hover:text-primary-accent transition-colors"
             title="Remove tag"
@@ -89,6 +90,7 @@ export default function TagManager({ entryId, tags, allUniqueTags, onAddTag, onR
             <div className="max-h-48 overflow-y-auto custom-scrollbar">
               {filteredTags.map(tag => (
                 <button
+                  type="button"
                   key={tag}
                   onClick={() => handleSelectTag(tag)}
                   className="w-full text-left px-3 py-2 font-mono text-sm text-primary-text hover:bg-background/50 hover:text-primary-accent transition-colors"

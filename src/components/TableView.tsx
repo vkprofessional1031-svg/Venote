@@ -7,9 +7,10 @@ export interface TableViewProps {
   columns: string[];
   rows: string[][];
   onUpdate?: (data: any) => void;
+  archiveButton?: React.ReactNode;
 }
 
-export default function TableView({ title, columns = [], rows = [], onUpdate }: TableViewProps) {
+export default function TableView({ title, columns = [], rows = [], onUpdate, archiveButton }: TableViewProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState(title);
   
@@ -111,7 +112,9 @@ export default function TableView({ title, columns = [], rows = [], onUpdate }: 
             TABLE
           </span>
           <div className="flex items-center gap-1">
-            <button 
+            {archiveButton}
+            <button
+              type="button" 
               onClick={handleShare}
               className="p-2 text-muted-text hover:text-secondary-accent transition-colors rounded-lg bg-background/50 hover:bg-background"
               title="Share card"
@@ -120,7 +123,8 @@ export default function TableView({ title, columns = [], rows = [], onUpdate }: 
                 <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
               </svg>
             </button>
-            <button 
+            <button
+              type="button" 
               onClick={() => setEditingTitle(true)}
               className="p-2 text-muted-text hover:text-primary-text transition-colors rounded-lg bg-background/50 hover:bg-background"
               title="Edit card"
@@ -172,6 +176,7 @@ export default function TableView({ title, columns = [], rows = [], onUpdate }: 
                   ))}
                   <th className="px-6 py-5 w-[60px] bg-card/50 text-right">
                     <button
+                      type="button"
                       onClick={addColumn}
                       className="text-muted-text hover:text-primary-text p-1 bg-background/50 rounded transition-colors inline-flex items-center justify-center"
                       title="Add column"
@@ -216,6 +221,7 @@ export default function TableView({ title, columns = [], rows = [], onUpdate }: 
                     ))}
                     <td className="px-6 py-5 whitespace-nowrap text-right">
                       <button
+                        type="button"
                         onClick={(e) => removeRow(e, rowIndex)}
                         className="p-2 -mr-2 text-muted-text hover:text-red-400 opacity-100 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity rounded"
                         title="Remove row"
@@ -231,6 +237,7 @@ export default function TableView({ title, columns = [], rows = [], onUpdate }: 
                 <tr>
                   <td colSpan={(columns.length || 1) + 1} className="p-2">
                     <button
+                      type="button"
                       onClick={addRow}
                       className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold text-muted-text hover:text-primary-text hover:bg-background/50 rounded-lg transition-colors border border-dashed border-hairline hover:border-muted-text/30"
                     >

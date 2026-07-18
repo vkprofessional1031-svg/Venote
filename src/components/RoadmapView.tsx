@@ -218,7 +218,8 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
             ROADMAP
           </span>
           <div className="flex items-center gap-1">
-            <button 
+            <button
+              type="button" 
               onClick={handleDownload}
               disabled={isDownloading}
               className="p-2 text-muted-text hover:text-primary-accent transition-colors rounded-lg bg-background/50 hover:bg-background disabled:opacity-50"
@@ -235,7 +236,8 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
                 </svg>
               )}
             </button>
-            <button 
+            <button
+              type="button" 
               onClick={handleShare}
               className="p-2 text-muted-text hover:text-primary-accent transition-colors rounded-lg bg-background/50 hover:bg-background"
               title="Share card"
@@ -244,7 +246,8 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
                 <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
               </svg>
             </button>
-            <button 
+            <button
+              type="button" 
               onClick={() => setEditingTitle(true)}
               className="p-2 text-muted-text hover:text-primary-text transition-colors rounded-lg bg-background/50 hover:bg-background"
               title="Edit title"
@@ -386,7 +389,8 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
                   maxWidth: isMobile ? '160px' : '260px'
                 }}
               >
-                <button 
+                <button
+                  type="button" 
                   onClick={() => setExpandedIndex(isExpanded ? null : i)}
                   className="bg-[#1E1A17] border border-hairline rounded-[20px] px-3 py-2 sm:px-4 sm:py-1.5 shadow-xl hover:border-primary-accent/50 transition-colors z-20 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 group w-full"
                 >
