@@ -200,7 +200,7 @@ export default function EntriesList({
                   setIsMobileMenuOpen(false);
                 }
               }}
-              className={`group relative w-full text-left p-2.5 rounded-xl transition-all cursor-pointer border-l-2 ${
+              className={`group relative w-full text-left p-2.5 md:p-3.5 rounded-xl transition-all cursor-pointer border-l-2 ${
                 activeEntryId === entry.id
                   ? 'bg-primary-accent/5 border-primary-accent'
                   : 'hover:bg-card border-transparent'
@@ -239,10 +239,10 @@ export default function EntriesList({
                       onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                       onBlur={() => saveRename(entry.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
+                      className="w-full font-serif italic font-bold text-lg md:text-xl text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
                     />
                   ) : (
-                    <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
+                    <h3 className="font-serif italic font-bold text-lg md:text-xl text-primary-text truncate tracking-tight">
                       {entry.results?.[0]?.title || 'Untitled'}
                     </h3>
                   )}
@@ -313,7 +313,7 @@ export default function EntriesList({
                       ))}
                     </div>
                   )}
-                  <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
+                  <p className="text-xs md:text-sm text-muted-text truncate mt-1 tracking-wide">
                     {getSnippet(entry)}
                   </p>
                 </>
@@ -337,7 +337,7 @@ export default function EntriesList({
                   setIsMobileMenuOpen(false);
                 }
               }}
-              className={`group relative w-full text-left p-2.5 rounded-xl transition-all cursor-pointer border-l-2 ${
+              className={`group relative w-full text-left p-2.5 md:p-3.5 rounded-xl transition-all cursor-pointer border-l-2 ${
                 activeEntryId === entry.id
                   ? 'bg-primary-accent/5 border-primary-accent'
                   : 'hover:bg-card border-transparent'
@@ -376,10 +376,10 @@ export default function EntriesList({
                       onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                       onBlur={() => saveRename(entry.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full font-serif italic font-bold text-lg text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
+                      className="w-full font-serif italic font-bold text-lg md:text-xl text-primary-text bg-background border border-hairline rounded px-2 py-1 outline-none focus:border-primary-accent"
                     />
                   ) : (
-                    <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
+                    <h3 className="font-serif italic font-bold text-lg md:text-xl text-primary-text truncate tracking-tight">
                       {entry.results?.[0]?.title || 'Untitled'}
                     </h3>
                   )}
@@ -450,7 +450,7 @@ export default function EntriesList({
                       ))}
                     </div>
                   )}
-                  <p className="text-sm text-muted-text truncate mt-1 tracking-wide">
+                  <p className="text-xs md:text-sm text-muted-text truncate mt-1 tracking-wide">
                     {getSnippet(entry)}
                   </p>
                 </>

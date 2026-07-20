@@ -7,6 +7,7 @@ export interface TaskItem {
   text: string;
   done: boolean;
   dueDate?: string | null;
+  completedAt?: string | null;
 }
 
 export interface TaskViewProps {

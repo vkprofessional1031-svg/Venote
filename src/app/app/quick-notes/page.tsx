@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import AppSidebar from '@/components/AppSidebar';
+import AppMobileHeader from '@/components/AppMobileHeader';
 
 interface QuickNote {
   id: string;
@@ -355,59 +357,14 @@ export default function QuickNotesPage() {
   return (
     <div className="flex h-[100dvh] md:h-screen bg-background overflow-hidden font-sans text-primary-text selection:bg-primary-accent/30 selection:text-primary-text">
       
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none md:pointer-events-auto'}`}>
-        <div className="p-4 md:p-5 pb-3 space-y-4">
-          {/* Logo */}
-          <Link href="/app" className="flex items-center gap-3">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="32" height="32" rx="8" fill="url(#logo-grad)"/>
-              <defs>
-                <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#FF6B3D"/>
-                  <stop offset="1" stopColor="#FF3B1D"/>
-                </linearGradient>
-              </defs>
-              <path d="M14.5 22.5L9 11.5H13L16 18L21 9H25L17.5 22.5H14.5Z" fill="white"/>
-              <circle cx="8" cy="14" r="1.5" fill="white"/>
-              <circle cx="10" cy="20" r="1" fill="white"/>
-              <circle cx="7" cy="18" r="1" fill="white"/>
-              <polygon points="10,8 13,10 9,11" fill="white"/>
-              <polygon points="8,21 12,23 9,24" fill="white"/>
-              <polygon points="12,14 15,16 12,17" fill="white"/>
-            </svg>
-            <span className="font-serif italic font-bold text-[32px] tracking-tight leading-none pt-1 text-[#F5EDD9]">Venote</span>
-          </Link>
-
-          <Link
-            href="/app"
-            className="w-full flex items-center justify-start gap-2 px-4 py-2.5 bg-background/50 text-muted-text hover:text-primary-text font-medium rounded-xl hover:bg-background transition-all border border-transparent hover:border-hairline"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            Organize
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleNewNote}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-accent text-primary-text font-medium rounded-xl hover:brightness-110 transition-all shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            New Quick Note
-          </button>
-
+      <AppSidebar 
+        activePath="/app/quick-notes" 
+        isMobileMenuOpen={isMobileMenuOpen} 
+        onCloseMenu={() => setIsMobileMenuOpen(false)} 
+        session={session} 
+        onNewNote={handleNewNote}
+      >
+        <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -439,10 +396,9 @@ export default function QuickNotesPage() {
               </svg>
             </button>
           </div>
-
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-1 md:space-y-2 custom-scrollbar min-h-0">
           {notesLoading ? (
             <div className="flex justify-center p-4">
               <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -466,17 +422,17 @@ export default function QuickNotesPage() {
                   setActiveNoteId(note.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full text-left p-3 rounded-xl transition-all cursor-pointer border-l-2 group relative ${
+                className={`w-full text-left p-3 md:p-4 rounded-xl transition-all cursor-pointer border-l-2 group relative ${
                   activeNoteId === note.id
                     ? 'bg-primary-accent/5 border-primary-accent'
                     : 'hover:bg-card border-transparent'
                 }`}
               >
                 <div className="pr-8">
-                  <h3 className="font-serif italic font-bold text-lg text-primary-text truncate tracking-tight">
+                  <h3 className="font-serif italic font-bold text-lg md:text-xl text-primary-text truncate tracking-tight">
                     {note.title || 'Untitled'}
                   </h3>
-                  <p className="text-xs text-muted-text truncate mt-1">
+                  <p className="text-xs md:text-sm text-muted-text truncate mt-1">
                     {note.body || 'No content'}
                   </p>
                 </div>
@@ -514,51 +470,22 @@ export default function QuickNotesPage() {
             ))
           )}
         </div>
-      </aside>
+      </AppSidebar>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto flex flex-col w-full min-w-0">
         
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 border-b border-hairline bg-background sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <Link href="/app" className="flex items-center gap-3">
-              <button 
-                type="button"
-                onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(true); }}
-                className="p-2 -ml-2 text-primary-text rounded-lg hover:bg-card transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <div className="flex items-center gap-2">
-                <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="32" height="32" rx="8" fill="url(#logo-grad-mobile)"/>
-                  <defs>
-                    <linearGradient id="logo-grad-mobile" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#FF6B3D"/>
-                      <stop offset="1" stopColor="#FF3B1D"/>
-                    </linearGradient>
-                  </defs>
-                  <path d="M14.5 22.5L9 11.5H13L16 18L21 9H25L17.5 22.5H14.5Z" fill="white"/>
-                  <circle cx="8" cy="14" r="1.5" fill="white"/>
-                  <circle cx="10" cy="20" r="1" fill="white"/>
-                  <circle cx="7" cy="18" r="1" fill="white"/>
-                  <polygon points="10,8 13,10 9,11" fill="white"/>
-                  <polygon points="8,21 12,23 9,24" fill="white"/>
-                  <polygon points="12,14 15,16 12,17" fill="white"/>
-                </svg>
-                <span className="font-serif italic font-bold text-2xl tracking-tight leading-none text-[#F5EDD9] pt-1">Venote</span>
-              </div>
-            </Link>
-          </div>
-          {saveState !== 'idle' && (
-            <span className="text-xs font-mono text-muted-text/60">
-              {saveState === 'saving' ? 'Saving...' : 'Saved'}
-            </span>
-          )}
-        </div>
+        <AppMobileHeader 
+          onOpenMenu={() => setIsMobileMenuOpen(true)} 
+          rightContent={
+            saveState !== 'idle' ? (
+              <span className="text-xs font-mono text-muted-text/60">
+                {saveState === 'saving' ? 'Saving...' : 'Saved'}
+              </span>
+            ) : null
+          }
+        />
 
         <div className="flex-1 flex flex-col items-center">
           {!activeNote ? (
