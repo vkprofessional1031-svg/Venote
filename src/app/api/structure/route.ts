@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const SYSTEM_INSTRUCTION = (currentDate: string) => `You are a text-structuring engine. Given raw, unstructured user input, analyze it and return a JSON object with a results array containing one or more structured items. Each item in the array must match exactly one of these schemas: tasks, note, table, roadmap, or expense.
+const SYSTEM_INSTRUCTION = (currentDate: string, currencySymbol: string) => `You are a text-structuring engine. Given raw, unstructured user input, analyze it and return a JSON object with a results array containing one or more structured items. Each item in the array must match exactly one of these schemas: tasks, note, table, roadmap, or expense.
 
 CRITICAL: Your entire response must be a single valid JSON object and nothing else — no greeting, explanation, markdown formatting, or commentary.
 
@@ -23,13 +23,14 @@ Schema for roadmap:
 { "type": "roadmap", "title": "short title", "goal": "the end objective in a few words", "milestones": [{ "label": "short milestone name", "description": "brief detail" }] }
 
 Schema for expense:
-{ "type": "expense", "title": "short description of expense", "amount": number, "category": "General", "date": "YYYY-MM-DD", "split_details": "optional text detailing who owes what" }
+{ "type": "expense", "title": "short description of expense", "amount": number, "category": "General", "date": "YYYY-MM-DD", "split_details": "optional text detailing who owes what", "split_participants": [{ "name": "Name", "amount": number, "settled": false }] }
 
 Classification rules:
 - DEFAULT to a single result in the array. Only include multiple results if the user's input EXPLICITLY asks for more than one distinct output.
 - Use expense when the user describes spending money, buying something, a cost, or a price. Extract the exact numerical amount.
 - For expenses, category MUST be one of: "General", "Food & Dining", "Transportation", "Entertainment", "Shopping", "Housing & Utilities". If unclear, use "General".
-- For expenses, if the input mentions splitting the cost, calculate the exact per-person share based on the total amount and who is paying, and describe it clearly in split_details (e.g. "Alex owes $400, Priya owes $400"). If no split is mentioned, omit split_details.
+- For expenses, if the input mentions splitting the cost, calculate the exact per-person share based on the total amount and who is paying, and describe it clearly in split_details (e.g. "Alex owes 400 ${currencySymbol}"). If no split is mentioned, omit split_details.
+- For expenses, if the input indicates the USER paid for others (and others owe the user), additionally generate a split_participants array with the name and exact amount owed to the user, setting settled to false. ONLY generate this array if the user is owed money (skip it / leave null if someone else paid).
 - Use roadmap when the input explicitly asks for a plan, roadmap, brainstorm toward a goal, or step-by-step path to reach something specific.
 - Use tasks ONLY if the entire input, or that portion of it, is a list of actions with little surrounding context.
 - Use table for comparable structured data with clear categories or repeating fields.
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
   }
 
   const userText = body.text;
+  const currencySymbol = body.currencySymbol || '$';
   if (!userText || typeof userText !== 'string') {
     return NextResponse.json(
       { error: 'A "text" field is required in the JSON body.' },
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
     const payload = {
       model: "llama-3.3-70b-versatile",
       messages: [
-        { role: "system", content: SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0]) },
+        { role: "system", content: SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0], currencySymbol) },
         { role: "user", content: userText }
       ],
       response_format: { type: "json_object" }

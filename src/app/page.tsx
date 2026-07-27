@@ -167,12 +167,12 @@ export default function LandingPage() {
             <div className="bg-background border border-hairline rounded-[24px] p-8 md:p-10 shadow-xl hover:border-secondary-accent/30 transition-colors">
               <div className="w-12 h-12 rounded-xl bg-secondary-accent/10 flex items-center justify-center mb-6 text-secondary-accent">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
               </div>
-              <h3 className="font-sans font-bold text-2xl mb-3">Tagging & Pinning</h3>
+              <h3 className="font-sans font-bold text-2xl mb-3">Smart Wallet</h3>
               <p className="text-muted-text leading-relaxed">
-                Keep your workspace pristine. Add custom tags for fast filtering and pin your most important thoughts to the top of your sidebar.
+                Set category budgets with visual limits, track split bills to see who owes you what, and get AI-generated summaries of your spending patterns.
               </p>
             </div>
 
