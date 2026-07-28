@@ -842,8 +842,7 @@ export default function ExpensesPage() {
                         className="flex justify-between items-center cursor-pointer select-none"
                         onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">⚡</span>
+                        <div className="flex items-center">
                           <h2 className="text-[13px] font-medium text-primary-text">Monthly AI Summary</h2>
                         </div>
                         <div className="flex items-center gap-3">
