@@ -25,9 +25,13 @@ Schema for roadmap:
 Schema for expense:
 { "type": "expense", "title": "short description of expense", "amount": number, "category": "General", "date": "YYYY-MM-DD", "split_details": "optional text detailing who owes what", "split_participants": [{ "name": "Name", "amount": number, "settled": false }] }
 
+Schema for income:
+{ "type": "income", "title": "short description of income", "amount": number, "source": "source of income (e.g. Salary, Freelance, Gift)", "date": "YYYY-MM-DD" }
+
 Classification rules:
-- DEFAULT to a single result in the array. Only include multiple results if the user's input EXPLICITLY asks for more than one distinct output.
+- Extract EVERY distinct transaction, task, or item found in the input. If the user mentions multiple expenses or incomes in one sentence, return each as a separate object in the results array. Do not combine them.
 - Use expense when the user describes spending money, buying something, a cost, or a price. Extract the exact numerical amount.
+- Use income when the user describes receiving money, getting paid, earning salary, or someone sending them money (e.g., "Got paid $500 freelance"). Extract the exact numerical amount. If genuinely ambiguous, default to expense.
 - For expenses, category MUST be one of: "General", "Food & Dining", "Transportation", "Entertainment", "Shopping", "Housing & Utilities". If unclear, use "General".
 - For expenses, if the input mentions splitting the cost, calculate the exact per-person share based on the total amount and who is paying, and describe it clearly in split_details (e.g. "Alex owes 400 ${currencySymbol}"). If no split is mentioned, omit split_details.
 - For expenses, if the input indicates the USER paid for others (and others owe the user), additionally generate a split_participants array with the name and exact amount owed to the user, setting settled to false. ONLY generate this array if the user is owed money (skip it / leave null if someone else paid).

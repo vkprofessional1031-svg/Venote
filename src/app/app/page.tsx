@@ -14,6 +14,8 @@ import RoadmapView from '@/components/RoadmapView';
 import { useToast } from '@/components/ToastProvider';
 
 import EntriesList, { Entry, SortOption } from '@/components/EntriesList';
+import { insertWalletItems } from '@/utils/transactions';
+import { insertPrepItems } from '@/utils/prep';
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -165,64 +167,150 @@ export default function Home() {
     fetchEntries();
   }, [session?.user?.id, authLoading]);
 
-  const handleStructureIt = async () => {
+  const handleStructureIt = async (overrideDomain?: string, overrideText?: string) => {
     console.log("ORGANIZE HANDLER FIRED");
-    if (!inputText.trim()) return;
+    const textToProcess = overrideText || inputText;
+    if (!textToProcess.trim()) return;
     
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/structure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: inputText }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.error === 'rate_limit') {
-          throw new Error('RATE_LIMIT');
-        }
-        throw new Error(data.error || 'Failed to structure text');
+      let domain = overrideDomain;
+      if (!domain) {
+        // Classify domain first
+        const routerRes = await fetch('/api/router', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToProcess }),
+        });
+        const routerData = await routerRes.json();
+        if (!routerRes.ok) throw new Error(routerData.error || 'Failed to route input');
+        domain = routerData.domain || 'organize';
       }
 
-      const structuredResults = data.results || [data];
-      
-      const { data: insertedData, error: insertError } = await supabase
-        .from('entries')
-        .insert({
-          user_id: session.user.id,
-          results: structuredResults
-        })
-        .select()
-        .single();
+      if (domain === 'wallet') {
+        const response = await fetch('/api/structure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToProcess, currencySymbol: '$' }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to structure text');
         
-      if (insertError) throw insertError;
+        const validItems = (data.results || []).filter((r: any) => r.type === 'expense' || r.type === 'income');
+        if (validItems.length === 0) throw new Error("Could not detect any expenses or incomes.");
+        
+        const processedItems = await insertWalletItems(validItems, session!.user.id, supabase);
+        const insertedIds = processedItems.map(item => ({ table: item.dbTable, id: item.id }));
+        
+        const newEntry: Entry = {
+          id: `temp-wallet-${Date.now()}`,
+          createdAt: Date.now(),
+          results: [],
+          isConfirmation: true,
+          confirmationDomain: 'wallet',
+          confirmationMessage: `Logged as ${validItems[0].type === 'income' ? 'an income' : 'an expense'} in Wallet — ${validItems[0].title}`,
+          originalInput: textToProcess,
+          insertedDbIds: insertedIds
+        };
+        setEntries(prev => [newEntry, ...prev]);
+        
+      } else if (domain === 'prep') {
+        const response = await fetch('/api/rounds-structure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToProcess }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to process input');
+        if (!data.results || !Array.isArray(data.results) || data.results.length === 0) {
+          throw new Error("Could not understand that.");
+        }
+        
+        const processedItems = await insertPrepItems(data.results, session!.user.id, supabase);
+        const insertedIds = processedItems.map(item => ({ table: item.dbTable, id: item.id }));
+        
+        const newEntry: Entry = {
+          id: `temp-prep-${Date.now()}`,
+          createdAt: Date.now(),
+          results: [],
+          isConfirmation: true,
+          confirmationDomain: 'prep',
+          confirmationMessage: `Logged as a ${processedItems[0].itemType} in Prep — ${processedItems[0].companyName || processedItems[0].prep_type}`,
+          originalInput: textToProcess,
+          insertedDbIds: insertedIds
+        };
+        setEntries(prev => [newEntry, ...prev]);
 
-      const newEntry: Entry = {
-        id: insertedData.id,
-        createdAt: new Date(insertedData.created_at).getTime(),
-        updatedAt: insertedData.updated_at ? new Date(insertedData.updated_at).getTime() : new Date(insertedData.created_at).getTime(),
-        results: insertedData.results,
-        tags: []
-      };
+      } else {
+        // organize
+        const response = await fetch('/api/structure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToProcess }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          if (data.error === 'rate_limit') throw new Error('RATE_LIMIT');
+          throw new Error(data.error || 'Failed to structure text');
+        }
+        
+        const structuredResults = data.results || [data];
+        const { data: insertedData, error: insertError } = await supabase
+          .from('entries')
+          .insert({
+            user_id: session!.user.id,
+            results: structuredResults
+          })
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
 
-      setEntries([newEntry, ...entries]);
-      setActiveEntryId(newEntry.id);
-      setInputText('');
+        const newEntry: Entry = {
+          id: insertedData.id,
+          createdAt: new Date(insertedData.created_at).getTime(),
+          updatedAt: insertedData.updated_at ? new Date(insertedData.updated_at).getTime() : new Date(insertedData.created_at).getTime(),
+          results: insertedData.results,
+          tags: []
+        };
+
+        setEntries(prev => [newEntry, ...prev]);
+        setActiveEntryId(newEntry.id);
+      }
+
+      if (!overrideText) {
+        setInputText('');
+      }
       setSearchQuery('');
     } catch (err: any) {
       console.error('Structuring error:', err);
       if (err.message === 'RATE_LIMIT') {
         setError("You've hit the AI service's usage limit — please wait a minute and try again");
       } else {
-        setError("Something went wrong — try rephrasing or try again.");
+        setError(err.message || "Something went wrong — try rephrasing or try again.");
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFixIt = async (id: string, newDomain: string, originalInput: string) => {
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    
+    if (entry.insertedDbIds) {
+      for (const item of entry.insertedDbIds) {
+        await supabase.from(item.table).delete().eq('id', item.id);
+      }
+    }
+    
+    setEntries(prev => prev.filter(e => e.id !== id));
+    
+    // Convert newDomain from user-friendly selection to internal domain string if needed
+    // 'organize', 'wallet', 'prep' are the valid domains passed from EntriesList
+    await handleStructureIt(newDomain, originalInput);
   };
 
   const handleStructureSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -614,6 +702,7 @@ export default function Home() {
             handleDelete={handleDelete}
             showArchived={showArchived}
             handleArchiveToggle={handleArchiveToggle}
+            onFixIt={handleFixIt}
           />
         </div>
 

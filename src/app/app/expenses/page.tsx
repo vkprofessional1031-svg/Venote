@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { insertWalletItems } from '@/utils/transactions';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 import { getCurrencySymbolFromLocale } from '@/lib/currency';
@@ -23,6 +24,15 @@ interface Expense {
   created_at: string;
   split_details?: string;
   split_participants?: SplitParticipant[];
+}
+
+interface Income {
+  id: string;
+  amount: number;
+  description: string;
+  source: string;
+  date: string;
+  created_at: string;
 }
 
 interface CategoryBudget {
@@ -52,6 +62,7 @@ export default function ExpensesPage() {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   
   // AI Quick Add state
@@ -61,7 +72,8 @@ export default function ExpensesPage() {
 
   // Manual Add state
   const [showManualForm, setShowManualForm] = useState(false);
-  const [manualForm, setManualForm] = useState({ amount: '', description: '', category: 'General', date: '' });
+  const [manualEntryType, setManualEntryType] = useState<'expense' | 'income'>('expense');
+  const [manualForm, setManualForm] = useState({ amount: '', description: '', category: 'General', source: '', date: '' });
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -107,6 +119,31 @@ export default function ExpensesPage() {
     return () => subscription.unsubscribe();
   }, [router]);
 
+  const reloadTransactions = async () => {
+    if (!session) return;
+    const [expensesResponse, incomesResponse] = await Promise.all([
+      supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('income')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+    ]);
+    
+    if (!expensesResponse.error && expensesResponse.data) {
+      setExpenses(expensesResponse.data);
+    }
+    if (!incomesResponse.error && incomesResponse.data) {
+      setIncomes(incomesResponse.data);
+    }
+  };
+
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
 
@@ -129,18 +166,9 @@ export default function ExpensesPage() {
     };
     fetchSettings();
 
-    const fetchExpenses = async () => {
+    const fetchExpensesAndIncomes = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) {
-        setExpenses(data);
-      }
+      await reloadTransactions();
       setLoading(false);
     };
     const fetchBudgets = async () => {
@@ -152,7 +180,7 @@ export default function ExpensesPage() {
       }
     };
     fetchBudgets();
-    fetchExpenses();
+    fetchExpensesAndIncomes();
   }, [session, authLoading]);
 
   const handleAIQuickAdd = async (e: React.FormEvent) => {
@@ -174,34 +202,17 @@ export default function ExpensesPage() {
       const data = await response.json();
       const results = data.results || [];
       
-      const expenseItem = results.find((r: any) => r.type === 'expense');
+      const validItems = results.filter((r: any) => r.type === 'expense' || r.type === 'income');
       
-      if (!expenseItem) {
-        setAiError("Could not detect an expense. Try being more specific (e.g. 'Spent $15 on lunch') or use the manual form.");
+      if (validItems.length === 0) {
+        setAiError("Could not detect any expenses or incomes. Try being more specific (e.g. 'Spent $15 on lunch') or use the manual form.");
         setIsProcessing(false);
         return;
       }
       
-      const { error } = await supabase.from('expenses').insert({
-        user_id: session.user.id,
-        amount: expenseItem.amount || 0,
-        description: expenseItem.title || 'Unknown Expense',
-        category: expenseItem.category || 'General',
-        date: expenseItem.date || new Date().toISOString().split('T')[0],
-        split_details: expenseItem.split_details || null,
-        split_participants: expenseItem.split_participants || null
-      });
+      await insertWalletItems(validItems, session.user.id, supabase);
       
-      if (error) throw error;
-      
-      // Refresh expenses
-      const { data: newData } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (newData) setExpenses(newData);
+      await reloadTransactions();
       
       setAiInput('');
     } catch (err: any) {
@@ -217,36 +228,44 @@ export default function ExpensesPage() {
     if (!manualForm.amount || !manualForm.description || !session) return;
     
     try {
-      const { error } = await supabase.from('expenses').insert({
-        user_id: session.user.id,
-        amount: parseFloat(manualForm.amount),
-        description: manualForm.description,
-        category: manualForm.category || 'General',
-        date: manualForm.date
-      });
+      if (manualEntryType === 'income') {
+        const { error } = await supabase.from('income').insert({
+          user_id: session.user.id,
+          amount: parseFloat(manualForm.amount),
+          description: manualForm.description,
+          source: manualForm.source || 'General',
+          date: manualForm.date
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('expenses').insert({
+          user_id: session.user.id,
+          amount: parseFloat(manualForm.amount),
+          description: manualForm.description,
+          category: manualForm.category || 'General',
+          date: manualForm.date
+        });
+        if (error) throw error;
+      }
       
-      if (error) throw error;
-      
-      // Refresh expenses
-      const { data: newData } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (newData) setExpenses(newData);
+      await reloadTransactions();
       
       setShowManualForm(false);
-      setManualForm({ amount: '', description: '', category: 'General', date: new Date().toISOString().split('T')[0] });
+      setManualForm({ amount: '', description: '', category: 'General', source: '', date: new Date().toISOString().split('T')[0] });
     } catch (err) {
-      console.error('Failed to add manual expense', err);
+      console.error('Failed to add manual entry', err);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this expense?')) return;
-    setExpenses(prev => prev.filter(e => e.id !== id));
-    await supabase.from('expenses').delete().eq('id', id);
+  const handleDelete = async (id: string, isIncome: boolean = false) => {
+    if (!confirm(`Delete this ${isIncome ? 'income' : 'expense'}?`)) return;
+    if (isIncome) {
+      setIncomes(prev => prev.filter(e => e.id !== id));
+      await supabase.from('income').delete().eq('id', id);
+    } else {
+      setExpenses(prev => prev.filter(e => e.id !== id));
+      await supabase.from('expenses').delete().eq('id', id);
+    }
   };
 
   // Compute category breakdown
@@ -256,6 +275,15 @@ export default function ExpensesPage() {
   }, {} as Record<string, number>);
 
   const totalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+
+  const currentMonthIncome = incomes.reduce((acc, curr) => {
+    if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
+      return acc + Number(curr.amount);
+    }
+    return acc;
+  }, 0);
+
+  const netBalance = currentMonthIncome - totalSpent;
 
   const currentMonthTotals = expenses.reduce((acc, curr) => {
     if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
@@ -409,6 +437,14 @@ export default function ExpensesPage() {
             }, {} as Record<string, number>);
             const currentMonthTotal = Object.values(currentMonthTotalsObj).reduce((a, b) => a + b, 0);
 
+            const currentMonthTotalIncome = incomes.reduce((acc, curr) => {
+              if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
+                return acc + Number(curr.amount);
+              }
+              return acc;
+            }, 0);
+            const currentMonthNetBalance = currentMonthTotalIncome - currentMonthTotal;
+
             const res = await fetch('/api/summary', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -416,6 +452,8 @@ export default function ExpensesPage() {
                 totalSpent: currentMonthTotal,
                 categoryTotals: currentMonthTotalsObj,
                 budgets: budgetMap,
+                totalIncome: currentMonthTotalIncome,
+                netBalance: currentMonthNetBalance,
                 currencySymbol: activeSymbol
               })
             });
@@ -439,7 +477,7 @@ export default function ExpensesPage() {
     };
     
     checkAndGenerateSummary();
-  }, [loading, session, expenses, budgets, currentMonthStart, nextMonthStart, activeSymbol, summaryChecked]);
+  }, [loading, session, expenses, incomes, budgets, currentMonthStart, nextMonthStart, activeSymbol, summaryChecked]);
 
   const handleRegenerateSummary = async () => {
     if (!session?.user?.id) return;
@@ -460,6 +498,14 @@ export default function ExpensesPage() {
       }, {} as Record<string, number>);
       const currentMonthTotal = Object.values(currentMonthTotalsObj).reduce((a, b) => a + b, 0);
 
+      const currentMonthTotalIncome = incomes.reduce((acc, curr) => {
+        if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
+          return acc + Number(curr.amount);
+        }
+        return acc;
+      }, 0);
+      const currentMonthNetBalance = currentMonthTotalIncome - currentMonthTotal;
+
       const res = await fetch('/api/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -467,6 +513,8 @@ export default function ExpensesPage() {
           totalSpent: currentMonthTotal,
           categoryTotals: currentMonthTotalsObj,
           budgets: budgetMap,
+          totalIncome: currentMonthTotalIncome,
+          netBalance: currentMonthNetBalance,
           currencySymbol: activeSymbol
         })
       });
@@ -498,6 +546,10 @@ export default function ExpensesPage() {
   const displayName = session?.user?.user_metadata?.full_name 
     || session?.user?.email?.split('@')[0] 
     || 'User';
+  const allTransactions = [
+    ...expenses.map(e => ({ ...e, isIncome: false })),
+    ...incomes.map(i => ({ ...i, isIncome: true, category: i.source }))
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative selection:bg-primary-accent/20">
@@ -573,14 +625,28 @@ export default function ExpensesPage() {
                 </div>
                 
                 <div className="flex flex-col gap-1">
-                  <div className="text-[11px] font-medium tracking-widest text-white/70 uppercase">Total Spent</div>
-                  <div className="text-4xl sm:text-5xl font-medium tracking-tight">
-                    {activeSymbol}{totalSpent.toFixed(2)}
+                  <div className="text-[11px] font-medium tracking-widest text-white/70 uppercase">Net Balance</div>
+                  <div className={`text-4xl sm:text-5xl font-medium tracking-tight ${netBalance < 0 ? 'text-[#FFD3D3]' : 'text-[#D3FFDF]'}`}>
+                    {netBalance < 0 ? '-' : ''}{activeSymbol}{Math.abs(netBalance).toFixed(2)}
                   </div>
                 </div>
                 
                 <div className="flex justify-between items-end mt-2">
-                  <div className="text-xs font-medium text-white/70 uppercase tracking-widest">
+                  <div className="flex gap-6">
+                    <div className="flex flex-col gap-1">
+                      <div className="text-[10px] font-medium tracking-widest text-white/60 uppercase">Total Income</div>
+                      <div className="text-sm font-medium tracking-tight text-white/90">
+                        {activeSymbol}{currentMonthIncome.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="text-[10px] font-medium tracking-widest text-white/60 uppercase">Total Spent</div>
+                      <div className="text-sm font-medium tracking-tight text-white/90">
+                        {activeSymbol}{totalSpent.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs font-medium text-white/70 uppercase tracking-widest pb-1">
                     {isMounted ? new Date().toLocaleString('default', { month: 'short' }) : ''} {isMounted ? new Date().getFullYear() : ''}
                   </div>
                 </div>
@@ -599,7 +665,7 @@ export default function ExpensesPage() {
                 onClick={() => setShowManualForm(true)} 
                 className="flex-1 py-3 px-4 rounded-xl bg-primary-accent text-[#1A1714] font-medium hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)] transition-all text-sm"
               >
-                Add expense
+                Add Transaction
               </button>
             </div>
 
@@ -653,6 +719,22 @@ export default function ExpensesPage() {
               {/* Manual Form */}
               {showManualForm && (
                 <div className="mt-4 pt-4 border-t border-hairline relative z-10">
+                  <div className="flex bg-background border border-hairline rounded-xl p-1 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setManualEntryType('expense')}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${manualEntryType === 'expense' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    >
+                      Expense
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualEntryType('income')}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${manualEntryType === 'income' ? 'bg-[#D3FFDF]/10 text-[#D3FFDF] shadow-sm' : 'text-muted-text hover:text-[#D3FFDF]'}`}
+                    >
+                      Income
+                    </button>
+                  </div>
                   <form onSubmit={handleManualSubmit} className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="flex-1">
@@ -684,19 +766,32 @@ export default function ExpensesPage() {
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="flex-1">
-                        <label className="block text-xs font-medium text-muted-text mb-1 uppercase tracking-wider">Category</label>
-                        <select
-                          value={manualForm.category}
-                          onChange={(e) => setManualForm({...manualForm, category: e.target.value})}
-                          className="w-full bg-background border border-hairline rounded-xl px-3 py-2 text-primary-text focus:outline-none focus:border-muted-text appearance-none"
-                        >
-                          <option value="General">General</option>
-                          <option value="Food & Dining">Food & Dining</option>
-                          <option value="Transportation">Transportation</option>
-                          <option value="Entertainment">Entertainment</option>
-                          <option value="Shopping">Shopping</option>
-                          <option value="Housing & Utilities">Housing & Utilities</option>
-                        </select>
+                        <label className="block text-xs font-medium text-muted-text mb-1 uppercase tracking-wider">
+                          {manualEntryType === 'income' ? 'Source' : 'Category'}
+                        </label>
+                        {manualEntryType === 'income' ? (
+                          <input
+                            type="text"
+                            required
+                            value={manualForm.source || ''}
+                            onChange={(e) => setManualForm({...manualForm, source: e.target.value})}
+                            className="w-full bg-background border border-hairline rounded-xl px-3 py-2 text-primary-text focus:outline-none focus:border-muted-text"
+                            placeholder="e.g. Salary, Freelance"
+                          />
+                        ) : (
+                          <select
+                            value={manualForm.category}
+                            onChange={(e) => setManualForm({...manualForm, category: e.target.value})}
+                            className="w-full bg-background border border-hairline rounded-xl px-3 py-2 text-primary-text focus:outline-none focus:border-muted-text appearance-none"
+                          >
+                            <option value="General">General</option>
+                            <option value="Food & Dining">Food & Dining</option>
+                            <option value="Transportation">Transportation</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Housing & Utilities">Housing & Utilities</option>
+                          </select>
+                        )}
                       </div>
                       <div className="flex-1">
                         <label className="block text-xs font-medium text-muted-text mb-1 uppercase tracking-wider">Date</label>
@@ -745,34 +840,40 @@ export default function ExpensesPage() {
                   <div className="flex flex-col gap-3">
                     <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Recent</h2>
                     <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden">
-                      {expenses.map((expense, idx) => (
-                        <div key={expense.id} className={`flex items-start justify-between gap-3 p-5 hover:bg-white/5 transition-colors group ${idx !== expenses.length - 1 ? 'border-b border-white/10' : ''}`}>
+                      {allTransactions.map((tx, idx) => (
+                        <div key={`${tx.id}-${tx.isIncome}`} className={`flex items-start justify-between gap-3 p-5 hover:bg-white/5 transition-colors group ${idx !== allTransactions.length - 1 ? 'border-b border-white/10' : ''}`}>
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center border border-white/10 text-muted-text flex-shrink-0 mt-0.5">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                              </svg>
+                              {tx.isIncome ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                              ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                              )}
                             </div>
                             <div className="flex flex-col flex-1 min-w-0">
-                              <div className="text-[15px] font-medium text-primary-text truncate">{expense.description}</div>
+                              <div className="text-[15px] font-medium text-primary-text truncate">{tx.description}</div>
                               <div className="text-xs text-muted-text flex items-center gap-2 flex-wrap mt-0.5">
-                                <span>{isMounted ? new Date(expense.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : expense.date}</span>
+                                <span>{isMounted ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : tx.date}</span>
                                 <span className="w-1 h-1 rounded-full bg-white/20" />
-                                <span className="text-primary-accent/80 font-medium whitespace-nowrap">{expense.category}</span>
+                                <span className="text-primary-accent/80 font-medium whitespace-nowrap">{tx.category}</span>
                               </div>
-                              {expense.split_details && (
+                              {(!tx.isIncome && (tx as any).split_details) && (
                                 <div className="text-xs text-muted-text/80 mt-1.5 pl-2 border-l-2 border-primary-accent/30 italic break-words whitespace-normal">
-                                  {expense.split_details}
+                                  {(tx as any).split_details}
                                 </div>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0 ml-2 mt-0.5">
-                            <div className="text-right font-medium tracking-tight text-lg text-primary-text">
-                              {activeSymbol}{Number(expense.amount).toFixed(2)}
+                            <div className={`text-right font-medium tracking-tight text-lg ${tx.isIncome ? 'text-green-400' : 'text-primary-text'}`}>
+                              {tx.isIncome ? '+' : '-'}{activeSymbol}{Number(tx.amount).toFixed(2)}
                             </div>
                             <button 
-                              onClick={() => handleDelete(expense.id)}
+                              onClick={() => handleDelete(tx.id, tx.isIncome)}
                               className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none p-1"
                               title="Delete"
                             >
@@ -843,7 +944,7 @@ export default function ExpensesPage() {
                         onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
                       >
                         <div className="flex items-center">
-                          <h2 className="text-[13px] font-medium text-primary-text">Monthly AI Summary</h2>
+                          <h2 className="text-[13px] font-medium text-primary-text">Monthly Financial Summary</h2>
                         </div>
                         <div className="flex items-center gap-3">
                           {(isSummaryExpanded && !summaryLoading && (monthlySummary || expenses.filter(e => e.date >= currentMonthStart && e.date < nextMonthStart).length > 0)) && (

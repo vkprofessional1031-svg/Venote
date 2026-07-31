@@ -1,17 +1,19 @@
 import { NextResponse } from 'next/server';
 
-const SYSTEM_INSTRUCTION = `You are a helpful, friendly financial assistant. Given a user's spending data for the current month, write a short list of 3-4 sharp, scannable bullet points summarizing their spending.
-Follow this exact structure:
-1. Total spent this month.
-2. Top spending category (with amount).
-3. Budget status (e.g. "Within budget on all tracked categories" or "Over budget on X by Y").
-4. One notable pattern or observation (ONLY if something stands out, otherwise omit this bullet).
+const SYSTEM_INSTRUCTION = `You are a helpful, friendly financial assistant. Given a user's financial data for the current month, write a short list of sharp, scannable bullet points summarizing their finances.
+Follow this structure:
+- Total spent this month.
+- Total income this month (ONLY if income is provided).
+- Net balance and whether it's positive or negative (ONLY if income is provided).
+- Top spending category (with amount).
+- Budget status (e.g. "Within budget on all tracked categories" or "Over budget on X by Y", only for categories with a budget set).
+- One notable pattern or observation (ONLY if something stands out, otherwise omit this bullet).
 
 CRITICAL: Do not write paragraphs or filler text. Each bullet must be one clear fact or insight.
 CRITICAL: You MUST return a single valid JSON object containing a "bullets" array of strings. Do not return markdown, just JSON.
 
 Output format:
-{ "bullets": ["Total spent: $255 this month", "Top category: Food ($100)", "Within budget on all tracked categories"] }`;
+{ "bullets": ["Total spent: $255 this month", "Total income: $500", "Net balance: +$245", "Top category: Food ($100)", "Within budget on all tracked categories"] }`;
 
 export async function POST(request: Request) {
   const apiKey = process.env.GROQ_API_KEY;
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { totalSpent, categoryTotals, budgets, currencySymbol = '$' } = body;
+  const { totalSpent, categoryTotals, budgets, totalIncome, netBalance, currencySymbol = '$' } = body;
 
   if (totalSpent === undefined || !categoryTotals) {
     return NextResponse.json(
@@ -42,10 +44,14 @@ export async function POST(request: Request) {
     );
   }
 
-  let userText = `Here is my spending data for this month:\n`;
-  userText += `Total Spent: ${currencySymbol}${Number(totalSpent).toFixed(2)}\n\n`;
+  let userText = `Here is my financial data for this month:\n`;
+  userText += `Total Spent: ${currencySymbol}${Number(totalSpent).toFixed(2)}\n`;
+  if (totalIncome !== undefined && totalIncome > 0) {
+    userText += `Total Income: ${currencySymbol}${Number(totalIncome).toFixed(2)}\n`;
+    userText += `Net Balance: ${netBalance < 0 ? '-' : '+'}${currencySymbol}${Math.abs(Number(netBalance)).toFixed(2)}\n`;
+  }
   
-  userText += `Category Totals:\n`;
+  userText += `\nCategory Totals:\n`;
   Object.entries(categoryTotals).forEach(([cat, amt]) => {
     userText += `- ${cat}: ${currencySymbol}${Number(amt).toFixed(2)}\n`;
   });

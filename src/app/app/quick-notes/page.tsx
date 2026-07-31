@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import { NoteEditor, NoteEditorRef } from '@/components/NoteEditor';
 
 interface QuickNote {
   id: string;
@@ -44,7 +45,7 @@ export default function QuickNotesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const bodyInputRef = useRef<HTMLTextAreaElement>(null);
+  const noteEditorRef = useRef<NoteEditorRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize Auth
@@ -321,18 +322,9 @@ export default function QuickNotesPage() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     if (activeNoteId && e.clipboardData.files && e.clipboardData.files.length > 0) {
-      const activeNote = notes.find(n => n.id === activeNoteId);
       if (activeNote) handleFileUpload(e.clipboardData.files, activeNoteId, activeNote.imageUrls || []);
     }
   };
-
-  // Adjust textarea height automatically
-  useEffect(() => {
-    if (bodyInputRef.current) {
-      bodyInputRef.current.style.height = 'auto';
-      bodyInputRef.current.style.height = bodyInputRef.current.scrollHeight + 'px';
-    }
-  });
 
   const activeNote = notes.find(n => n.id === activeNoteId);
 
@@ -587,6 +579,7 @@ export default function QuickNotesPage() {
                           type="button"
                           onClick={() => handleUpdate(activeNote.id, { textAlign: 'right' })}
                           className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.textAlign === 'right' ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
+                          title="Align Right"
                         >
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="7" y2="18"></line></svg>
                         </button>
@@ -595,6 +588,17 @@ export default function QuickNotesPage() {
                       <div className="w-px h-3.5 bg-hairline mx-1" />
 
                       <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => noteEditorRef.current?.insertChecklist()}
+                          className="p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
+                          title="Checklist"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 11 12 14 22 4"></polyline>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                          </svg>
+                        </button>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
@@ -659,10 +663,10 @@ export default function QuickNotesPage() {
                   />
 
 
-                  <textarea
-                    ref={bodyInputRef}
+                  <NoteEditor
+                    ref={noteEditorRef}
                     value={activeNote.body}
-                    onChange={(e) => handleUpdate(activeNote.id, { body: e.target.value })}
+                    onChange={(newVal) => handleUpdate(activeNote.id, { body: newVal })}
                     placeholder="Write your note here..."
                     style={{
                       fontFamily: `var(--font-${activeNote.fontFamily.toLowerCase().replace(/ /g, '-')}), ${activeNote.fontFamily}, sans-serif`,
@@ -672,7 +676,7 @@ export default function QuickNotesPage() {
                       fontStyle: activeNote.isItalic ? 'italic' : 'normal',
                       textDecoration: activeNote.isUnderline ? 'underline' : 'none'
                     }}
-                    className="w-full bg-transparent outline-none text-muted-text hover:text-primary-text focus:text-primary-text resize-none min-h-[120px] transition-colors leading-relaxed placeholder:text-muted-text/30"
+                    className="w-full text-muted-text hover:text-primary-text focus-within:text-primary-text min-h-[120px] transition-colors leading-relaxed"
                     onPaste={handlePaste}
                   />
 
@@ -816,6 +820,39 @@ export default function QuickNotesPage() {
                         className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'right' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="7" y2="18"></line></svg>
+                      </button>
+                    </div>
+                    
+                    <div className="w-px bg-hairline my-2" />
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          noteEditorRef.current?.insertChecklist();
+                          setIsStyleSheetOpen(false);
+                        }}
+                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-hairline text-muted-text bg-[#1A1714] transition-all"
+                        title="Checklist"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 11 12 14 22 4"></polyline>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                          setIsStyleSheetOpen(false);
+                        }}
+                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-hairline text-muted-text bg-[#1A1714] transition-all"
+                        title="Add Image"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
                       </button>
                     </div>
                   </div>

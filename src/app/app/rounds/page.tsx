@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { insertPrepItems } from '@/utils/prep';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 
@@ -158,82 +159,7 @@ export default function RoundsPage() {
 
       const results = data.results;
       
-      for (const item of results) {
-        if (item.type === 'round') {
-          // 1. Find or create the company application
-          const companyName = item.company || 'Unknown Company';
-          const roleName = item.role || 'Software Engineer';
-          
-          let appId = null;
-          const existingApp = applications.find(a => a.company.toLowerCase() === companyName.toLowerCase());
-          
-          if (existingApp) {
-            appId = existingApp.id;
-          } else {
-            const { data: newApp, error: newAppErr } = await supabase
-              .from('job_applications')
-              .insert({
-                user_id: session.user.id,
-                company: companyName,
-                role: roleName,
-              })
-              .select()
-              .single();
-              
-            if (newAppErr) throw newAppErr;
-            appId = newApp.id;
-          }
-
-          let parsedDeadline = null;
-          if (item.deadline) {
-            let dl = item.deadline;
-            // If the AI just returned YYYY-MM-DD, assume end of day
-            if (dl.length === 10) {
-              dl = `${dl}T23:59:59`;
-            }
-            // Strip any Z to force local time parsing
-            dl = dl.replace('Z', '');
-            
-            // new Date("YYYY-MM-DDTHH:mm:ss") without a Z parses as local time
-            parsedDeadline = new Date(dl).toISOString();
-          }
-
-          // 2. Add the round
-          const { error: roundErr } = await supabase
-            .from('application_rounds')
-            .insert({
-              user_id: session.user.id,
-              application_id: appId,
-              round_name: item.round_name || 'Interview',
-              deadline: parsedDeadline,
-              notes: item.notes || null,
-              status: 'upcoming'
-            });
-            
-          if (roundErr) throw roundErr;
-          
-        } else if (item.type === 'prep') {
-          // Add prep session
-          // Try to link to an application if company_reference is provided
-          let appId = null;
-          if (item.company_reference) {
-            const existingApp = applications.find(a => a.company.toLowerCase() === item.company_reference.toLowerCase());
-            if (existingApp) appId = existingApp.id;
-          }
-          
-          const { error: prepErr } = await supabase
-            .from('prep_sessions')
-            .insert({
-              user_id: session.user.id,
-              prep_type: item.prep_type || 'Prep Session',
-              count_or_duration: item.count_or_duration || null,
-              date: new Date().toISOString().split('T')[0],
-              application_id: appId
-            });
-            
-          if (prepErr) throw prepErr;
-        }
-      }
+      await insertPrepItems(results, session.user.id, supabase);
 
       // Refresh data
       const { data: appsData } = await supabase.from('job_applications').select('*, rounds:application_rounds(*)');

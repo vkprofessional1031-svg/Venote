@@ -9,6 +9,11 @@ export interface Entry {
   tags?: string[];
   isArchived?: boolean;
   imageUrls?: string[];
+  isConfirmation?: boolean;
+  confirmationDomain?: string;
+  confirmationMessage?: string;
+  originalInput?: string;
+  insertedDbIds?: { table: string, id: string }[];
 }
 export type SortOption = 'newest' | 'oldest' | 'az' | 'edited';
 
@@ -31,6 +36,7 @@ interface EntriesListProps {
   handleDelete: (e: React.MouseEvent, id: string) => void;
   showArchived: boolean;
   handleArchiveToggle: (e: React.MouseEvent, id: string, currentArchived: boolean) => void;
+  onFixIt?: (id: string, newDomain: string, originalInput: string) => void;
 }
 
 export default function EntriesList({
@@ -51,8 +57,42 @@ export default function EntriesList({
   startRename,
   handleDelete,
   showArchived,
-  handleArchiveToggle
+  handleArchiveToggle,
+  onFixIt
 }: EntriesListProps) {
+  
+  const ConfirmationCard = ({ entry }: { entry: Entry }) => {
+    const [showFixMenu, setShowFixMenu] = React.useState(false);
+    return (
+      <div className="relative mb-3 bg-background border border-primary-accent/30 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-sm">
+        <div className="flex items-start gap-2">
+          <span className="text-primary-accent">✅</span>
+          <span className="text-primary-text">{entry.confirmationMessage}</span>
+        </div>
+        <div className="relative">
+          <button onClick={() => setShowFixMenu(!showFixMenu)} className="text-muted-text hover:text-primary-accent text-xs font-medium underline underline-offset-2">
+            Not right? Fix it
+          </button>
+          {showFixMenu && (
+            <div className="absolute right-0 mt-1 w-48 bg-card border border-hairline rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="px-3 py-2 text-[10px] font-mono tracking-wider text-muted-text uppercase bg-[#1A1714]">
+                Reclassify as...
+              </div>
+              {['organize', 'wallet', 'prep'].filter(d => d !== entry.confirmationDomain).map(domain => (
+                <button
+                  key={domain}
+                  onClick={() => { setShowFixMenu(false); onFixIt?.(entry.id, domain, entry.originalInput || ''); }}
+                  className="block w-full text-left px-3 py-2 text-sm text-primary-text hover:bg-background transition-colors"
+                >
+                  {domain === 'organize' ? 'Organize (Task/Note)' : domain === 'wallet' ? 'Wallet (Expense/Income)' : 'Prep (Round/Session)'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
   
   const getBadgeStyle = (type: string) => {
     switch (type) {
@@ -192,6 +232,9 @@ export default function EntriesList({
             </span>
           </div>
           {pinnedEntries.map((entry) => (
+            entry.isConfirmation ? (
+              <ConfirmationCard key={entry.id} entry={entry} />
+            ) : (
             <div
               key={entry.id}
               onClick={() => {
@@ -319,6 +362,7 @@ export default function EntriesList({
                 </>
               )}
             </div>
+            )
           ))}
         </div>
       )}
@@ -329,6 +373,9 @@ export default function EntriesList({
             <span className="text-[10px] font-mono tracking-[0.2em] text-muted-text uppercase">Recent</span>
           </div>
           {unpinnedEntries.map((entry) => (
+            entry.isConfirmation ? (
+              <ConfirmationCard key={entry.id} entry={entry} />
+            ) : (
             <div
               key={entry.id}
               onClick={() => {
@@ -456,6 +503,7 @@ export default function EntriesList({
                 </>
               )}
             </div>
+            )
           ))}
         </div>
       )}
