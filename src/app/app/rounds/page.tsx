@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { insertPrepItems } from '@/utils/prep';
+import { insertPrepItems, recalculateApplicationStatus } from '@/utils/prep';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 
@@ -14,6 +14,8 @@ interface JobApplication {
   source: string | null;
   applied_date: string | null;
   notes: string | null;
+  status: string;
+  status_manually_set: boolean;
   rounds: ApplicationRound[];
 }
 
@@ -59,6 +61,7 @@ export default function RoundsPage() {
   const [manualApp, setManualApp] = useState({ company: '', role: '', source: '', applied_date: '', notes: '' });
   const [manualRound, setManualRound] = useState({ application_id: '', round_name: '', deadline_date: '', deadline_time: '', status: 'upcoming', notes: '' });
   const [manualPrep, setManualPrep] = useState({ prep_type: '', count_or_duration: '', application_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [activeStatusDropdown, setActiveStatusDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -238,6 +241,7 @@ export default function RoundsPage() {
         notes: manualRound.notes || null,
       });
       if (error) throw error;
+      await recalculateApplicationStatus(manualRound.application_id, supabase);
       setManualRound({ application_id: manualRound.application_id, round_name: '', deadline_date: '', deadline_time: '', status: 'upcoming', notes: '' });
       await fetchData();
     } catch (error) {
@@ -265,7 +269,7 @@ export default function RoundsPage() {
     }
   };
 
-  const handleToggleRoundStatus = async (roundId: string, currentStatus: string) => {
+  const handleToggleRoundStatus = async (roundId: string, currentStatus: string, appId: string) => {
     const newStatus = currentStatus === 'upcoming' ? 'completed' : 'upcoming';
     
     // Optimistic UI update
@@ -276,6 +280,8 @@ export default function RoundsPage() {
 
     try {
       await supabase.from('application_rounds').update({ status: newStatus }).eq('id', roundId);
+      await recalculateApplicationStatus(appId, supabase);
+      await fetchData();
     } catch (err) {
       console.error('Failed to update status', err);
     }
@@ -285,6 +291,38 @@ export default function RoundsPage() {
     if (!confirm('Are you sure you want to delete this application and all its rounds?')) return;
     setApplications(prev => prev.filter(a => a.id !== appId));
     await supabase.from('job_applications').delete().eq('id', appId);
+  };
+
+  const handleDeletePrepSession = async (sessionId: string) => {
+    setPrepSessions(prev => prev.filter(p => p.id !== sessionId));
+    try {
+      await supabase.from('prep_sessions').delete().eq('id', sessionId);
+    } catch (err) {
+      console.error('Failed to delete prep session', err);
+    }
+  };
+
+  const handleManualStatusOverride = async (appId: string, newStatus: string) => {
+    setActiveStatusDropdown(null);
+    setApplications(prev => prev.map(app => app.id === appId ? { ...app, status: newStatus, status_manually_set: true } : app));
+    try {
+      await supabase.from('job_applications').update({ status: newStatus, status_manually_set: true }).eq('id', appId);
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to override status', err);
+    }
+  };
+
+  const handleResetToAuto = async (appId: string) => {
+    setActiveStatusDropdown(null);
+    setApplications(prev => prev.map(app => app.id === appId ? { ...app, status_manually_set: false } : app));
+    try {
+      await supabase.from('job_applications').update({ status_manually_set: false }).eq('id', appId);
+      await recalculateApplicationStatus(appId, supabase);
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to reset to auto status', err);
+    }
   };
 
   // Derive "Due Soon" (upcoming rounds)
@@ -547,15 +585,54 @@ export default function RoundsPage() {
                               <div className="font-bold text-lg text-primary-text">{app.company}</div>
                               <div className="text-sm text-muted-text">{app.role}</div>
                             </div>
-                            <button 
-                              onClick={() => handleDeleteApplication(app.id)}
-                              className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
-                              title="Delete Application"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <button
+                                  onClick={() => setActiveStatusDropdown(activeStatusDropdown === app.id ? null : app.id)}
+                                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border flex items-center gap-1.5 transition-colors ${
+                                    app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
+                                    app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
+                                    app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' :
+                                    'bg-white/5 text-muted-text border-white/10 hover:bg-white/10'
+                                  }`}
+                                >
+                                  {app.status === 'in_progress' ? 'In Progress' : app.status}
+                                  {app.status_manually_set && (
+                                    <svg className="w-3 h-3 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                                  )}
+                                </button>
+                                
+                                {activeStatusDropdown === app.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-40 bg-[#1A1714] border border-hairline rounded-lg shadow-xl z-50 overflow-hidden text-sm">
+                                    <div className="p-1 border-b border-hairline">
+                                      <button onClick={() => handleManualStatusOverride(app.id, 'applied')} className="w-full text-left px-3 py-1.5 text-muted-text hover:text-primary-text hover:bg-white/5 rounded-md transition-colors">Applied</button>
+                                      <button onClick={() => handleManualStatusOverride(app.id, 'in_progress')} className="w-full text-left px-3 py-1.5 text-amber-500 hover:bg-white/5 rounded-md transition-colors">In Progress</button>
+                                      <button onClick={() => handleManualStatusOverride(app.id, 'accepted')} className="w-full text-left px-3 py-1.5 text-[#8A9A5B] hover:bg-white/5 rounded-md transition-colors">Accepted</button>
+                                      <button onClick={() => handleManualStatusOverride(app.id, 'rejected')} className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-white/5 rounded-md transition-colors">Rejected</button>
+                                    </div>
+                                    <div className="p-1">
+                                      <button 
+                                        onClick={() => handleResetToAuto(app.id)} 
+                                        disabled={!app.status_manually_set}
+                                        className="w-full text-left px-3 py-1.5 text-xs text-muted-text hover:text-primary-text hover:bg-white/5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-between items-center"
+                                      >
+                                        <span>Reset to auto</span>
+                                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <button 
+                                onClick={() => handleDeleteApplication(app.id)}
+                                className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                                title="Delete Application"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                           <div className="p-4 flex flex-col gap-3">
                             {app.rounds.length === 0 ? (
@@ -567,7 +644,7 @@ export default function RoundsPage() {
                                     <div className="absolute left-2.5 top-6 bottom-[-16px] w-[1px] bg-white/10" />
                                   )}
                                   <button 
-                                    onClick={() => handleToggleRoundStatus(round.id, round.status)}
+                                    onClick={() => handleToggleRoundStatus(round.id, round.status, app.id)}
                                     className={`w-5 h-5 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors z-10 ${
                                       round.status === 'completed' || round.status === 'passed' 
                                         ? 'bg-primary-accent border-primary-accent text-background' 
@@ -620,18 +697,29 @@ export default function RoundsPage() {
                             <div className="text-xs font-medium text-muted-text uppercase tracking-wider">{dateLabel}</div>
                             <div className="flex flex-col gap-2">
                               {sessions.map(session => (
-                                <div key={session.id} className="flex justify-between items-center bg-white/5 px-3 py-2.5 rounded-lg border border-white/5">
+                                <div key={session.id} className="flex justify-between items-center bg-white/5 px-3 py-2.5 rounded-lg border border-white/5 group relative">
                                   <div className="flex flex-col">
                                     <span className="text-sm font-medium text-primary-text">{session.prep_type}</span>
                                     {session.company_reference && (
                                       <span className="text-[11px] text-muted-text">for {session.company_reference}</span>
                                     )}
                                   </div>
-                                  {session.count_or_duration && (
-                                    <span className="text-sm font-medium text-primary-accent/90 bg-primary-accent/10 px-2 py-0.5 rounded">
-                                      {session.count_or_duration}
-                                    </span>
-                                  )}
+                                  <div className="flex items-center gap-3">
+                                    {session.count_or_duration && (
+                                      <span className="text-sm font-medium text-primary-accent/90 bg-primary-accent/10 px-2 py-0.5 rounded">
+                                        {session.count_or_duration}
+                                      </span>
+                                    )}
+                                    <button 
+                                      onClick={() => handleDeletePrepSession(session.id)}
+                                      className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                                      title="Delete Prep Session"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
