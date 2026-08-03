@@ -14,6 +14,7 @@ interface JobApplication {
   source: string | null;
   applied_date: string | null;
   notes: string | null;
+  job_url: string | null;
   status: string;
   status_manually_set: boolean;
   rounds: ApplicationRound[];
@@ -57,11 +58,21 @@ export default function RoundsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
 
+  // Inline editing state for Table View
+  const [editingCell, setEditingCell] = useState<{ appId: string; field: string } | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+
+  // Status dropdown floating state
+  const [statusDropdownState, setStatusDropdownState] = useState<{
+    appId: string;
+    top: number;
+    left: number;
+  } | null>(null);
+
   // Manual Form States
-  const [manualApp, setManualApp] = useState({ company: '', role: '', source: '', applied_date: '', notes: '' });
+  const [manualApp, setManualApp] = useState({ company: '', role: '', source: '', applied_date: '', notes: '', job_url: '' });
   const [manualRound, setManualRound] = useState({ application_id: '', round_name: '', deadline_date: '', deadline_time: '', status: 'upcoming', notes: '' });
   const [manualPrep, setManualPrep] = useState({ prep_type: '', count_or_duration: '', application_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
-  const [activeStatusDropdown, setActiveStatusDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -208,9 +219,10 @@ export default function RoundsPage() {
         source: manualApp.source || null,
         applied_date: manualApp.applied_date || null,
         notes: manualApp.notes || null,
+        job_url: manualApp.job_url || null,
       });
       if (error) throw error;
-      setManualApp({ company: '', role: '', source: '', applied_date: '', notes: '' });
+      setManualApp({ company: '', role: '', source: '', applied_date: '', notes: '', job_url: '' });
       await fetchData();
     } catch (error) {
       console.error('Error inserting manual application:', error);
@@ -302,8 +314,35 @@ export default function RoundsPage() {
     }
   };
 
+  const handleOpenStatusDropdown = (e: React.MouseEvent<HTMLButtonElement>, appId: string) => {
+    if (statusDropdownState?.appId === appId) {
+      setStatusDropdownState(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const dropdownWidth = 160;
+    const dropdownHeight = 190;
+    
+    let left = rect.left;
+    if (left + dropdownWidth > window.innerWidth - 12) {
+      left = window.innerWidth - dropdownWidth - 12;
+    }
+    if (left < 12) left = 12;
+
+    let top = rect.bottom + 6;
+    if (top + dropdownHeight > window.innerHeight - 12) {
+      top = Math.max(12, rect.top - dropdownHeight - 6);
+    }
+
+    setStatusDropdownState({
+      appId,
+      top,
+      left,
+    });
+  };
+
   const handleManualStatusOverride = async (appId: string, newStatus: string) => {
-    setActiveStatusDropdown(null);
+    setStatusDropdownState(null);
     setApplications(prev => prev.map(app => app.id === appId ? { ...app, status: newStatus, status_manually_set: true } : app));
     try {
       await supabase.from('job_applications').update({ status: newStatus, status_manually_set: true }).eq('id', appId);
@@ -314,15 +353,99 @@ export default function RoundsPage() {
   };
 
   const handleResetToAuto = async (appId: string) => {
-    setActiveStatusDropdown(null);
+    setStatusDropdownState(null);
     setApplications(prev => prev.map(app => app.id === appId ? { ...app, status_manually_set: false } : app));
     try {
       await supabase.from('job_applications').update({ status_manually_set: false }).eq('id', appId);
       await recalculateApplicationStatus(appId, supabase);
-      await fetchData();
     } catch (err) {
       console.error('Failed to reset to auto status', err);
     }
+  };
+
+  const handleAddNewApplicationRow = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('job_applications')
+        .insert({
+          user_id: session.user.id,
+          company: '',
+          role: '',
+          status: 'applied',
+          status_manually_set: false,
+          applied_date: today,
+          job_url: null,
+          notes: null,
+        })
+        .select(`
+          id,
+          company,
+          role,
+          source,
+          applied_date,
+          notes,
+          job_url,
+          status,
+          status_manually_set,
+          created_at
+        `)
+        .single();
+      if (error) throw error;
+      if (data) {
+        const newApp: JobApplication = {
+          ...data,
+          rounds: [],
+        };
+        setApplications(prev => [newApp, ...prev]);
+        handleStartInlineEdit(data.id, 'company', '');
+      }
+    } catch (err) {
+      console.error('Failed to add new application row:', err);
+    }
+  };
+
+  const handleStartInlineEdit = (appId: string, field: string, initialValue: string | null) => {
+    setEditingCell({ appId, field });
+    setEditingValue(initialValue || '');
+  };
+
+  const handleSaveInlineEdit = async (appId: string, field: string, value: string) => {
+    setEditingCell(null);
+    const trimmed = value.trim();
+    const finalValue = (field === 'company' || field === 'role') ? trimmed : (trimmed === '' ? null : trimmed);
+
+    // Optimistic UI update
+    setApplications(prev => prev.map(app => 
+      app.id === appId ? { ...app, [field]: finalValue } : app
+    ));
+
+    try {
+      const { error } = await supabase
+        .from('job_applications')
+        .update({ [field]: finalValue })
+        .eq('id', appId);
+      if (error) throw error;
+    } catch (err) {
+      console.error(`Failed to update ${field}:`, err);
+      await fetchData();
+    }
+  };
+
+  const handleInlineKeyDown = (e: React.KeyboardEvent, appId: string, field: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveInlineEdit(appId, field, editingValue);
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+    }
+  };
+
+  const formatExternalUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `https://${url}`;
   };
 
   // Derive "Due Soon" (upcoming rounds)
@@ -478,6 +601,7 @@ export default function RoundsPage() {
                           <input type="text" required placeholder="Role" value={manualApp.role} onChange={e => setManualApp({...manualApp, role: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
                           <input type="text" placeholder="Source (e.g. Referral, Career Fair)" value={manualApp.source} onChange={e => setManualApp({...manualApp, source: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
                           <input type="date" placeholder="Applied Date" value={manualApp.applied_date} onChange={e => setManualApp({...manualApp, applied_date: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 [color-scheme:dark]" />
+                          <input type="url" placeholder="Job Listing URL (optional)" value={manualApp.job_url} onChange={e => setManualApp({...manualApp, job_url: e.target.value})} className="md:col-span-2 bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
                           <textarea placeholder="Notes (optional)" value={manualApp.notes} onChange={e => setManualApp({...manualApp, notes: e.target.value})} rows={2} className="md:col-span-2 bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
                         </div>
                         <button type="submit" disabled={!manualApp.company || !manualApp.role} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:bg-white transition-all disabled:opacity-50 text-sm">Save Application</button>
@@ -535,60 +659,75 @@ export default function RoundsPage() {
               <div className="flex items-center justify-center p-12">
                 <div className="w-8 h-8 border-4 border-primary-accent border-t-transparent rounded-full animate-spin"></div>
               </div>
-            ) : applications.length === 0 && prepSessions.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-muted-text mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H15M9 11l3 3L22 4" />
-                </svg>
-                <p className="text-primary-text text-lg mb-2">No applications yet</p>
-                <p className="text-muted-text text-sm max-w-sm">Use the input above to quickly track job application rounds and prep sessions using AI.</p>
-              </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-8">
                 
-                {/* Left Col: Primary Layout (Due Soon + Applications) */}
-                <div className="flex flex-col gap-6">
+                {/* Top 2-Column Grid: Left Col (Due Soon + Applications Cards) & Right Col (Prep Reps) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   
-                  {/* Due Soon Section */}
-                  {allUpcomingRounds.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                      <h2 className="text-xs font-medium text-red-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                        Due Soon
-                      </h2>
-                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-4 flex flex-col gap-4">
-                        {allUpcomingRounds.map((round) => (
-                          <div key={round.id} className="flex flex-col gap-1 border-l-2 border-red-500/50 pl-3 py-1">
-                            <div className="flex justify-between items-start gap-4">
-                              <span className="font-medium text-primary-text leading-tight">{round.company} <span className="text-muted-text font-normal ml-1">· {round.round_name}</span></span>
-                              {round.deadline && (
-                                <span className="text-[11px] font-medium px-2 py-1 bg-red-500/10 text-red-400 rounded-md whitespace-nowrap">
-                                  {isMounted ? getTimeRemainingLabel(round.deadline) : ''}
-                                </span>
-                              )}
+                  {/* Left Col: Due Soon & Applications Cards */}
+                  <div className="flex flex-col gap-6">
+                    
+                    {/* 1. Due Soon Section */}
+                    {allUpcomingRounds.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h2 className="text-xs font-medium text-red-400 uppercase tracking-wider pl-1 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                          Due Soon
+                        </h2>
+                        <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-4 flex flex-col gap-4">
+                          {allUpcomingRounds.map((round) => (
+                            <div key={round.id} className="flex flex-col gap-1 border-l-2 border-red-500/50 pl-3 py-1">
+                              <div className="flex justify-between items-start gap-4">
+                                <span className="font-medium text-primary-text leading-tight">{round.company} <span className="text-muted-text font-normal ml-1">· {round.round_name}</span></span>
+                                {round.deadline && (
+                                  <span className="text-[11px] font-medium px-2 py-1 bg-red-500/10 text-red-400 rounded-md whitespace-nowrap">
+                                    {isMounted ? getTimeRemainingLabel(round.deadline) : ''}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-sm text-muted-text">{round.role}</span>
                             </div>
-                            <span className="text-sm text-muted-text">{round.role}</span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Applications List */}
-                  <div className="flex flex-col gap-3">
-                    <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Applications</h2>
-                    <div className="flex flex-col gap-4">
-                      {applications.map((app) => (
-                        <div key={app.id} className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden group">
-                          <div className="p-4 border-b border-white/5 flex justify-between items-start bg-white/[0.02]">
-                            <div>
-                              <div className="font-bold text-lg text-primary-text">{app.company}</div>
-                              <div className="text-sm text-muted-text">{app.role}</div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="relative">
+                    {/* 2. Applications Section (Card View) */}
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Applications</h2>
+                      {applications.length === 0 ? (
+                        <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 text-center text-muted-text">
+                          <p className="text-sm">No applications yet.</p>
+                          <p className="text-xs text-muted-text/70 mt-1">Add one in Job Tracker below or use Quick Add above.</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-4">
+                          {applications.map((app) => (
+                            <div key={app.id} className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden group">
+                              <div className="p-4 border-b border-white/5 flex justify-between items-start bg-white/[0.02]">
+                                <div>
+                                  <div className="font-bold text-lg text-primary-text flex items-center gap-2">
+                                    <span>{app.company}</span>
+                                    {app.job_url && (
+                                      <a
+                                        href={formatExternalUrl(app.job_url)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-muted-text hover:text-primary-accent transition-colors"
+                                        title="Open job listing"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                      </a>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-text">{app.role}</div>
+                                </div>
+                              <div className="flex items-center gap-3">
                                 <button
-                                  onClick={() => setActiveStatusDropdown(activeStatusDropdown === app.id ? null : app.id)}
+                                  onClick={(e) => handleOpenStatusDropdown(e, app.id)}
                                   className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border flex items-center gap-1.5 transition-colors ${
                                     app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
                                     app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
@@ -597,138 +736,621 @@ export default function RoundsPage() {
                                   }`}
                                 >
                                   {app.status === 'in_progress' ? 'In Progress' : app.status}
-                                  {app.status_manually_set && (
-                                    <svg className="w-3 h-3 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                                  )}
                                 </button>
-                                
-                                {activeStatusDropdown === app.id && (
-                                  <div className="absolute right-0 top-full mt-1 w-40 bg-[#1A1714] border border-hairline rounded-lg shadow-xl z-50 overflow-hidden text-sm">
-                                    <div className="p-1 border-b border-hairline">
-                                      <button onClick={() => handleManualStatusOverride(app.id, 'applied')} className="w-full text-left px-3 py-1.5 text-muted-text hover:text-primary-text hover:bg-white/5 rounded-md transition-colors">Applied</button>
-                                      <button onClick={() => handleManualStatusOverride(app.id, 'in_progress')} className="w-full text-left px-3 py-1.5 text-amber-500 hover:bg-white/5 rounded-md transition-colors">In Progress</button>
-                                      <button onClick={() => handleManualStatusOverride(app.id, 'accepted')} className="w-full text-left px-3 py-1.5 text-[#8A9A5B] hover:bg-white/5 rounded-md transition-colors">Accepted</button>
-                                      <button onClick={() => handleManualStatusOverride(app.id, 'rejected')} className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-white/5 rounded-md transition-colors">Rejected</button>
-                                    </div>
-                                    <div className="p-1">
-                                      <button 
-                                        onClick={() => handleResetToAuto(app.id)} 
-                                        disabled={!app.status_manually_set}
-                                        className="w-full text-left px-3 py-1.5 text-xs text-muted-text hover:text-primary-text hover:bg-white/5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-between items-center"
-                                      >
-                                        <span>Reset to auto</span>
-                                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
-                                      </button>
+                                <button 
+                                  onClick={() => handleDeleteApplication(app.id)}
+                                  className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                                  title="Delete Application"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-4 flex flex-col gap-3">
+                              {app.rounds.length === 0 ? (
+                                <p className="text-sm text-muted-text italic">No rounds tracked yet.</p>
+                              ) : (
+                                app.rounds.map((round, idx) => (
+                                  <div key={round.id} className="flex items-start gap-3 relative">
+                                    {idx !== app.rounds.length - 1 && (
+                                      <div className="absolute left-2.5 top-6 bottom-[-16px] w-[1px] bg-white/10" />
+                                    )}
+                                    <button 
+                                      onClick={() => handleToggleRoundStatus(round.id, round.status, app.id)}
+                                      className={`w-5 h-5 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors z-10 ${
+                                        round.status === 'completed' || round.status === 'passed' 
+                                          ? 'bg-primary-accent border-primary-accent text-background' 
+                                          : 'bg-background border-white/20 hover:border-primary-accent'
+                                      }`}
+                                    >
+                                      {(round.status === 'completed' || round.status === 'passed') && (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                    <div className="flex flex-col flex-1">
+                                      <div className={`text-[15px] font-medium ${round.status === 'completed' || round.status === 'passed' ? 'text-muted-text line-through opacity-70' : 'text-primary-text'}`}>
+                                        {round.round_name}
+                                      </div>
+                                      {round.deadline && (
+                                        <div className={`text-xs mt-0.5 ${round.status === 'upcoming' ? 'text-primary-accent/80' : 'text-muted-text'}`}>
+                                          {isMounted ? new Date(round.deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+                                        </div>
+                                      )}
+                                      {round.notes && (
+                                        <div className="text-xs text-muted-text mt-1 bg-white/5 p-2 rounded-md italic">
+                                          {round.notes}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                )}
-                              </div>
-                              <button 
-                                onClick={() => handleDeleteApplication(app.id)}
-                                className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
-                                title="Delete Application"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                                ))
+                              )}
                             </div>
                           </div>
-                          <div className="p-4 flex flex-col gap-3">
-                            {app.rounds.length === 0 ? (
-                              <p className="text-sm text-muted-text italic">No rounds tracked yet.</p>
-                            ) : (
-                              app.rounds.map((round, idx) => (
-                                <div key={round.id} className="flex items-start gap-3 relative">
-                                  {idx !== app.rounds.length - 1 && (
-                                    <div className="absolute left-2.5 top-6 bottom-[-16px] w-[1px] bg-white/10" />
-                                  )}
-                                  <button 
-                                    onClick={() => handleToggleRoundStatus(round.id, round.status, app.id)}
-                                    className={`w-5 h-5 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors z-10 ${
-                                      round.status === 'completed' || round.status === 'passed' 
-                                        ? 'bg-primary-accent border-primary-accent text-background' 
-                                        : 'bg-background border-white/20 hover:border-primary-accent'
-                                    }`}
-                                  >
-                                    {(round.status === 'completed' || round.status === 'passed') && (
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                  <div className="flex flex-col flex-1">
-                                    <div className={`text-[15px] font-medium ${round.status === 'completed' || round.status === 'passed' ? 'text-muted-text line-through opacity-70' : 'text-primary-text'}`}>
-                                      {round.round_name}
-                                    </div>
-                                    {round.deadline && (
-                                      <div className={`text-xs mt-0.5 ${round.status === 'upcoming' ? 'text-primary-accent/80' : 'text-muted-text'}`}>
-                                        {isMounted ? new Date(round.deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
-                                      </div>
-                                    )}
-                                    {round.notes && (
-                                      <div className="text-xs text-muted-text mt-1 bg-white/5 p-2 rounded-md italic">
-                                        {round.notes}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Right Col: Prep Reps */}
-                <div className="flex flex-col gap-6">
-                  
-                  {/* Prep Reps Section */}
-                  <div className="flex flex-col gap-3">
-                    <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Prep Reps</h2>
-                    <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 flex flex-col gap-5">
-                      {prepSessions.length === 0 ? (
-                        <p className="text-sm text-muted-text italic">No prep sessions logged yet.</p>
-                      ) : (
-                        Object.entries(prepGroups).map(([dateLabel, sessions]) => (
-                          <div key={dateLabel} className="flex flex-col gap-2">
-                            <div className="text-xs font-medium text-muted-text uppercase tracking-wider">{dateLabel}</div>
-                            <div className="flex flex-col gap-2">
-                              {sessions.map(session => (
-                                <div key={session.id} className="flex justify-between items-center bg-white/5 px-3 py-2.5 rounded-lg border border-white/5 group relative">
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium text-primary-text">{session.prep_type}</span>
-                                    {session.company_reference && (
-                                      <span className="text-[11px] text-muted-text">for {session.company_reference}</span>
-                                    )}
+                  {/* Right Col: 4. Prep Reps */}
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Prep Reps</h2>
+                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 flex flex-col gap-5">
+                        {prepSessions.length === 0 ? (
+                          <p className="text-sm text-muted-text italic">No prep sessions logged yet.</p>
+                        ) : (
+                          Object.entries(prepGroups).map(([dateLabel, sessions]) => (
+                            <div key={dateLabel} className="flex flex-col gap-2">
+                              <div className="text-xs font-medium text-muted-text uppercase tracking-wider">{dateLabel}</div>
+                              <div className="flex flex-col gap-2">
+                                {sessions.map(session => (
+                                  <div key={session.id} className="flex justify-between items-center bg-white/5 px-3 py-2.5 rounded-lg border border-white/5 group relative">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium text-primary-text">{session.prep_type}</span>
+                                      {session.company_reference && (
+                                        <span className="text-[11px] text-muted-text">for {session.company_reference}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      {session.count_or_duration && (
+                                        <span className="text-sm font-medium text-primary-accent/90 bg-primary-accent/10 px-2 py-0.5 rounded">
+                                          {session.count_or_duration}
+                                        </span>
+                                      )}
+                                      <button 
+                                        onClick={() => handleDeletePrepSession(session.id)}
+                                        className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                                        title="Delete Prep Session"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                    {session.count_or_duration && (
-                                      <span className="text-sm font-medium text-primary-accent/90 bg-primary-accent/10 px-2 py-0.5 rounded">
-                                        {session.count_or_duration}
-                                      </span>
-                                    )}
-                                    <button 
-                                      onClick={() => handleDeletePrepSession(session.id)}
-                                      className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
-                                      title="Delete Prep Session"
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))
-                      )}
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
 
+                </div>
+
+                {/* 3. Job Tracker Section (Spreadsheet-style Table View) */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center pl-1">
+                    <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider">Job Tracker</h2>
+                    <button
+                      onClick={handleAddNewApplicationRow}
+                      className="text-xs font-medium text-primary-accent hover:text-white bg-primary-accent/10 hover:bg-primary-accent/20 border border-primary-accent/30 rounded-lg px-2.5 py-1 flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Add Application"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>Add Application</span>
+                    </button>
+                  </div>
+                  {/* Desktop View: Spreadsheet-style Table */}
+                  <div className="hidden md:block bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm border-collapse min-w-[620px]">
+                        <thead>
+                          <tr className="border-b border-white/10 bg-white/[0.03] text-[11px] font-medium text-muted-text uppercase tracking-wider select-none">
+                            <th className="py-3 px-3.5 font-medium">Company</th>
+                            <th className="py-3 px-3.5 font-medium">Role</th>
+                            <th className="py-3 px-3.5 font-medium">Status</th>
+                            <th className="py-3 px-3.5 font-medium">Link to Listing</th>
+                            <th className="py-3 px-3.5 font-medium">Notes</th>
+                            <th className="py-3 px-3.5 font-medium">Date Applied</th>
+                            <th className="py-3 px-2 w-8 text-right"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 text-xs">
+                          {applications.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-8 text-center text-muted-text">
+                                <div className="flex flex-col items-center justify-center gap-2">
+                                  <p className="text-sm font-medium text-primary-text/80">No applications yet</p>
+                                  <button
+                                    onClick={handleAddNewApplicationRow}
+                                    className="text-xs text-primary-accent hover:underline flex items-center gap-1 mt-0.5"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                                    </svg>
+                                    Click + to add your first job application
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            applications.map((app) => (
+                              <tr key={app.id} className="group hover:bg-white/[0.02] transition-colors">
+                                
+                                {/* 1. Company */}
+                                <td className="py-2.5 px-3.5 align-middle">
+                                  {editingCell?.appId === app.id && editingCell?.field === 'company' ? (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'company', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'company')}
+                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      autoFocus
+                                      placeholder="Add company..."
+                                    />
+                                  ) : (
+                                    <div
+                                      onClick={() => handleStartInlineEdit(app.id, 'company', app.company)}
+                                      className="text-primary-text font-medium cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                      title={app.company || 'Click to edit company'}
+                                    >
+                                      {app.company ? (
+                                        <span>{app.company}</span>
+                                      ) : (
+                                        <span className="text-muted-text/40 italic font-normal">Add company...</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* 2. Role */}
+                                <td className="py-2.5 px-3.5 align-middle">
+                                  {editingCell?.appId === app.id && editingCell?.field === 'role' ? (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'role', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'role')}
+                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      autoFocus
+                                      placeholder="Add role..."
+                                    />
+                                  ) : (
+                                    <div
+                                      onClick={() => handleStartInlineEdit(app.id, 'role', app.role)}
+                                      className="text-muted-text cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                      title={app.role || 'Click to edit role'}
+                                    >
+                                      {app.role ? (
+                                        <span>{app.role}</span>
+                                      ) : (
+                                        <span className="text-muted-text/40 italic">Add role...</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* 3. Status */}
+                                <td className="py-2.5 px-3.5 align-middle">
+                                  <button
+                                    onClick={(e) => handleOpenStatusDropdown(e, app.id)}
+                                    className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border flex items-center gap-1 transition-colors ${
+                                      app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
+                                      app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
+                                      app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' :
+                                      'bg-white/5 text-muted-text border-white/10 hover:bg-white/10'
+                                    }`}
+                                  >
+                                    <span>
+                                      {app.status === 'accepted' ? 'ACCEPTED' :
+                                       app.status === 'rejected' ? 'REJECTED' :
+                                       app.status === 'in_progress' ? 'IN PROGRESS' :
+                                       'APPLIED'}
+                                    </span>
+                                    <svg className="w-2.5 h-2.5 opacity-60 ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
+                                  </button>
+                                </td>
+
+                                {/* 4. Link to Listing */}
+                                <td className="py-2.5 px-3.5 align-middle max-w-[200px]">
+                                  {editingCell?.appId === app.id && editingCell?.field === 'job_url' ? (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'job_url', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'job_url')}
+                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      autoFocus
+                                      placeholder="https://..."
+                                    />
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 group/url">
+                                      {app.job_url ? (
+                                        <>
+                                          <a
+                                            href={formatExternalUrl(app.job_url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-primary-accent hover:underline flex items-center gap-1 truncate max-w-[140px]"
+                                            title={app.job_url}
+                                          >
+                                            <span className="truncate">{app.job_url.replace(/^https?:\/\/(www\.)?/, '')}</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                          </a>
+                                          <button
+                                            onClick={() => handleStartInlineEdit(app.id, 'job_url', app.job_url)}
+                                            className="text-muted-text/40 hover:text-muted-text opacity-0 group-hover/url:opacity-100 transition-opacity p-0.5"
+                                            title="Edit link"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                            </svg>
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <span
+                                          onClick={() => handleStartInlineEdit(app.id, 'job_url', '')}
+                                          className="text-muted-text/40 italic cursor-pointer hover:text-muted-text transition-colors"
+                                          title="Click to add link"
+                                        >
+                                          Add link...
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* 5. Notes */}
+                                <td className="py-2.5 px-3.5 align-middle max-w-[200px]">
+                                  {editingCell?.appId === app.id && editingCell?.field === 'notes' ? (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'notes', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'notes')}
+                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      autoFocus
+                                      placeholder="Add notes..."
+                                    />
+                                  ) : (
+                                    <div
+                                      onClick={() => handleStartInlineEdit(app.id, 'notes', app.notes)}
+                                      className="cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                      title={app.notes || 'Click to add notes'}
+                                    >
+                                      {app.notes ? (
+                                        <span className="text-muted-text">{app.notes}</span>
+                                      ) : (
+                                        <span className="text-muted-text/40 italic">Add notes...</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* 6. Date Applied */}
+                                <td className="py-2.5 px-3.5 align-middle whitespace-nowrap">
+                                  {editingCell?.appId === app.id && editingCell?.field === 'applied_date' ? (
+                                    <input
+                                      type="date"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'applied_date', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'applied_date')}
+                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs focus:outline-none [color-scheme:dark]"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <div
+                                      onClick={() => handleStartInlineEdit(app.id, 'applied_date', app.applied_date)}
+                                      className="cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors"
+                                      title="Click to change date applied"
+                                    >
+                                      {app.applied_date ? (
+                                        <span className="text-muted-text">{app.applied_date}</span>
+                                      ) : (
+                                        <span className="text-muted-text/40 italic">Add date...</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Row Delete Action */}
+                                <td className="py-2.5 px-2 align-middle text-right">
+                                  <button
+                                    onClick={() => handleDeleteApplication(app.id)}
+                                    className="text-muted-text/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 focus:outline-none"
+                                    title="Delete Application"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </td>
+
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Mobile View: Stacked Cards */}
+                  <div className="block md:hidden flex flex-col gap-3">
+                    {applications.length === 0 ? (
+                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-6 text-center text-muted-text">
+                        <p className="text-sm font-medium text-primary-text/80">No applications yet</p>
+                        <button
+                          onClick={handleAddNewApplicationRow}
+                          className="text-xs text-primary-accent hover:underline flex items-center justify-center gap-1.5 mt-2 mx-auto"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>Click + to add your first job application</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-3.5">
+                          {applications.map((app) => (
+                            <div key={app.id} className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden">
+                              {/* Card Header: Company, Role, and Trash Delete button */}
+                              <div className="p-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-start gap-2">
+                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                  {/* Company Name */}
+                                  {editingCell?.appId === app.id && editingCell?.field === 'company' ? (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'company', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'company')}
+                                      className="bg-[#1A1714] text-primary-text font-bold text-base border border-primary-accent/50 rounded px-2.5 py-1 w-full focus:outline-none"
+                                      autoFocus
+                                      placeholder="Add company..."
+                                    />
+                                  ) : (
+                                    <div
+                                      onClick={() => handleStartInlineEdit(app.id, 'company', app.company)}
+                                      className="font-bold text-base text-primary-text cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                      title="Tap to edit company"
+                                    >
+                                      {app.company ? (
+                                        <span>{app.company}</span>
+                                      ) : (
+                                        <span className="text-muted-text/40 italic font-normal">Add company...</span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Role */}
+                                  {editingCell?.appId === app.id && editingCell?.field === 'role' ? (
+                                    <input
+                                      type="text"
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onBlur={() => handleSaveInlineEdit(app.id, 'role', editingValue)}
+                                      onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'role')}
+                                      className="bg-[#1A1714] text-muted-text text-sm border border-primary-accent/50 rounded px-2.5 py-1 w-full focus:outline-none mt-1"
+                                      autoFocus
+                                      placeholder="Add role..."
+                                    />
+                                  ) : (
+                                    <div
+                                      onClick={() => handleStartInlineEdit(app.id, 'role', app.role)}
+                                      className="text-sm text-muted-text cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                      title="Tap to edit role"
+                                    >
+                                      {app.role ? (
+                                        <span>{app.role}</span>
+                                      ) : (
+                                        <span className="text-muted-text/40 italic">Add role...</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Delete Button */}
+                                <button
+                                  onClick={() => handleDeleteApplication(app.id)}
+                                  className="text-muted-text/40 hover:text-red-400 p-1.5 focus:outline-none rounded transition-colors"
+                                  title="Delete Application"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+
+                              {/* Card Body: Labeled Fields */}
+                              <div className="p-3.5 flex flex-col divide-y divide-white/5 text-xs">
+                                
+                                {/* Field: STATUS */}
+                                <div className="py-2.5 flex items-center justify-between gap-3">
+                                  <span className="text-[10px] font-semibold text-muted-text/70 uppercase tracking-wider w-16 shrink-0">STATUS</span>
+                                  <div className="flex-1 flex justify-end">
+                                    <button
+                                      onClick={(e) => handleOpenStatusDropdown(e, app.id)}
+                                      className={`px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded border flex items-center gap-1.5 transition-colors ${
+                                        app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
+                                        app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
+                                        app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' :
+                                        'bg-white/5 text-muted-text border-white/10 hover:bg-white/10'
+                                      }`}
+                                    >
+                                      <span>
+                                        {app.status === 'accepted' ? 'ACCEPTED' :
+                                         app.status === 'rejected' ? 'REJECTED' :
+                                         app.status === 'in_progress' ? 'IN PROGRESS' :
+                                         'APPLIED'}
+                                      </span>
+                                      <svg className="w-3 h-3 opacity-60 ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Field: LINK */}
+                                <div className="py-2.5 flex items-center justify-between gap-3">
+                                  <span className="text-[10px] font-semibold text-muted-text/70 uppercase tracking-wider w-16 shrink-0">LINK</span>
+                                  <div className="flex-1 min-w-0">
+                                    {editingCell?.appId === app.id && editingCell?.field === 'job_url' ? (
+                                      <input
+                                        type="text"
+                                        value={editingValue}
+                                        onChange={(e) => setEditingValue(e.target.value)}
+                                        onBlur={() => handleSaveInlineEdit(app.id, 'job_url', editingValue)}
+                                        onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'job_url')}
+                                        className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
+                                        autoFocus
+                                        placeholder="https://..."
+                                      />
+                                    ) : (
+                                      <div className="flex items-center gap-1.5">
+                                        {app.job_url ? (
+                                          <>
+                                            <a
+                                              href={formatExternalUrl(app.job_url)}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-primary-accent hover:underline flex items-center gap-1 truncate max-w-[200px]"
+                                              title={app.job_url}
+                                            >
+                                              <span className="truncate">{app.job_url.replace(/^https?:\/\/(www\.)?/, '')}</span>
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                              </svg>
+                                            </a>
+                                            <button
+                                              onClick={() => handleStartInlineEdit(app.id, 'job_url', app.job_url)}
+                                              className="text-muted-text/50 hover:text-muted-text p-1"
+                                              title="Edit link"
+                                            >
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                              </svg>
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span
+                                            onClick={() => handleStartInlineEdit(app.id, 'job_url', '')}
+                                            className="text-muted-text/40 italic cursor-pointer hover:text-muted-text transition-colors py-0.5"
+                                            title="Tap to add link"
+                                          >
+                                            Add link...
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Field: NOTES */}
+                                <div className="py-2.5 flex items-start justify-between gap-3">
+                                  <span className="text-[10px] font-semibold text-muted-text/70 uppercase tracking-wider w-16 shrink-0 pt-0.5">NOTES</span>
+                                  <div className="flex-1 min-w-0">
+                                    {editingCell?.appId === app.id && editingCell?.field === 'notes' ? (
+                                      <input
+                                        type="text"
+                                        value={editingValue}
+                                        onChange={(e) => setEditingValue(e.target.value)}
+                                        onBlur={() => handleSaveInlineEdit(app.id, 'notes', editingValue)}
+                                        onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'notes')}
+                                        className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
+                                        autoFocus
+                                        placeholder="Add notes..."
+                                      />
+                                    ) : (
+                                      <div
+                                        onClick={() => handleStartInlineEdit(app.id, 'notes', app.notes)}
+                                        className="cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                        title={app.notes || 'Tap to add notes'}
+                                      >
+                                        {app.notes ? (
+                                          <span className="text-muted-text">{app.notes}</span>
+                                        ) : (
+                                          <span className="text-muted-text/40 italic">Add notes...</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Field: DATE */}
+                                <div className="py-2.5 flex items-center justify-between gap-3">
+                                  <span className="text-[10px] font-semibold text-muted-text/70 uppercase tracking-wider w-16 shrink-0">DATE</span>
+                                  <div className="flex-1 min-w-0">
+                                    {editingCell?.appId === app.id && editingCell?.field === 'applied_date' ? (
+                                      <input
+                                        type="date"
+                                        value={editingValue}
+                                        onChange={(e) => setEditingValue(e.target.value)}
+                                        onBlur={() => handleSaveInlineEdit(app.id, 'applied_date', editingValue)}
+                                        onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'applied_date')}
+                                        className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs focus:outline-none [color-scheme:dark]"
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <div
+                                        onClick={() => handleStartInlineEdit(app.id, 'applied_date', app.applied_date)}
+                                        className="cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors"
+                                        title="Tap to change date applied"
+                                      >
+                                        {app.applied_date ? (
+                                          <span className="text-muted-text">{app.applied_date}</span>
+                                        ) : (
+                                          <span className="text-muted-text/40 italic">Add date...</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Mobile Add Application button below cards */}
+                        <button
+                          onClick={handleAddNewApplicationRow}
+                          className="w-full py-2.5 px-4 bg-primary-accent/10 hover:bg-primary-accent/20 border border-primary-accent/30 text-primary-accent font-medium rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99]"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>Add Application</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 
               </div>
@@ -736,6 +1358,66 @@ export default function RoundsPage() {
             
           </div>
         </div>
+
+        {/* Fixed Floating Status Dropdown Menu (immune to row / table clipping) */}
+        {statusDropdownState && (() => {
+          const app = applications.find(a => a.id === statusDropdownState.appId);
+          if (!app) return null;
+          return (
+            <>
+              <div 
+                className="fixed inset-0 z-50 bg-transparent" 
+                onClick={() => setStatusDropdownState(null)} 
+              />
+              <div 
+                className="fixed z-50 w-40 bg-[#1A1714] border border-white/10 rounded-xl shadow-2xl overflow-hidden text-xs divide-y divide-white/5 animate-in fade-in zoom-in-95 duration-100"
+                style={{ top: `${statusDropdownState.top}px`, left: `${statusDropdownState.left}px` }}
+              >
+                <div className="p-1">
+                  <button 
+                    onClick={() => handleManualStatusOverride(app.id, 'applied')} 
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'applied' ? 'bg-white/10 text-primary-text font-medium' : 'text-muted-text hover:text-primary-text hover:bg-white/5'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-muted-text/50" />
+                    Applied
+                  </button>
+                  <button 
+                    onClick={() => handleManualStatusOverride(app.id, 'in_progress')} 
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 font-medium' : 'text-amber-500/70 hover:text-amber-500 hover:bg-white/5'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    In Progress
+                  </button>
+                  <button 
+                    onClick={() => handleManualStatusOverride(app.id, 'accepted')} 
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'accepted' ? 'bg-[#8A9A5B]/10 text-[#8A9A5B] font-medium' : 'text-[#8A9A5B]/70 hover:text-[#8A9A5B] hover:bg-white/5'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-[#8A9A5B]" />
+                    Accepted
+                  </button>
+                  <button 
+                    onClick={() => handleManualStatusOverride(app.id, 'rejected')} 
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'rejected' ? 'bg-red-500/10 text-red-400 font-medium' : 'text-red-400/70 hover:text-red-400 hover:bg-white/5'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    Rejected
+                  </button>
+                </div>
+                <div className="p-1">
+                  <button 
+                    onClick={() => handleResetToAuto(app.id)} 
+                    disabled={!app.status_manually_set}
+                    className="w-full text-left px-3 py-1.5 text-[11px] text-muted-text hover:text-primary-text hover:bg-white/5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex justify-between items-center"
+                  >
+                    <span>Reset to auto</span>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                  </button>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+
       </main>
     </div>
   );

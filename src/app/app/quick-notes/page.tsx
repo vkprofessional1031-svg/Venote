@@ -42,6 +42,7 @@ export default function QuickNotesPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -241,6 +242,26 @@ export default function QuickNotesPage() {
         setTimeout(() => setSaveState('idle'), 2000);
       }
     }, 800);
+  };
+
+  const handleCopyNote = async (note: QuickNote) => {
+    const fullText = note.title ? `${note.title}\n\n${note.body}` : note.body;
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(fullText);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = fullText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedNoteId(note.id);
+      setTimeout(() => setCopiedNoteId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy note text:', err);
+    }
   };
 
   const handleUpdateImages = (id: string, newUrls: string[]) => {
@@ -609,6 +630,23 @@ export default function QuickNotesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyNote(activeNote)}
+                          className={`p-1 rounded transition-colors ${copiedNoteId === activeNote.id ? 'text-[#8A9A5B] bg-[#8A9A5B]/10' : 'text-muted-text hover:text-primary-text hover:bg-white/5'}`}
+                          title={copiedNoteId === activeNote.id ? "Copied!" : "Copy Note to Clipboard"}
+                        >
+                          {copiedNoteId === activeNote.id ? (
+                            <svg className="w-3.5 h-3.5 text-[#8A9A5B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                          )}
+                        </button>
                         <input 
                           type="file" 
                           ref={fileInputRef} 
@@ -853,6 +891,27 @@ export default function QuickNotesPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleCopyNote(activeNote);
+                          setIsStyleSheetOpen(false);
+                        }}
+                        className={`p-2.5 flex-1 rounded-xl flex items-center justify-center border transition-all ${copiedNoteId === activeNote.id ? 'bg-[#8A9A5B]/10 border-[#8A9A5B]/30 text-[#8A9A5B]' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        title="Copy Note"
+                      >
+                        {copiedNoteId === activeNote.id ? (
+                          <svg className="w-4 h-4 text-[#8A9A5B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        )}
                       </button>
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useImperativeHandle, forwardRef, useState } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 
 interface NoteEditorProps {
   value: string;
@@ -13,220 +13,173 @@ interface NoteEditorProps {
 
 export interface NoteEditorRef {
   insertChecklist: () => void;
+  focus: () => void;
 }
 
-const AutoResizeTextarea = ({ value, onChange, onKeyDown, onFocus, style, className, placeholder }: any) => {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  
+export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, onChange, style, className, placeholder, onPaste }, ref) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize the single unified textarea to match its full content height
   useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = '0px';
-      ref.current.style.height = `${ref.current.scrollHeight}px`;
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '0px';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.max(scrollHeight, 120)}px`;
     }
   }, [value]);
 
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => {
-        onChange(e.target.value);
-      }}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      placeholder={placeholder}
-      className={`resize-none overflow-hidden outline-none bg-transparent ${className || ''}`}
-      style={style}
-      rows={1}
-    />
-  );
-};
-
-export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, onChange, style, className, placeholder, onPaste }, ref) => {
-  const lines = value.split('\n');
-  if (lines.length === 0) lines.push('');
-  
-  const [activeLineIndex, setActiveLineIndex] = useState<number>(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus();
+    },
     insertChecklist: () => {
-      const newLines = [...lines];
-      const currentLine = newLines[activeLineIndex] || '';
-      if (!currentLine.startsWith('- [ ] ') && !currentLine.startsWith('- [x] ')) {
-        newLines[activeLineIndex] = `- [ ] ${currentLine}`;
-        onChange(newLines.join('\n'));
-        focusLine(activeLineIndex, 'end');
-      }
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart ?? 0;
+      const end = textarea.selectionEnd ?? 0;
+
+      // Find the line bounds of current selection
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      let lineEnd = value.indexOf('\n', end);
+      if (lineEnd === -1) lineEnd = value.length;
+
+      const beforeLine = value.substring(0, lineStart);
+      const selectedLinesText = value.substring(lineStart, lineEnd);
+      const afterLine = value.substring(lineEnd);
+
+      const lines = selectedLinesText.split('\n');
+      let cursorDelta = 0;
+
+      const modifiedLines = lines.map((l, idx) => {
+        if (l.startsWith('- [ ] ')) {
+          if (idx === 0) cursorDelta = -6;
+          return l.substring(6);
+        } else if (l.startsWith('- [x] ')) {
+          if (idx === 0) cursorDelta = -6;
+          return l.substring(6);
+        } else {
+          if (idx === 0) cursorDelta = 6;
+          return '- [ ] ' + l;
+        }
+      });
+
+      const newSelectedText = modifiedLines.join('\n');
+      const newValue = beforeLine + newSelectedText + afterLine;
+      onChange(newValue);
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          const newPos = Math.max(0, Math.min(newValue.length, start + cursorDelta));
+          textareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      }, 0);
     }
   }));
 
-  const focusLine = (index: number, cursorPosition?: 'start' | 'end') => {
-    setTimeout(() => {
-      if (!containerRef.current) return;
-      const textareas = containerRef.current.querySelectorAll('textarea');
-      const target = textareas[index];
-      if (target) {
-        target.focus();
-        if (cursorPosition === 'start') {
-          target.selectionStart = 0;
-          target.selectionEnd = 0;
-        } else if (cursorPosition === 'end') {
-          target.selectionStart = target.value.length;
-          target.selectionEnd = target.value.length;
-        }
-      }
-    }, 10);
-  };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
 
-  const handleLineChange = (index: number, newText: string) => {
-    const newLines = [...lines];
-    newLines[index] = newText;
-    onChange(newLines.join('\n'));
-  };
+    const cursor = textarea.selectionStart;
+    const lineStart = value.lastIndexOf('\n', cursor - 1) + 1;
+    const currentLine = value.substring(lineStart, cursor);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
-    const target = e.currentTarget;
-    
+    // Enter key handling on checklist lines
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      const cursor = target.selectionStart;
-      const text = lines[index];
-      
-      const isChecklist = text.startsWith('- [ ] ') || text.startsWith('- [x] ');
-      const prefixLength = isChecklist ? 6 : 0;
-      
-      // If cursor is at the very beginning of a checklist item (before the text), behave differently
-      const beforeCursorText = text.substring(prefixLength, prefixLength + cursor);
-      const afterCursorText = text.substring(prefixLength + cursor);
-      
-      let nextLinePrefix = '';
-      if (isChecklist) {
-        nextLinePrefix = '- [ ] ';
-        // If the current line is just an empty checklist, hitting enter should remove the checklist format
-        if (text === '- [ ] ' || text === '- [x] ') {
-          handleLineChange(index, '');
-          return;
-        }
-      }
-
-      const newLines = [...lines];
-      
-      if (isChecklist) {
-        newLines[index] = text.substring(0, prefixLength) + target.value.substring(0, cursor);
-        newLines.splice(index + 1, 0, nextLinePrefix + target.value.substring(cursor));
-      } else {
-        newLines[index] = target.value.substring(0, cursor);
-        newLines.splice(index + 1, 0, target.value.substring(cursor));
-      }
-      
-      onChange(newLines.join('\n'));
-      setActiveLineIndex(index + 1);
-      focusLine(index + 1, 'start');
-    }
-    else if (e.key === 'Backspace' && target.selectionStart === 0 && target.selectionEnd === 0) {
-      const text = lines[index];
-      // If it's a checklist, backspace removes the checklist format
-      if (text.startsWith('- [ ] ') || text.startsWith('- [x] ')) {
+      if (currentLine === '- [ ] ' || currentLine === '- [x] ') {
+        // Clear empty checklist marker
         e.preventDefault();
-        handleLineChange(index, text.substring(6));
+        const before = value.substring(0, lineStart);
+        const after = value.substring(cursor);
+        const newValue = before + after;
+        onChange(newValue);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.setSelectionRange(lineStart, lineStart);
+          }
+        }, 0);
+        return;
+      } else if (currentLine.startsWith('- [ ] ') || currentLine.startsWith('- [x] ')) {
+        // Auto-continue checklist on next line
+        e.preventDefault();
+        const before = value.substring(0, cursor);
+        const after = value.substring(cursor);
+        const insertText = '\n- [ ] ';
+        const newValue = before + insertText + after;
+        onChange(newValue);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            const newPos = cursor + insertText.length;
+            textareaRef.current.setSelectionRange(newPos, newPos);
+          }
+        }, 0);
         return;
       }
-      
-      // If it's normal text and not the first line, merge with previous line
-      if (index > 0) {
-        e.preventDefault();
-        const prevLine = lines[index - 1];
-        const prevLineLength = prevLine.startsWith('- [ ] ') || prevLine.startsWith('- [x] ') 
-          ? prevLine.length - 6 
-          : prevLine.length;
-          
-        const newLines = [...lines];
-        newLines[index - 1] = newLines[index - 1] + newLines[index];
-        newLines.splice(index, 1);
-        onChange(newLines.join('\n'));
-        setActiveLineIndex(index - 1);
-        
-        setTimeout(() => {
-          if (!containerRef.current) return;
-          const textareas = containerRef.current.querySelectorAll('textarea');
-          const targetTA = textareas[index - 1];
-          if (targetTA) {
-            targetTA.focus();
-            targetTA.selectionStart = prevLineLength;
-            targetTA.selectionEnd = prevLineLength;
-          }
-        }, 10);
-      }
     }
-    else if (e.key === 'ArrowUp') {
-      if (target.selectionStart === 0 && index > 0) {
-        e.preventDefault();
-        setActiveLineIndex(index - 1);
-        focusLine(index - 1, 'end');
-      }
-    }
-    else if (e.key === 'ArrowDown') {
-      if (target.selectionStart === target.value.length && index < lines.length - 1) {
-        e.preventDefault();
-        setActiveLineIndex(index + 1);
-        focusLine(index + 1, 'start');
-      }
-    }
-  };
 
-  const toggleChecklist = (index: number) => {
-    const text = lines[index];
-    const newLines = [...lines];
-    if (text.startsWith('- [ ] ')) {
-      newLines[index] = '- [x] ' + text.substring(6);
-    } else if (text.startsWith('- [x] ')) {
-      newLines[index] = '- [ ] ' + text.substring(6);
+    // Backspace key on checklist prefix
+    if (e.key === 'Backspace' && textarea.selectionStart === textarea.selectionEnd) {
+      if (cursor === lineStart + 6 && (value.substring(lineStart, cursor) === '- [ ] ' || value.substring(lineStart, cursor) === '- [x] ')) {
+        e.preventDefault();
+        const before = value.substring(0, lineStart);
+        const after = value.substring(cursor);
+        const newValue = before + after;
+        onChange(newValue);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.setSelectionRange(lineStart, lineStart);
+          }
+        }, 0);
+        return;
+      }
     }
-    onChange(newLines.join('\n'));
+
+    // Tab / Shift+Tab indent/unindent
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (value.substring(lineStart, lineStart + 2) === '  ') {
+          const before = value.substring(0, lineStart);
+          const after = value.substring(lineStart + 2);
+          const newValue = before + after;
+          onChange(newValue);
+          setTimeout(() => {
+            if (textareaRef.current) {
+              const newPos = Math.max(lineStart, cursor - 2);
+              textareaRef.current.setSelectionRange(newPos, newPos);
+            }
+          }, 0);
+        }
+      } else {
+        const before = value.substring(0, cursor);
+        const after = value.substring(cursor);
+        const newValue = before + '  ' + after;
+        onChange(newValue);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.setSelectionRange(cursor + 2, cursor + 2);
+          }
+        }, 0);
+      }
+    }
   };
 
   return (
-    <div ref={containerRef} className={className} style={style} onPaste={onPaste}>
-      {lines.map((line, index) => {
-        const isChecklist = line.startsWith('- [ ] ') || line.startsWith('- [x] ');
-        const isChecked = line.startsWith('- [x] ');
-        const textContent = isChecklist ? line.substring(6) : line;
-        
-        return (
-          <div key={index} className={`flex items-start group relative ${isChecklist ? 'my-[2px]' : ''}`}>
-            {isChecklist && (
-              <div className="pt-[0.3em] mr-2 shrink-0 flex items-center justify-center">
-                <div 
-                  onClick={() => toggleChecklist(index)}
-                  className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${
-                    isChecked 
-                      ? 'bg-primary-accent border-primary-accent' 
-                      : 'border-muted-text/50 hover:border-primary-accent'
-                  }`}
-                >
-                  {isChecked && (
-                    <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-            )}
-            <AutoResizeTextarea
-              value={textContent}
-              onChange={(newText: string) => {
-                const prefix = isChecklist ? (isChecked ? '- [x] ' : '- [ ] ') : '';
-                handleLineChange(index, prefix + newText);
-              }}
-              onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => handleKeyDown(e, index)}
-              onFocus={() => setActiveLineIndex(index)}
-              placeholder={index === 0 && lines.length === 1 ? placeholder : ''}
-              className={`w-full ${isChecked ? 'line-through opacity-50' : ''}`}
-            />
-          </div>
-        );
-      })}
+    <div className={`relative w-full ${className || ''}`}>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onPaste={onPaste}
+        placeholder={placeholder}
+        style={style}
+        rows={1}
+        className="w-full bg-transparent outline-none resize-none overflow-hidden transition-colors"
+        spellCheck
+      />
     </div>
   );
 });
