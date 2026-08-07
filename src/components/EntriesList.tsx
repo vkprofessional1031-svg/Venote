@@ -243,10 +243,10 @@ export default function EntriesList({
                   setIsMobileMenuOpen(false);
                 }
               }}
-              className={`group relative w-full text-left p-2.5 md:p-3.5 rounded-xl transition-all cursor-pointer border-l-2 ${
+              className={`group relative w-full text-left p-3 md:p-3.5 rounded-2xl transition-all cursor-pointer border ${
                 activeEntryId === entry.id
-                  ? 'bg-primary-accent/5 border-primary-accent'
-                  : 'hover:bg-card border-transparent'
+                  ? 'glass-panel border-primary-accent/50 text-primary-text shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]'
+                  : 'hover:glass-panel-subtle border-transparent text-[#A6988D] hover:border-white/10'
               }`}
             >
               <div className="flex items-start justify-between mb-2">

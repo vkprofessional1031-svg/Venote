@@ -614,7 +614,7 @@ export default function Home() {
         <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-[#8C7E74]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -622,7 +622,7 @@ export default function Home() {
                 placeholder="Search your notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-background border border-hairline rounded-xl text-sm focus:outline-none focus:border-muted-text transition-all placeholder:text-muted-text text-primary-text"
+                className="w-full pl-10 pr-4 py-2.5 glass-panel-subtle border border-white/10 rounded-2xl text-sm focus:outline-none focus:border-primary-accent/60 transition-all placeholder:text-[#8C7E74] text-primary-text"
               />
             </div>
             <button
@@ -632,10 +632,10 @@ export default function Home() {
                 setActiveEntryId(null);
               }}
               title="Archived"
-              className={`shrink-0 p-2.5 rounded-xl transition-colors border ${
+              className={`shrink-0 p-2.5 rounded-2xl transition-all border ${
                 showArchived 
-                  ? 'bg-primary-text text-background border-primary-text' 
-                  : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
+                  ? 'glass-panel text-primary-accent border-primary-accent/40 shadow-sm' 
+                  : 'glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:text-primary-text'
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -652,10 +652,10 @@ export default function Home() {
                   key={tag}
                   type="button"
                   onClick={() => setActiveTagFilter(activeTagFilter === tag ? null : tag)}
-                  className={`shrink-0 snap-start px-2.5 py-1 rounded-full text-[10px] font-mono tracking-wide transition-all border ${
+                  className={`shrink-0 snap-start px-2.5 py-1 rounded-xl text-[10px] font-mono tracking-wide transition-all border ${
                     activeTagFilter === tag 
-                      ? 'bg-primary-text text-background border-primary-text'
-                      : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
+                      ? 'glass-panel text-primary-accent border-primary-accent/40 font-semibold'
+                      : 'glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:text-primary-text'
                   }`}
                 >
                   #{tag}
@@ -725,19 +725,26 @@ export default function Home() {
 
         <div className="flex-1 flex flex-col items-center">
           {!activeEntry ? (
-            <div className="w-full max-w-[800px] px-4 py-8 pb-32 md:px-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] md:min-h-screen">
-                <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
-                  <h1 className="font-serif italic font-bold text-4xl md:text-[40px] lg:text-[44px] tracking-tight leading-[1.1] mb-3 flex flex-col items-center">
-                    <span className="text-primary-text">What's on your</span>
-                    <span className="text-primary-accent mt-1">mind?</span>
-                  </h1>
-                
-                  <p className="text-base md:text-lg text-muted-text font-medium max-w-2xl mx-auto">
-                    Dump anything here — I'll turn it into notes, tasks, and tables.
-                  </p>
-                </div>
+            <div className="w-full max-w-[800px] px-4 py-8 pb-32 md:px-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] md:min-h-screen relative overflow-hidden md:overflow-visible">
+                {/* Subtle Ambient Glow */}
+                <div 
+                  aria-hidden="true" 
+                  className="ambient-glow-hero"
+                />
 
-                <div className="w-full max-w-3xl relative">
+                <div className="relative z-10 w-full flex flex-col items-center">
+                  <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
+                    <h1 className="font-serif italic font-bold text-4xl md:text-[40px] lg:text-[44px] tracking-tight leading-[1.1] mb-3 flex flex-col items-center">
+                      <span className="text-primary-text">What's on your</span>
+                      <span className="text-primary-accent mt-1">mind?</span>
+                    </h1>
+                  
+                    <p className="text-base md:text-lg text-muted-text font-medium max-w-2xl mx-auto">
+                      Dump anything here — I'll turn it into notes, tasks, and tables.
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-3xl relative">
                   <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
                     <form onSubmit={handleStructureSubmit} className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 md:p-1.5 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
                       <input
@@ -800,6 +807,7 @@ export default function Home() {
                   {error}
                 </div>
               )}
+                </div>
             </div>
         ) : (
           <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 space-y-6 md:space-y-8 relative">

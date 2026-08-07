@@ -49,7 +49,7 @@ export default function AppSidebar({
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] bg-sidebar border-r border-hairline flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none md:pointer-events-auto'}`}>
+      <aside className={`fixed top-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 w-[272px] glass-sidebar flex flex-col h-[100dvh] md:h-screen md:sticky md:top-0 shrink-0 ${isMobileMenuOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none md:pointer-events-auto'}`}>
         <div className="p-4 md:p-5 pb-3 space-y-4">
           {/* Logo */}
           <Link href="/app" className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export default function AppSidebar({
             <>
               <Link
                 href="/app"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-accent/10 text-primary-accent font-medium rounded-xl transition-all border border-primary-accent/20 shadow-sm"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 glass-panel text-primary-accent font-medium rounded-2xl transition-all border border-primary-accent/30 shadow-sm hover:border-primary-accent/50"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -88,7 +88,7 @@ export default function AppSidebar({
               <button
                 type="button"
                 onClick={onNewNote}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-accent text-primary-text font-medium rounded-xl hover:brightness-110 transition-all shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#FF5C38] to-[#FF451A] text-white font-semibold rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_4px_18px_0_rgba(255,92,56,0.35),inset_0_1px_0_0_rgba(255,255,255,0.25)] border border-white/15"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -100,7 +100,7 @@ export default function AppSidebar({
             <Link
               href="/app"
               onClick={activePath === "/app" ? onNewNote : undefined}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-accent text-primary-text font-medium rounded-xl hover:brightness-110 transition-all shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#FF5C38] to-[#FF451A] text-white font-semibold rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_4px_18px_0_rgba(255,92,56,0.35),inset_0_1px_0_0_rgba(255,255,255,0.25)] border border-white/15"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -112,47 +112,47 @@ export default function AppSidebar({
           <div className="flex items-center gap-2 w-full">
             <Link
               href="/app/quick-notes"
-              className={`flex-1 flex justify-center items-center py-3 rounded-xl transition-all border group relative ${
+              className={`flex-1 flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/quick-notes"
-                  ? "bg-primary-accent/10 text-primary-accent border-primary-accent/20 shadow-sm"
-                  : "bg-background/50 text-muted-text border-transparent hover:border-hairline hover:bg-background hover:text-primary-text"
+                  ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
+                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-card border border-hairline rounded-lg text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-sm">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
                 Quick Notes
               </div>
             </Link>
             <Link
               href="/app/schedule"
-              className={`flex-1 flex justify-center items-center py-3 rounded-xl transition-all border group relative ${
+              className={`flex-1 flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/schedule"
-                  ? "bg-primary-accent/10 text-primary-accent border-primary-accent/20 shadow-sm"
-                  : "bg-background/50 text-muted-text border-transparent hover:border-hairline hover:bg-background hover:text-primary-text"
+                  ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
+                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-card border border-hairline rounded-lg text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-sm">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
                 Schedule
               </div>
             </Link>
             <Link
               href="/app/this-week"
-              className={`flex-1 flex justify-center items-center py-3 rounded-xl transition-all border group relative ${
+              className={`flex-1 flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/this-week"
-                  ? "bg-primary-accent/10 text-primary-accent border-primary-accent/20 shadow-sm"
-                  : "bg-background/50 text-muted-text border-transparent hover:border-hairline hover:bg-background hover:text-primary-text"
+                  ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
+                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
               </svg>
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-card border border-hairline rounded-lg text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-sm">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
                 Progress
               </div>
             </Link>
@@ -162,10 +162,10 @@ export default function AppSidebar({
           <div className="flex flex-col md:flex-row gap-2 w-full mt-2">
             <Link
               href="/app/expenses"
-              className={`flex-1 flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-xl transition-all border group relative ${
+              className={`flex-1 flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-2xl transition-all border group relative ${
                 activePath === "/app/expenses"
-                  ? "bg-primary-accent/10 text-primary-accent border-primary-accent/20 shadow-sm"
-                  : "bg-background/50 text-muted-text border-transparent hover:border-hairline hover:bg-background hover:text-primary-text"
+                  ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
+                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -176,10 +176,10 @@ export default function AppSidebar({
 
             <Link
               href="/app/rounds"
-              className={`flex-1 flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-xl transition-all border group relative ${
+              className={`flex-1 flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-2xl transition-all border group relative ${
                 activePath === "/app/rounds"
-                  ? "bg-primary-accent/10 text-primary-accent border-primary-accent/20 shadow-sm"
-                  : "bg-background/50 text-muted-text border-transparent hover:border-hairline hover:bg-background hover:text-primary-text"
+                  ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
+                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,20 +193,20 @@ export default function AppSidebar({
         {children}
 
         {!hideProfile && (
-          <div className="mt-auto p-3 md:p-4 border-t border-hairline bg-[#1A1714] shrink-0 relative z-10">
+          <div className="mt-auto p-3 md:p-4 border-t border-white/10 glass-panel-subtle shrink-0 relative z-10">
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-3 px-1">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-accent to-[#FF8F77] flex items-center justify-center text-background text-sm font-bold shadow-inner shrink-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF5C38] to-[#FF8F77] flex items-center justify-center text-white text-sm font-bold shadow-md shrink-0 border border-white/20">
                   {initial}
                 </div>
                 <div className="flex flex-col overflow-hidden leading-tight">
                   <div className="text-sm font-medium text-primary-text truncate">{displayName}</div>
-                  <div className="text-[11px] text-muted-text truncate opacity-80">{session?.user?.email}</div>
+                  <div className="text-[11px] text-[#A6988D] truncate">{session?.user?.email}</div>
                 </div>
               </div>
               <button
                 onClick={handleLogOut}
-                className="w-full flex items-center justify-start gap-2 px-3 py-2 text-sm text-muted-text hover:text-red-400 font-medium rounded-lg hover:bg-red-400/10 transition-all border border-transparent"
+                className="w-full flex items-center justify-start gap-2 px-3 py-2 text-sm text-[#A6988D] hover:text-red-400 font-medium rounded-xl hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
