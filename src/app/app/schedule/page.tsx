@@ -6,13 +6,6 @@ import { supabase } from '@/lib/supabase';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 import { useToast } from '@/components/ToastProvider';
-import {
-  subscribeToPushNotifications,
-  unsubscribeFromPushNotifications,
-  checkIsPushSubscribed,
-  getNotificationPermissionStatus,
-  registerServiceWorker
-} from '@/utils/pushNotifications';
 
 interface ScheduleBlock {
   id: string;
@@ -67,13 +60,6 @@ export default function SchedulePage() {
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false); // Mobile unscheduled bottom sheet
   const [sidebarFilter, setSidebarFilter] = useState<'all' | 'prep' | 'task'>('all');
 
-  // Notification State
-  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<string>('default');
-  const [isTogglingPush, setIsTogglingPush] = useState(false);
-  const [showNotifMenu, setShowNotifMenu] = useState(false);
-  const notifMenuRef = useRef<HTMLDivElement>(null);
-
   // Calendar State
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const d = new Date();
@@ -108,28 +94,6 @@ export default function SchedulePage() {
   const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
   const resizeStartYRef = useRef<number>(0);
   const resizeInitialMinutesRef = useRef<number>(60);
-
-  // Initial Auth & Notifications
-  useEffect(() => {
-    registerServiceWorker();
-    checkIsPushSubscribed().then(setIsPushSubscribed);
-    getNotificationPermissionStatus().then(setNotificationPermission);
-  }, []);
-
-  // Click Outside Handler for Notifications Popover
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notifMenuRef.current && !notifMenuRef.current.contains(event.target as Node)) {
-        setShowNotifMenu(false);
-      }
-    };
-    if (showNotifMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifMenu]);
 
   // Initial Auth
   useEffect(() => {
@@ -678,70 +642,6 @@ export default function SchedulePage() {
     }
   };
 
-  // Toggle Browser Push Notifications
-  const handleTogglePushNotifications = async () => {
-    if (!session?.user?.id) {
-      showToast('Please sign in to configure notifications', 'error');
-      return;
-    }
-    setIsTogglingPush(true);
-    try {
-      if (isPushSubscribed) {
-        const res = await unsubscribeFromPushNotifications(session.user.id);
-        if (res.success) {
-          setIsPushSubscribed(false);
-          showToast('Push notifications disabled', 'success');
-        } else {
-          showToast(res.error || 'Failed to disable push notifications', 'error');
-        }
-      } else {
-        const res = await subscribeToPushNotifications(session.user.id);
-        if (res.success) {
-          setIsPushSubscribed(true);
-          setNotificationPermission('granted');
-          showToast('Push notifications enabled! Reminders will arrive 10m before blocks', 'success');
-        } else {
-          showToast(res.error || 'Could not enable notifications', 'error');
-        }
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Notification error', 'error');
-    } finally {
-      setIsTogglingPush(false);
-    }
-  };
-
-  // Create a block ~9.5 minutes out to test reminder
-  const handleCreateTestReminderBlock = async () => {
-    if (!session?.user?.id) return;
-    try {
-      const now = new Date();
-      const testStart = new Date(now.getTime() + 9.5 * 60 * 1000);
-      const testEnd = new Date(testStart.getTime() + 45 * 60 * 1000);
-
-      const { data, error } = await supabase
-        .from('schedule_blocks')
-        .insert({
-          user_id: session.user.id,
-          title: '⚡ Test Reminder Block',
-          start_time: testStart.toISOString(),
-          end_time: testEnd.toISOString(),
-          notes: 'Test block scheduled 10m out for verification',
-          color: '#FF5C38'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setBlocks(prev => [...prev, data]);
-      showToast('Test block created ~9.5m out. In-app & desktop reminder will fire shortly!', 'success');
-      setShowNotifMenu(false);
-    } catch (err: any) {
-      console.error('Failed to create test block:', err);
-      showToast(err.message || 'Failed to create test block', 'error');
-    }
-  };
-
   // Real-time "now" line indicator position
   const now = new Date();
   const currentMinutesFromMidnight = now.getHours() * 60 + now.getMinutes();
@@ -819,102 +719,9 @@ export default function SchedulePage() {
 
           {/* Right Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* Notification Reminders Dropdown */}
-            <div className="relative" ref={notifMenuRef}>
-              <button
-                onClick={() => {
-                  setShowNotifMenu(prev => {
-                    const next = !prev;
-                    if (next) setIsSidebarOpen(false);
-                    return next;
-                  });
-                }}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer ${
-                  isPushSubscribed || notificationPermission === 'granted'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                    : 'bg-card border-hairline text-muted-text hover:text-primary-text'
-                }`}
-                title="Notification Reminders Settings"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <span className="hidden sm:inline">
-                  {isPushSubscribed ? 'Reminders On' : 'Reminders'}
-                </span>
-                {isPushSubscribed && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                )}
-              </button>
-
-              {showNotifMenu && (
-                <div className="absolute right-0 top-full mt-2.5 w-80 sm:w-84 bg-[#181818] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] p-4 z-50 animate-in fade-in zoom-in-95 duration-150 text-primary-text backdrop-blur-xl">
-                  {/* Popover Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-hairline">
-                    <h4 className="text-xs font-bold text-primary-text">Schedule Notifications</h4>
-                    <button 
-                      onClick={() => setShowNotifMenu(false)}
-                      className="text-muted-text hover:text-primary-text text-xs p-1.5 rounded-lg hover:bg-white/5 transition-colors"
-                      title="Close"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Popover Body */}
-                  <div className="py-3 space-y-3">
-                    <p className="text-muted-text text-[11.5px] leading-relaxed">
-                      Receive alerts 10 minutes before your scheduled blocks start.
-                    </p>
-
-                    {/* Browser Push Toggle Card */}
-                    <div className="p-3 bg-card/80 rounded-xl border border-hairline/80 flex items-center justify-between gap-3 shadow-inner">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-primary-text">Browser Push</span>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
-                            isPushSubscribed 
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-white/5 text-muted-text border border-hairline'
-                          }`}>
-                            {isPushSubscribed ? 'Enabled' : 'Off'}
-                          </span>
-                        </div>
-                        <div className="text-[10.5px] text-muted-text">
-                          {isPushSubscribed ? 'Active on this device' : 'Reminders even when tab is closed'}
-                        </div>
-                      </div>
-
-                      {/* Toggle Switch */}
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={isPushSubscribed}
-                        onClick={handleTogglePushNotifications}
-                        disabled={isTogglingPush}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          isPushSubscribed ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]' : 'bg-white/15 hover:bg-white/20'
-                        }`}
-                        title={isPushSubscribed ? 'Click to disable push notifications' : 'Click to enable push notifications'}
-                      >
-                        <span className="sr-only">Toggle browser push notifications</span>
-                        <span
-                          aria-hidden="true"
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                            isPushSubscribed ? 'translate-x-5' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Add Block Button */}
             <button
               onClick={() => {
-                setShowNotifMenu(false);
                 const targetDay = selectedMobileDate || new Date();
                 const now = new Date();
                 const start = new Date(targetDay.getFullYear(), targetDay.getMonth(), targetDay.getDate(), 9, 0, 0);
@@ -943,11 +750,7 @@ export default function SchedulePage() {
                 if (typeof window !== 'undefined' && window.innerWidth < 768) {
                   setIsMobileSheetOpen(prev => !prev);
                 } else {
-                  setIsSidebarOpen(prev => {
-                    const next = !prev;
-                    if (next) setShowNotifMenu(false);
-                    return next;
-                  });
+                  setIsSidebarOpen(prev => !prev);
                 }
               }}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer shrink-0 ${
