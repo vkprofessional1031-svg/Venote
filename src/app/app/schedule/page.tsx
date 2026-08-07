@@ -1563,18 +1563,6 @@ export default function SchedulePage() {
                   className="w-full px-3.5 py-2 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent resize-none"
                 />
               </div>
-
-              {/* Source link info if linked */}
-              {editingBlock.linked_round_id && (
-                <div className="p-2.5 rounded-xl bg-[#8B5CF6]/10 border border-[#8B5CF6]/20 text-[11px] text-[#8B5CF6] flex items-center gap-2">
-                  <span>Linked to Prep interview round. Deleting this block will not affect the round.</span>
-                </div>
-              )}
-              {editingBlock.linked_task_id && (
-                <div className="p-2.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20 text-[11px] text-[#10B981] flex items-center gap-2">
-                  <span>Linked to Organize task. Deleting this block will not affect the task.</span>
-                </div>
-              )}
             </div>
 
             {/* Modal Actions */}
