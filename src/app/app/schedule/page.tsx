@@ -137,17 +137,10 @@ export default function SchedulePage() {
       const loadedBlocks: ScheduleBlock[] = blocksData || [];
       setBlocks(loadedBlocks);
 
-      // Map of linked IDs to block IDs
-      const linkedTaskMap = new Map<string, string>();
-      const linkedRoundMap = new Map<string, string>();
-      loadedBlocks.forEach(b => {
-        if (b.linked_task_id) linkedTaskMap.set(b.linked_task_id, b.id);
-        if (b.linked_round_id) linkedRoundMap.set(b.linked_round_id, b.id);
-      });
-
       const extractedItems: UnscheduledItem[] = [];
+      const matchedBlockIds = new Set<string>();
 
-      // 2. Fetch Prep Rounds
+      // 1. Fetch Prep Rounds
       const { data: roundsData, error: roundsError } = await supabase
         .from('application_rounds')
         .select('*, application:job_applications(company, role)')
@@ -159,7 +152,12 @@ export default function SchedulePage() {
           if (round.status !== 'completed' && round.status !== 'passed' && round.status !== 'rejected') {
             const companyName = round.application?.company || 'Prep Application';
             const title = `${companyName} — ${round.round_name || 'Interview'}`;
-            const isScheduled = linkedRoundMap.has(round.id);
+            
+            // Match against block linked to this specific round
+            const matchingBlock = loadedBlocks.find(b => b.linked_round_id === round.id && !matchedBlockIds.has(b.id));
+            if (matchingBlock) {
+              matchedBlockIds.add(matchingBlock.id);
+            }
 
             extractedItems.push({
               id: `round-${round.id}`,
@@ -168,14 +166,14 @@ export default function SchedulePage() {
               subtitle: round.notes || (round.deadline ? `Due ${new Date(round.deadline).toLocaleDateString()}` : undefined),
               dueDate: round.deadline,
               rawSourceId: round.id,
-              isScheduled: isScheduled,
-              scheduledBlockId: linkedRoundMap.get(round.id)
+              isScheduled: !!matchingBlock,
+              scheduledBlockId: matchingBlock?.id
             });
           }
         });
       }
 
-      // 3. Fetch Organize Tasks
+      // 2. Fetch Organize Tasks
       const { data: entriesData, error: entriesError } = await supabase
         .from('entries')
         .select('*')
@@ -188,45 +186,70 @@ export default function SchedulePage() {
           if (!entry.results || !Array.isArray(entry.results)) return;
           const entryTitle = entry.results[0]?.title || 'Note';
 
+          // Get all blocks linked to this entry that haven't been claimed yet
+          const entryLinkedBlocks = loadedBlocks.filter(b => b.linked_task_id === entry.id && !matchedBlockIds.has(b.id));
+          const availableBlocks = [...entryLinkedBlocks];
+
+          // Collect all non-done tasks in this entry
+          const entryTasks: Array<{
+            uniqueTaskId: string;
+            text: string;
+            dueDate: string | null;
+          }> = [];
+
           entry.results.forEach((res: any, rIdx: number) => {
             if (res.type === 'tasks' && Array.isArray(res.items)) {
               res.items.forEach((task: any, tIdx: number) => {
                 if (!task.done) {
-                  const uniqueTaskId = `${entry.id}-${rIdx}-${tIdx}`;
-                  // Check if this entry/task is linked
-                  const isScheduled = linkedTaskMap.has(entry.id) || linkedTaskMap.has(uniqueTaskId);
-
-                  extractedItems.push({
-                    id: `task-${uniqueTaskId}`,
-                    type: 'task',
-                    title: task.text || 'Untitled Task',
-                    subtitle: entryTitle !== 'Note' ? entryTitle : undefined,
-                    dueDate: task.dueDate || null,
-                    rawSourceId: entry.id,
-                    isScheduled: isScheduled,
-                    scheduledBlockId: linkedTaskMap.get(entry.id) || linkedTaskMap.get(uniqueTaskId)
+                  entryTasks.push({
+                    uniqueTaskId: `${entry.id}-${rIdx}-${tIdx}`,
+                    text: (task.text || 'Untitled Task').trim(),
+                    dueDate: task.dueDate || null
                   });
                 }
               });
             } else if (res.embeddedTasks && Array.isArray(res.embeddedTasks)) {
               res.embeddedTasks.forEach((task: any, tIdx: number) => {
                 if (!task.done) {
-                  const uniqueTaskId = `${entry.id}-emb-${rIdx}-${tIdx}`;
-                  const isScheduled = linkedTaskMap.has(entry.id) || linkedTaskMap.has(uniqueTaskId);
-
-                  extractedItems.push({
-                    id: `task-${uniqueTaskId}`,
-                    type: 'task',
-                    title: task.text || 'Untitled Task',
-                    subtitle: entryTitle !== 'Note' ? entryTitle : undefined,
-                    dueDate: task.dueDate || null,
-                    rawSourceId: entry.id,
-                    isScheduled: isScheduled,
-                    scheduledBlockId: linkedTaskMap.get(entry.id) || linkedTaskMap.get(uniqueTaskId)
+                  entryTasks.push({
+                    uniqueTaskId: `${entry.id}-emb-${rIdx}-${tIdx}`,
+                    text: (task.text || 'Untitled Task').trim(),
+                    dueDate: task.dueDate || null
                   });
                 }
               });
             }
+          });
+
+          // Match each task individually to a linked block
+          entryTasks.forEach(task => {
+            // First pass: exact title match (case-insensitive)
+            let matchedBlockIndex = availableBlocks.findIndex(
+              b => b.title.trim().toLowerCase() === task.text.toLowerCase()
+            );
+
+            // Second pass: if only 1 task in entry and 1 block linked to this entry
+            if (matchedBlockIndex === -1 && availableBlocks.length === 1 && entryTasks.length === 1) {
+              matchedBlockIndex = 0;
+            }
+
+            let matchedBlock: ScheduleBlock | undefined = undefined;
+            if (matchedBlockIndex !== -1) {
+              matchedBlock = availableBlocks[matchedBlockIndex];
+              availableBlocks.splice(matchedBlockIndex, 1);
+              matchedBlockIds.add(matchedBlock.id);
+            }
+
+            extractedItems.push({
+              id: `task-${task.uniqueTaskId}`,
+              type: 'task',
+              title: task.text,
+              subtitle: entryTitle !== 'Note' ? entryTitle : undefined,
+              dueDate: task.dueDate,
+              rawSourceId: entry.id,
+              isScheduled: !!matchedBlock,
+              scheduledBlockId: matchedBlock?.id
+            });
           });
         });
       }
