@@ -126,9 +126,9 @@ export default function AppSidebar({
               </div>
             </Link>
             <Link
-              href="/app/today"
+              href="/app/schedule"
               className={`flex-1 flex justify-center items-center py-3 rounded-xl transition-all border group relative ${
-                activePath === "/app/today"
+                activePath === "/app/schedule"
                   ? "bg-primary-accent/10 text-primary-accent border-primary-accent/20 shadow-sm"
                   : "bg-background/50 text-muted-text border-transparent hover:border-hairline hover:bg-background hover:text-primary-text"
               }`}
@@ -137,7 +137,7 @@ export default function AppSidebar({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-card border border-hairline rounded-lg text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-sm">
-                Today
+                Schedule
               </div>
             </Link>
             <Link

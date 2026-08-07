@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const SYSTEM_INSTRUCTION = (currentDate: string) => `You are a text-structuring engine for a job application Rounds Tracker. Given raw, unstructured user input, analyze it and return a JSON object with a results array containing one or more structured items. Each item must match either the "round" schema or the "prep" schema.
+const SYSTEM_INSTRUCTION = (currentDate: string) => `You are a text-structuring engine for a job application Prep & Rounds Tracker. Given raw, unstructured user input, analyze it and return a JSON object with a results array containing one or more structured items. Each item must match one of these schemas: "application", "round", or "prep".
 
 CRITICAL: Your entire response must be a single valid JSON object and nothing else — no greeting, explanation, markdown formatting, or commentary.
 CRITICAL: Respond in the same language as the user's input.
@@ -9,12 +9,21 @@ CRITICAL: Today's date is ${currentDate}. Use this to resolve relative dates (e.
 Output format:
 { "results": [ one or more objects, each matching a schema below ] }
 
+Schema for application:
+{
+  "type": "application",
+  "company": "Company Name",
+  "role": "Role Name (default to 'Software Engineer' if omitted)",
+  "status": "applied | in_progress | accepted | rejected (default to 'applied')",
+  "notes": "Any additional context (or empty string if none)"
+}
+
 Schema for round:
 { 
   "type": "round", 
   "company": "Company Name", 
   "role": "Role Name (default to 'Software Engineer' if omitted)", 
-  "round_name": "Name of the interview round (e.g. 'OA', 'Phone Screen')", 
+  "round_name": "Name of the interview round (e.g. 'OA', 'Phone Screen', 'Technical Interview', 'Onsite', 'Final Round')", 
   "deadline": "YYYY-MM-DDTHH:mm:ss (if time mentioned, DO NOT include 'Z'), otherwise YYYY-MM-DD", 
   "notes": "Any additional context (do not include the raw time/date string. Do not duplicate the role name or company name in the notes field. Only include notes if there is genuinely new context not already captured in company, role, round_name, or deadline. If there's nothing extra to add, leave notes empty.)" 
 }
@@ -29,7 +38,10 @@ Schema for prep:
 
 Classification rules:
 - DEFAULT to a single result in the array, unless explicitly given multiple distinct actions.
-- Use "round" when the user mentions an interview, assessment, offer, or any stage of a job application process. Extract the company and round name carefully. Resolve deadlines/dates.
+- Only create a "round" entry if the input EXPLICITLY mentions a specific interview stage (OA, assessment, phone screen, technical round, onsite, behavioral interview, final round, etc.).
+- If the input ONLY mentions applying to a company (e.g. "Applied to Netflix for backend role") or a general status update with no specific round mentioned (e.g. "Rejected by Google", "Got accepted by Stripe"), do NOT create a round — output type "application".
+- When an input describes an application or status update (e.g., "Applied to Netflix for backend role" -> { type: "application", company: "Netflix", role: "Backend Engineer", status: "applied" }), use "application".
+- When an input describes a status update on a company (e.g., "Rejected by Google" -> { type: "application", company: "Google", status: "rejected" }), use "application" with the corresponding status.
 - Use "prep" when the user mentions practicing, studying, doing LeetCode, mock interviews, or preparing. If they mention prepping FOR a specific company, include it in company_reference.`;
 
 export async function POST(request: Request) {

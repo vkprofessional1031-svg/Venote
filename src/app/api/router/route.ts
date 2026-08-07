@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 
-const SYSTEM_INSTRUCTION = `You are a domain routing engine. Given raw user input, classify it strictly into one of three domains: 'organize', 'wallet', or 'prep'.
-- 'wallet': If the input involves money, expenses, income, spending, buying, getting paid, or costs.
-- 'prep': If the input involves job applications, interviews, online assessments (OAs), recruiter calls, mock interviews, or leetcode practice.
-- 'organize': If the input is a general task, note, roadmap, brainstorm, or list that doesn't fit the other two.
+const SYSTEM_INSTRUCTION = `You are a smart domain routing engine. Given raw user input, classify it strictly into one of three domains: 'organize', 'wallet', or 'prep'.
+
+Routing Rules:
+- 'wallet': For personal financial transactions where the user is logging what they spent, bought, paid, earned, or received (e.g. "Spent $20 on lunch", "Coffee $4.50", "Uber home $24", "Got paid $500 freelance", "Paid $120 for groceries split with Sam").
+- 'prep': For job search, interview preparation, applications, recruiter screenings, online assessments (OAs), rounds, mock interviews, or LeetCode practice (e.g. "Applied to Netflix for backend role", "Google OA due Friday", "Did 3 LeetCode problems", "Rejected by Stripe", "Amazon onsite on Monday").
+- 'organize': For general notes, tasks, todo lists, brainstorming, roadmaps, AND comparison tables / structured data.
+  * CRITICAL: Multiple distinct entities each with a price/attribute described comparatively (e.g. "Riverside apartment is $1800, Oakwood is $2100, Maple is $1600", "MacBook Air is $1000, Pro is $2000", "Option A vs Option B") MUST route to 'organize' (as a comparison table), NOT 'wallet'.
+  * Simple checklists, reminders, or general thoughts (e.g. "todo: buy milk", "ideas for novel", "plan for vacation") MUST route to 'organize'.
 
 CRITICAL: Return a single JSON object with a "domain" string key. Do not output anything else.`;
 

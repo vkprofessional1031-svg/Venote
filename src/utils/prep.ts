@@ -4,7 +4,58 @@ export async function insertPrepItems(items: any[], userId: string, supabase: Su
   const processedItems = [];
 
   for (const item of items) {
-    if (item.type === 'round') {
+    if (item.type === 'application') {
+      const companyName = item.company || 'Unknown Company';
+      const roleName = item.role || 'Software Engineer';
+      const status = item.status || 'applied';
+
+      const { data: existingApps } = await supabase
+        .from('job_applications')
+        .select('*')
+        .eq('user_id', userId)
+        .ilike('company', companyName)
+        .limit(1);
+
+      if (existingApps && existingApps.length > 0) {
+        const appId = existingApps[0].id;
+        const updatePayload: any = {
+          status: status,
+          status_manually_set: true,
+          updated_at: new Date().toISOString()
+        };
+        if (item.role && item.role !== 'Software Engineer') {
+          updatePayload.role = item.role;
+        }
+        if (item.notes) {
+          updatePayload.notes = item.notes;
+        }
+        const { data: updatedApp, error: updateErr } = await supabase
+          .from('job_applications')
+          .update(updatePayload)
+          .eq('id', appId)
+          .select()
+          .single();
+
+        if (updateErr) throw updateErr;
+        processedItems.push({ ...(updatedApp || existingApps[0]), itemType: 'application', companyName, dbTable: 'job_applications' });
+      } else {
+        const { data: newApp, error: newAppErr } = await supabase
+          .from('job_applications')
+          .insert({
+            user_id: userId,
+            company: companyName,
+            role: roleName,
+            status: status,
+            notes: item.notes || null,
+            status_manually_set: status !== 'applied'
+          })
+          .select()
+          .single();
+
+        if (newAppErr) throw newAppErr;
+        processedItems.push({ ...newApp, itemType: 'application', companyName, dbTable: 'job_applications' });
+      }
+    } else if (item.type === 'round') {
       const companyName = item.company || 'Unknown Company';
       const roleName = item.role || 'Software Engineer';
       

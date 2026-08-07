@@ -193,7 +193,7 @@ export default function Home() {
         const response = await fetch('/api/structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToProcess, currencySymbol: '$' }),
+          body: JSON.stringify({ text: textToProcess, domain: 'wallet', currencySymbol: '$' }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to structure text');
@@ -237,7 +237,7 @@ export default function Home() {
           results: [],
           isConfirmation: true,
           confirmationDomain: 'prep',
-          confirmationMessage: `Logged as a ${processedItems[0].itemType} in Prep — ${processedItems[0].companyName || processedItems[0].prep_type}`,
+          confirmationMessage: `Logged as ${processedItems[0].itemType === 'application' ? 'an application' : processedItems[0].itemType === 'prep' ? 'a prep session' : 'a round'} in Prep — ${processedItems[0].companyName || processedItems[0].prep_type}`,
           originalInput: textToProcess,
           insertedDbIds: insertedIds
         };
@@ -248,7 +248,7 @@ export default function Home() {
         const response = await fetch('/api/structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToProcess }),
+          body: JSON.stringify({ text: textToProcess, domain: 'organize' }),
         });
         const data = await response.json();
         if (!response.ok) {
@@ -286,11 +286,11 @@ export default function Home() {
       setSearchQuery('');
     } catch (err: any) {
       console.error('Structuring error:', err);
-      if (err.message === 'RATE_LIMIT') {
-        setError("You've hit the AI service's usage limit — please wait a minute and try again");
-      } else {
-        setError(err.message || "Something went wrong — try rephrasing or try again.");
-      }
+      const errMsg = err.message === 'RATE_LIMIT'
+        ? "You've hit the AI service's usage limit — please wait a minute and try again"
+        : (err.message || "Something went wrong — try rephrasing or try again.");
+      setError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setLoading(false);
     }

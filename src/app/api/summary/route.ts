@@ -3,17 +3,18 @@ import { NextResponse } from 'next/server';
 const SYSTEM_INSTRUCTION = `You are a helpful, friendly financial assistant. Given a user's financial data for the current month, write a short list of sharp, scannable bullet points summarizing their finances.
 Follow this structure:
 - Total spent this month.
-- Total income this month (ONLY if income is provided).
-- Net balance and whether it's positive or negative (ONLY if income is provided).
+- Total income this month (MANDATORY whenever Total Income is provided).
+- Net balance and whether it's positive or negative (MANDATORY whenever Total Income is provided).
 - Top spending category (with amount).
-- Budget status (e.g. "Within budget on all tracked categories" or "Over budget on X by Y", only for categories with a budget set).
+- Budget status (e.g. "Within budget on all tracked categories" or "Over budget on X by Y", or "No budgets set").
 - One notable pattern or observation (ONLY if something stands out, otherwise omit this bullet).
 
+CRITICAL: Whenever "Total Income" is provided in the input data, you MUST ALWAYS include both the "Total income: ..." bullet and the "Net balance: ..." bullet. Do not omit them under any circumstances.
 CRITICAL: Do not write paragraphs or filler text. Each bullet must be one clear fact or insight.
 CRITICAL: You MUST return a single valid JSON object containing a "bullets" array of strings. Do not return markdown, just JSON.
 
 Output format:
-{ "bullets": ["Total spent: $255 this month", "Total income: $500", "Net balance: +$245", "Top category: Food ($100)", "Within budget on all tracked categories"] }`;
+{ "bullets": ["Total spent: $255.00 this month", "Total income: $500.00", "Net balance: +$245.00", "Top category: Food ($100.00)", "Within budget on all tracked categories"] }`;
 
 export async function POST(request: Request) {
   const apiKey = process.env.GROQ_API_KEY;
@@ -46,9 +47,9 @@ export async function POST(request: Request) {
 
   let userText = `Here is my financial data for this month:\n`;
   userText += `Total Spent: ${currencySymbol}${Number(totalSpent).toFixed(2)}\n`;
-  if (totalIncome !== undefined && totalIncome > 0) {
+  if (totalIncome !== undefined && totalIncome !== null) {
     userText += `Total Income: ${currencySymbol}${Number(totalIncome).toFixed(2)}\n`;
-    userText += `Net Balance: ${netBalance < 0 ? '-' : '+'}${currencySymbol}${Math.abs(Number(netBalance)).toFixed(2)}\n`;
+    userText += `Net Balance: ${Number(netBalance) < 0 ? '-' : '+'}${currencySymbol}${Math.abs(Number(netBalance || 0)).toFixed(2)}\n`;
   }
   
   userText += `\nCategory Totals:\n`;
