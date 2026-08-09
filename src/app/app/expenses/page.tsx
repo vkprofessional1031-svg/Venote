@@ -603,7 +603,7 @@ export default function ExpensesPage() {
             </header>
 
             {/* Hero Card */}
-            <div className="bg-gradient-to-br from-[#FF5C38] to-[#8a2712] rounded-[20px] p-6 sm:p-8 text-white shadow-[0_8px_30px_rgba(255,92,56,0.3)] relative overflow-hidden mt-2">
+            <div className="glass-panel-modal rounded-[24px] p-6 sm:p-8 text-white shadow-[0_8px_32px_rgba(255,92,56,0.15)] border border-primary-accent/20 relative overflow-hidden mt-2">
               {/* Background texture (dot grid) */}
               <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
               
@@ -670,7 +670,7 @@ export default function ExpensesPage() {
             </div>
 
             {/* AI Add Bar */}
-            <div className="bg-card/50 backdrop-blur-md rounded-2xl p-4 border border-hairline shadow-sm relative group">
+            <div className="glass-panel-modal rounded-[24px] p-4 border border-white/10 shadow-sm relative group">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-accent/5 via-transparent to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <form onSubmit={handleAIQuickAdd} className="relative z-10 flex flex-col gap-3">
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
@@ -839,7 +839,7 @@ export default function ExpensesPage() {
                   {/* Recent Transactions */}
                   <div className="flex flex-col gap-3">
                     <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Recent</h2>
-                    <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden">
+                    <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                       {allTransactions.map((tx, idx) => (
                         <div key={`${tx.id}-${tx.isIncome}`} className={`flex items-start justify-between gap-3 p-5 hover:bg-white/5 transition-colors group ${idx !== allTransactions.length - 1 ? 'border-b border-white/10' : ''}`}>
                           <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -891,7 +891,7 @@ export default function ExpensesPage() {
                   {peopleOwingMoney.length > 0 && (
                     <div className="flex flex-col gap-3">
                       <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Settle Up</h2>
-                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 flex flex-col gap-4">
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 flex flex-col gap-4">
                         {peopleOwingMoney.map(([name, data]) => (
                           <div key={name} className="flex flex-col gap-2">
                             <div 
@@ -936,7 +936,7 @@ export default function ExpensesPage() {
                 <div className="flex flex-col gap-6">
                   
                   {/* AI Summary Strip */}
-                  <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] relative group overflow-hidden">
+                  <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] relative group overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-primary-accent/5 to-transparent opacity-50 pointer-events-none" />
                     <div className="relative z-10 p-4">
                       <div 
@@ -1004,12 +1004,12 @@ export default function ExpensesPage() {
                   {budgets.length > 0 && (
                     <div className="flex flex-col gap-3">
                       <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Budgets</h2>
-                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 flex flex-col gap-5">
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 flex flex-col gap-5">
                         {budgets.map(budget => {
                           const cat = budget.category;
                           const spent = currentMonthTotals[cat] || 0;
                           const budgetPercent = Math.min((spent / budget.monthly_limit) * 100, 100);
-                          let barColor = 'bg-white/30'; // 0-74%
+                          let barColor = 'bg-muted-text'; // 0-74%
                           if (spent / budget.monthly_limit >= 1) barColor = 'bg-red-500'; // 100%+
                           else if (spent / budget.monthly_limit >= 0.9) barColor = 'bg-orange-500'; // 90-99%
                           else if (spent / budget.monthly_limit >= 0.75) barColor = 'bg-amber-500'; // 75-89%
@@ -1038,7 +1038,7 @@ export default function ExpensesPage() {
                   {/* Breakdown Section */}
                   <div className="flex flex-col gap-3">
                     <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Breakdown</h2>
-                    <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 flex flex-col gap-5">
+                    <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 flex flex-col gap-5">
                       {Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([cat, amount]) => {
                         const percent = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
                         return (

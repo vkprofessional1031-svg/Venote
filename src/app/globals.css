@@ -121,4 +121,17 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Hide scrollbar for Chrome, Safari, Edge */
+::-webkit-scrollbar {
+  display: none;
+}
 
+/* Hide scrollbar for Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for IE/legacy Edge */
+* {
+  -ms-overflow-style: none;
+}

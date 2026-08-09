@@ -196,7 +196,7 @@ export default function NoteView({ title, body, embeddedTasks = [], onToggle, on
   return (
     <>
       <div 
-        className="w-full bg-card rounded-[24px] overflow-hidden shadow-sm border border-transparent transition-colors"
+        className="w-full glass-panel-modal rounded-[24px] overflow-hidden shadow-2xl border border-white/10 transition-colors"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >

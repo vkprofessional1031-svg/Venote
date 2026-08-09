@@ -114,7 +114,7 @@ export default function TaskView({ title, items, onToggle, onUpdate, headerAddon
   };
 
   return (
-    <div className="w-full bg-card rounded-[24px] overflow-hidden shadow-sm border border-transparent hover:border-hairline transition-colors">
+    <div className="w-full glass-panel-modal rounded-[24px] overflow-hidden shadow-2xl border border-white/10 transition-colors">
       <div className="p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-3 md:gap-0 relative">
           <div className="flex items-center gap-3 flex-wrap">

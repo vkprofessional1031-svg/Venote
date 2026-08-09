@@ -60,7 +60,37 @@ export default function EntriesList({
   handleArchiveToggle,
   onFixIt
 }: EntriesListProps) {
-  
+  const [swipedEntryId, setSwipedEntryId] = React.useState<string | null>(null);
+  const [touchStartX, setTouchStartX] = React.useState<number | null>(null);
+  const [touchCurrentX, setTouchCurrentX] = React.useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, id: string) => {
+    if (touchStartX === null) return;
+    setTouchCurrentX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, id: string) => {
+    if (touchStartX === null || touchCurrentX === null) return;
+    const diff = touchStartX - touchCurrentX;
+    
+    // Swipe left threshold
+    if (diff > 40) {
+      setSwipedEntryId(id);
+    } 
+    // Swipe right threshold
+    else if (diff < -40) {
+      if (swipedEntryId === id) setSwipedEntryId(null);
+    }
+    
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  };
+
   const ConfirmationCard = ({ entry }: { entry: Entry }) => {
     const [showFixMenu, setShowFixMenu] = React.useState(false);
     return (
@@ -235,20 +265,31 @@ export default function EntriesList({
             entry.isConfirmation ? (
               <ConfirmationCard key={entry.id} entry={entry} />
             ) : (
-            <div
-              key={entry.id}
-              onClick={() => {
-                if (editingEntryId !== entry.id) {
-                  setActiveEntryId(entry.id);
-                  setIsMobileMenuOpen(false);
-                }
-              }}
-              className={`group relative w-full text-left p-3 md:p-3.5 rounded-2xl transition-all cursor-pointer border ${
-                activeEntryId === entry.id
-                  ? 'glass-panel border-primary-accent/50 text-primary-text shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]'
-                  : 'hover:glass-panel-subtle border-transparent text-[#A6988D] hover:border-white/10'
-              }`}
-            >
+            <div key={entry.id} className="group relative w-full mb-1 rounded-2xl overflow-hidden">
+              <div 
+                className="flex w-full transition-transform duration-300 ease-out"
+                style={{ transform: swipedEntryId === entry.id ? 'translateX(-240px)' : 'translateX(0)' }}
+              >
+                <div
+                  onClick={() => {
+                    if (swipedEntryId === entry.id) {
+                      setSwipedEntryId(null);
+                      return;
+                    }
+                    if (editingEntryId !== entry.id) {
+                      setActiveEntryId(entry.id);
+                      setIsMobileMenuOpen(false);
+                    }
+                  }}
+                  onTouchStart={(e) => handleTouchStart(e, entry.id)}
+                  onTouchMove={(e) => handleTouchMove(e, entry.id)}
+                  onTouchEnd={(e) => handleTouchEnd(e, entry.id)}
+                  className={`w-full shrink-0 text-left p-3 md:p-3.5 rounded-2xl cursor-pointer border ${
+                    activeEntryId === entry.id
+                      ? 'glass-panel border-primary-accent/50 text-primary-text shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]'
+                      : 'hover:glass-panel-subtle border-transparent text-[#A6988D] hover:border-white/10'
+                  }`}
+                >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex flex-wrap gap-1.5">
                   {entry.results?.map((res: any, idx: number) => (
@@ -293,7 +334,7 @@ export default function EntriesList({
 
                 {/* Actions (Always visible on mobile, hover on desktop) */}
                 {editingEntryId !== entry.id && (
-                  <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="shrink-0 flex items-center gap-1 hidden md:flex opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
                       onClick={(e) => handleTogglePin(e, entry.id, !!entry.pinned)}
@@ -362,6 +403,43 @@ export default function EntriesList({
                 </>
               )}
             </div>
+
+            {/* Mobile Swipe Actions (Fixed to the right of the card track) */}
+            <div className="w-[240px] shrink-0 flex items-stretch md:hidden bg-background">
+              <button onClick={(e) => { e.stopPropagation(); handleTogglePin(e, entry.id, !!entry.pinned); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-gray-800 text-white transition-opacity active:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[10px] font-medium">{entry.pinned ? 'Unpin' : 'Pin'}</span>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); startRename(e, entry.id, entry.results?.[0]?.title); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-gray-700 text-white transition-opacity active:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                <span className="text-[10px] font-medium">Edit</span>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleArchiveToggle(e, entry.id, !!entry.isArchived); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-gray-600 text-white transition-opacity active:opacity-70">
+                {showArchived ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+                    <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <span className="text-[10px] font-medium">{showArchived ? 'Unarchive' : 'Archive'}</span>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(e, entry.id); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-red-600 text-white transition-opacity active:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[10px] font-medium">Delete</span>
+              </button>
+            </div>
+            </div>
+          </div>
             )
           ))}
         </div>
@@ -376,20 +454,31 @@ export default function EntriesList({
             entry.isConfirmation ? (
               <ConfirmationCard key={entry.id} entry={entry} />
             ) : (
-            <div
-              key={entry.id}
-              onClick={() => {
-                if (editingEntryId !== entry.id) {
-                  setActiveEntryId(entry.id);
-                  setIsMobileMenuOpen(false);
-                }
-              }}
-              className={`group relative w-full text-left p-2.5 md:p-3.5 rounded-xl transition-all cursor-pointer border-l-2 ${
-                activeEntryId === entry.id
-                  ? 'bg-primary-accent/5 border-primary-accent'
-                  : 'hover:bg-card border-transparent'
-              }`}
-            >
+            <div key={entry.id} className="group relative w-full mb-1 rounded-xl overflow-hidden">
+              <div 
+                className="flex w-full transition-transform duration-300 ease-out"
+                style={{ transform: swipedEntryId === entry.id ? 'translateX(-240px)' : 'translateX(0)' }}
+              >
+                <div
+                  onClick={() => {
+                    if (swipedEntryId === entry.id) {
+                      setSwipedEntryId(null);
+                      return;
+                    }
+                    if (editingEntryId !== entry.id) {
+                      setActiveEntryId(entry.id);
+                      setIsMobileMenuOpen(false);
+                    }
+                  }}
+                  onTouchStart={(e) => handleTouchStart(e, entry.id)}
+                  onTouchMove={(e) => handleTouchMove(e, entry.id)}
+                  onTouchEnd={(e) => handleTouchEnd(e, entry.id)}
+                  className={`w-full shrink-0 text-left p-2.5 md:p-3.5 rounded-xl cursor-pointer border-l-2 ${
+                    activeEntryId === entry.id
+                      ? 'bg-primary-accent/5 border-primary-accent'
+                      : 'hover:bg-card border-transparent'
+                  }`}
+                >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex flex-wrap gap-1.5">
                   {entry.results?.map((res: any, idx: number) => (
@@ -434,7 +523,7 @@ export default function EntriesList({
 
                 {/* Actions (Always visible on mobile, hover on desktop) */}
                 {editingEntryId !== entry.id && (
-                  <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="shrink-0 flex items-center gap-1 hidden md:flex opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
                       onClick={(e) => handleTogglePin(e, entry.id, !!entry.pinned)}
@@ -503,6 +592,43 @@ export default function EntriesList({
                 </>
               )}
             </div>
+
+            {/* Mobile Swipe Actions (Fixed to the right of the card track) */}
+            <div className="w-[240px] shrink-0 flex items-stretch md:hidden bg-background">
+              <button onClick={(e) => { e.stopPropagation(); handleTogglePin(e, entry.id, !!entry.pinned); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-gray-800 text-white transition-opacity active:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1h2a2 2 0 012 2v2l2 3v2h-6v4.5a.5.5 0 01-1 0V13H4v-2l2-3V6a2 2 0 012-2h2V3a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[10px] font-medium">{entry.pinned ? 'Unpin' : 'Pin'}</span>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); startRename(e, entry.id, entry.results?.[0]?.title); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-gray-700 text-white transition-opacity active:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                <span className="text-[10px] font-medium">Edit</span>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleArchiveToggle(e, entry.id, !!entry.isArchived); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-gray-600 text-white transition-opacity active:opacity-70">
+                {showArchived ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+                    <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <span className="text-[10px] font-medium">{showArchived ? 'Unarchive' : 'Archive'}</span>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(e, entry.id); setSwipedEntryId(null); }} className="w-16 flex flex-col items-center justify-center bg-red-600 text-white transition-opacity active:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[10px] font-medium">Delete</span>
+              </button>
+            </div>
+            </div>
+          </div>
             )
           ))}
         </div>

@@ -694,7 +694,7 @@ export default function SchedulePage() {
         <AppMobileHeader onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
         {/* Schedule Top Bar */}
-        <header className="px-3 sm:px-4 md:px-8 py-3 md:py-3.5 border-b border-hairline bg-card/90 backdrop-blur-md flex items-center justify-between gap-2 shrink-0 relative z-40">
+        <header className="px-3 sm:px-4 md:px-8 py-3 md:py-3.5 border-b border-white/10 glass-panel-modal flex items-center justify-between gap-2 shrink-0 relative z-40">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <div className="min-w-0">
               <h1 className="text-base sm:text-xl md:text-2xl font-serif font-bold text-primary-text flex items-center gap-1.5 sm:gap-2">
@@ -711,7 +711,7 @@ export default function SchedulePage() {
             <div className="hidden md:flex items-center gap-1.5 bg-background/80 border border-hairline rounded-xl p-1 shadow-sm">
               <button
                 onClick={handlePrevWeek}
-                className="p-1.5 hover:bg-card rounded-lg text-muted-text hover:text-primary-text transition-colors"
+                className="p-1.5 hover:bg-white/10 rounded-lg text-muted-text hover:text-primary-text transition-colors"
                 title="Previous week"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -720,13 +720,13 @@ export default function SchedulePage() {
               </button>
               <button
                 onClick={handleToday}
-                className="px-2.5 py-1 text-xs font-semibold hover:bg-card rounded-lg text-primary-text transition-colors"
+                className="px-2.5 py-1 text-xs font-semibold hover:bg-white/10 rounded-lg text-primary-text transition-colors"
               >
                 Today
               </button>
               <button
                 onClick={handleNextWeek}
-                className="p-1.5 hover:bg-card rounded-lg text-muted-text hover:text-primary-text transition-colors"
+                className="p-1.5 hover:bg-white/10 rounded-lg text-muted-text hover:text-primary-text transition-colors"
                 title="Next week"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -779,7 +779,7 @@ export default function SchedulePage() {
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer shrink-0 ${
                 isSidebarOpen || isMobileSheetOpen
                   ? 'bg-primary-accent/10 border-primary-accent/30 text-primary-accent'
-                  : 'bg-card border-hairline text-muted-text hover:text-primary-text'
+                  : 'bg-white/10 border-white/10 text-primary-text hover:brightness-110'
               }`}
               title="Toggle unscheduled panel"
             >
@@ -797,13 +797,13 @@ export default function SchedulePage() {
         </header>
 
         {/* Mobile Day Navigation Bar (Visible only on mobile) */}
-        <div className="flex md:hidden flex-col border-b border-hairline bg-card/60 shrink-0">
+        <div className="flex md:hidden flex-col border-b border-white/10 glass-panel-modal shrink-0">
           {/* Day Navigation Row */}
           <div className="flex items-center justify-between px-3 py-2.5 gap-2">
             <div className="flex items-center gap-1 bg-background/80 border border-hairline rounded-lg p-0.5">
               <button
                 onClick={handleMobilePrevDay}
-                className="p-1.5 hover:bg-card rounded-md text-muted-text hover:text-primary-text transition-colors"
+                className="p-1.5 hover:bg-white/10 rounded-md text-muted-text hover:text-primary-text transition-colors"
                 title="Previous day"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -812,13 +812,13 @@ export default function SchedulePage() {
               </button>
               <button
                 onClick={handleMobileToday}
-                className="px-2 py-0.5 text-xs font-semibold hover:bg-card rounded-md text-primary-text transition-colors"
+                className="px-2 py-0.5 text-xs font-semibold hover:bg-white/10 rounded-md text-primary-text transition-colors"
               >
                 Today
               </button>
               <button
                 onClick={handleMobileNextDay}
-                className="p-1.5 hover:bg-card rounded-md text-muted-text hover:text-primary-text transition-colors"
+                className="p-1.5 hover:bg-white/10 rounded-md text-muted-text hover:text-primary-text transition-colors"
                 title="Next day"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -856,7 +856,7 @@ export default function SchedulePage() {
                   className={`py-1.5 px-0.5 text-center transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-primary-accent/15 text-primary-accent'
-                      : 'hover:bg-card/60 text-muted-text hover:text-primary-text'
+                      : 'hover:bg-white/10 text-muted-text hover:text-primary-text'
                   }`}
                 >
                   <div className="text-[9px] uppercase font-medium">
@@ -904,7 +904,7 @@ export default function SchedulePage() {
           {/* DESKTOP WEEK-VIEW GRID (Visible only on md screens and up) */}
           <div className="hidden md:flex flex-1 flex-col min-w-0 h-full overflow-hidden bg-background">
             {/* Days Header Row */}
-            <div className="flex border-b border-hairline bg-card/40 shrink-0">
+            <div className="flex border-b border-white/10 glass-panel-modal shrink-0">
               {/* Time gutter placeholder */}
               <div className="w-14 sm:w-16 shrink-0 border-r border-hairline flex items-end justify-center pb-2 text-[10px] uppercase font-mono text-muted-text/60">
                 GMT
@@ -917,14 +917,14 @@ export default function SchedulePage() {
                   return (
                     <div
                       key={idx}
-                      className={`py-2.5 px-1 sm:px-2 text-center transition-colors ${
+                      className={`py-2.5 px-1 sm:px-2 flex flex-col items-center justify-center transition-colors ${
                         isToday ? 'bg-primary-accent/5' : ''
                       }`}
                     >
-                      <div className="text-[11px] sm:text-xs uppercase font-medium text-muted-text">
+                      <div className="text-[11px] sm:text-xs uppercase font-medium text-muted-text text-center">
                         {day.toLocaleDateString(undefined, { weekday: 'short' })}
                       </div>
-                      <div className="flex items-center justify-center gap-1 mt-0.5">
+                      <div className="flex items-center justify-center mt-0.5">
                         <span
                           className={`text-sm sm:text-base font-bold w-7 h-7 flex items-center justify-center rounded-full transition-all ${
                             isToday
@@ -978,10 +978,10 @@ export default function SchedulePage() {
                         {isToday && (
                           <div 
                             style={{ top: `${nowLineTop}px` }}
-                            className="absolute left-0 right-0 z-[5] pointer-events-none -translate-y-1/2 flex items-center"
+                            className="absolute left-1 right-0 z-[5] pointer-events-none -translate-y-1/2 flex items-center"
                           >
-                            <div className="w-full h-[2px] bg-red-500/90 shadow-[0_0_6px_rgba(239,68,68,0.5)]"></div>
-                            <div className="absolute left-1 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] z-10"></div>
+                            <div className="absolute left-0 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] z-10"></div>
+                            <div className="absolute left-1 right-0 h-[2px] bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]"></div>
                           </div>
                         )}
 
@@ -1002,7 +1002,7 @@ export default function SchedulePage() {
                               e.currentTarget.classList.remove('bg-primary-accent/15');
                               handleDropOnSlot(dayDate, hour, e);
                             }}
-                            className="border-b border-hairline/40 hover:bg-card/40 cursor-pointer transition-colors relative group/slot"
+                            className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors relative group/slot"
                           >
                             {/* Subtle half-hour dotted guide */}
                             <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-hairline/20 pointer-events-none"></div>
@@ -1148,10 +1148,10 @@ export default function SchedulePage() {
                   {isDateToday(selectedMobileDate) && (
                     <div 
                       style={{ top: `${nowLineTop}px` }}
-                      className="absolute left-0 right-0 z-[5] pointer-events-none -translate-y-1/2 flex items-center"
+                      className="absolute left-1 right-0 z-[5] pointer-events-none -translate-y-1/2 flex items-center"
                     >
-                      <div className="w-full h-[2px] bg-red-500/90 shadow-[0_0_6px_rgba(239,68,68,0.5)]"></div>
-                      <div className="absolute left-1 w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] z-10"></div>
+                      <div className="absolute left-0 w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] z-10"></div>
+                      <div className="absolute left-[5px] right-0 h-[2px] bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]"></div>
                     </div>
                   )}
 
@@ -1161,7 +1161,7 @@ export default function SchedulePage() {
                       key={hour}
                       style={{ height: `${HOUR_HEIGHT}px` }}
                       onClick={() => handleSlotClick(selectedMobileDate, hour)}
-                      className="border-b border-hairline/40 hover:bg-card/40 active:bg-primary-accent/10 cursor-pointer transition-colors relative"
+                      className="border-b border-white/5 hover:bg-white/5 active:bg-primary-accent/10 cursor-pointer transition-colors relative"
                     >
                       {/* Dotted half-hour indicator */}
                       <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-hairline/20 pointer-events-none"></div>
@@ -1238,12 +1238,12 @@ export default function SchedulePage() {
 
           {/* DESKTOP UNSCHEDULED SIDEBAR PANEL (Visible only on md screens and up) */}
           {isSidebarOpen && (
-            <aside className="hidden md:flex w-80 md:w-88 border-l border-hairline bg-card/70 backdrop-blur-md flex-col h-full shrink-0 z-20 shadow-xl animate-in slide-in-from-right duration-200">
+            <aside className="hidden md:flex w-80 md:w-88 border-l border-white/10 glass-panel-modal flex-col h-full shrink-0 z-20 shadow-2xl animate-in slide-in-from-right duration-200">
               <div className="p-4 border-b border-hairline flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-bold text-primary-text flex items-center gap-2">
                     <span>Unscheduled Items</span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-card border border-hairline font-mono text-muted-text">
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 border border-white/10 font-mono text-primary-text">
                       {filteredUnscheduled.length}
                     </span>
                   </h2>
@@ -1267,7 +1267,7 @@ export default function SchedulePage() {
                     onClick={() => setSidebarFilter(tab)}
                     className={`flex-1 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer ${
                       sidebarFilter === tab
-                        ? 'bg-card text-primary-text border border-hairline shadow-sm'
+                        ? 'glass-panel text-primary-text border-primary-accent/50 shadow-sm'
                         : 'text-muted-text hover:text-primary-text'
                     }`}
                   >
@@ -1294,7 +1294,7 @@ export default function SchedulePage() {
                       className={`p-3 rounded-xl border transition-all ${
                         item.isScheduled
                           ? 'bg-background/40 border-hairline/60 opacity-50 cursor-default'
-                          : 'bg-card border-hairline hover:border-primary-accent/40 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing group/item'
+                          : 'glass-panel-subtle hover:border-white/10 cursor-grab active:cursor-grabbing group/item'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -1358,7 +1358,7 @@ export default function SchedulePage() {
                 className="absolute inset-0"
                 onClick={() => setIsMobileSheetOpen(false)}
               />
-              <div className="relative w-full max-h-[82vh] bg-card border-t border-hairline rounded-t-3xl shadow-2xl flex flex-col z-10 animate-in slide-in-from-bottom duration-250">
+              <div className="relative w-full max-h-[82vh] glass-panel-modal border-t border-white/10 rounded-t-[32px] shadow-[0_-8px_40px_rgba(0,0,0,0.4)] flex flex-col z-10 animate-in slide-in-from-bottom duration-250">
                 {/* Handle Bar */}
                 <div className="w-12 h-1 bg-hairline rounded-full mx-auto my-2.5 shrink-0" />
 
@@ -1392,7 +1392,7 @@ export default function SchedulePage() {
                       onClick={() => setSidebarFilter(tab)}
                       className={`flex-1 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer ${
                         sidebarFilter === tab
-                          ? 'bg-card text-primary-text border border-hairline shadow-sm'
+                          ? 'glass-panel text-primary-text border-primary-accent/50 shadow-sm'
                           : 'text-muted-text hover:text-primary-text'
                       }`}
                     >
@@ -1421,7 +1421,7 @@ export default function SchedulePage() {
                         className={`p-3.5 rounded-2xl border transition-all ${
                           item.isScheduled
                             ? 'bg-background/40 border-hairline/60 opacity-50 cursor-default'
-                            : 'bg-card border-hairline active:border-primary-accent/60 shadow-sm cursor-pointer'
+                            : 'glass-panel-subtle hover:border-white/10 active:border-primary-accent/60 shadow-sm cursor-pointer'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -1499,7 +1499,7 @@ export default function SchedulePage() {
       {/* Block Edit / Create Modal */}
       {isModalOpen && editingBlock && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-card border border-hairline rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+          <div className="glass-panel-modal border border-white/10 rounded-[24px] w-full max-w-md p-6 shadow-[0_8px_40px_rgba(0,0,0,0.4)] space-y-4">
             <div className="flex items-center justify-between border-b border-hairline pb-3">
               <h3 className="text-lg font-serif font-bold text-primary-text">
                 {isNewBlock ? 'Create Time Block' : 'Edit Time Block'}

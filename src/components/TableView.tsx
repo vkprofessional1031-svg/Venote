@@ -104,7 +104,7 @@ export default function TableView({ title, columns = [], rows = [], onUpdate, ar
   };
 
   return (
-    <div className="w-full bg-card rounded-[24px] border border-hairline overflow-hidden shadow-2xl">
+    <div className="w-full glass-panel-modal rounded-[24px] border border-white/10 overflow-hidden shadow-2xl">
       <div className="p-6 md:p-8 lg:p-10">
         <div className="flex items-center justify-between mb-6 md:mb-8 relative">
           <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-1 rounded bg-secondary-accent/10 text-secondary-accent flex items-center gap-1.5 font-bold">

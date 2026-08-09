@@ -420,11 +420,11 @@ export default function QuickNotesPage() {
               </svg>
             </div>
           ) : notes.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-text bg-[#1A1714] rounded-xl border border-hairline border-dashed">
+            <div className="p-4 text-center text-sm text-muted-text glass-panel rounded-xl border border-white/10 border-dashed">
               No quick notes yet.
             </div>
           ) : filteredNotes.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-text bg-[#1A1714] rounded-xl border border-hairline border-dashed">
+            <div className="p-4 text-center text-sm text-muted-text glass-panel rounded-xl border border-white/10 border-dashed">
               No notes found.
             </div>
           ) : (
@@ -438,7 +438,7 @@ export default function QuickNotesPage() {
                 className={`w-full text-left p-3 md:p-4 rounded-xl transition-all cursor-pointer border-l-2 group relative ${
                   activeNoteId === note.id
                     ? 'bg-primary-accent/5 border-primary-accent'
-                    : 'hover:bg-card border-transparent'
+                    : 'hover:bg-white/5 border-transparent'
                 }`}
               >
                 <div className="pr-8">
@@ -515,7 +515,7 @@ export default function QuickNotesPage() {
           ) : (
             <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 space-y-6 relative">
               <div 
-                className="w-full bg-card rounded-[24px] overflow-hidden shadow-sm border border-transparent transition-colors"
+                className="w-full glass-panel-modal rounded-[24px] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)] border border-white/10 transition-colors"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
               >
@@ -528,7 +528,7 @@ export default function QuickNotesPage() {
                     </span>
 
                     {/* Desktop Toolbar */}
-                    <div className="hidden md:flex items-center gap-1 p-1 bg-[#1A1714] border border-hairline rounded-lg w-fit">
+                    <div className="hidden md:flex items-center gap-1 p-1 glass-panel border border-white/10 rounded-lg w-fit">
                       <select
                         value={activeNote.fontFamily}
                         onChange={(e) => handleUpdate(activeNote.id, { fontFamily: e.target.value })}
@@ -761,7 +761,7 @@ export default function QuickNotesPage() {
           <button
             type="button"
             onClick={() => setIsStyleSheetOpen(true)}
-            className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-card border border-hairline rounded-full shadow-lg flex items-center justify-center text-primary-text hover:bg-white/5 transition-colors z-30"
+            className="md:hidden fixed bottom-6 right-6 w-14 h-14 glass-panel border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex items-center justify-center text-primary-text hover:bg-white/10 transition-colors z-30 backdrop-blur-xl"
           >
             <span className="font-serif italic font-bold text-xl leading-none">Aa</span>
           </button>
@@ -774,7 +774,7 @@ export default function QuickNotesPage() {
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
               onClick={() => setIsStyleSheetOpen(false)}
             />
-            <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-hairline rounded-t-3xl p-6 z-50 md:hidden animate-in slide-in-from-bottom shadow-2xl safe-area-pb pb-8">
+            <div className="fixed bottom-0 left-0 right-0 glass-panel-modal border-t border-white/10 rounded-t-[32px] p-6 z-50 md:hidden animate-in slide-in-from-bottom shadow-[0_-8px_40px_rgba(0,0,0,0.4)] safe-area-pb pb-8">
               <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6" />
               
               <div className="space-y-6">
@@ -786,7 +786,7 @@ export default function QuickNotesPage() {
                         key={font}
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { fontFamily: font })}
-                        className={`p-2.5 rounded-xl text-sm border transition-all ${activeNote.fontFamily === font ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl text-sm border transition-all ${activeNote.fontFamily === font ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         {font}
                       </button>
@@ -802,7 +802,7 @@ export default function QuickNotesPage() {
                         key={size}
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { fontSize: size })}
-                        className={`p-2.5 rounded-xl text-sm border transition-all ${activeNote.fontSize === size ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl text-sm border transition-all ${activeNote.fontSize === size ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         {size.replace('px', '')}
                       </button>
@@ -817,21 +817,21 @@ export default function QuickNotesPage() {
                       <button
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { isBold: !activeNote.isBold })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isBold ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isBold ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         <span className="font-bold font-serif text-lg leading-none pt-1">B</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { isItalic: !activeNote.isItalic })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isItalic ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isItalic ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         <span className="italic font-serif text-lg leading-none pt-1">I</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { isUnderline: !activeNote.isUnderline })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isUnderline ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isUnderline ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         <span className="underline font-serif text-lg leading-none pt-1">U</span>
                       </button>
@@ -841,21 +841,21 @@ export default function QuickNotesPage() {
                       <button
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { textAlign: 'left' })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'left' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'left' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { textAlign: 'center' })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'center' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'center' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="19" y1="12" x2="5" y2="12"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUpdate(activeNote.id, { textAlign: 'right' })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'right' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'right' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="7" y2="18"></line></svg>
                       </button>
@@ -870,7 +870,7 @@ export default function QuickNotesPage() {
                           noteEditorRef.current?.insertChecklist();
                           setIsStyleSheetOpen(false);
                         }}
-                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-hairline text-muted-text bg-[#1A1714] transition-all"
+                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all"
                         title="Checklist"
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -885,7 +885,7 @@ export default function QuickNotesPage() {
                           fileInputRef.current?.click();
                           setIsStyleSheetOpen(false);
                         }}
-                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-hairline text-muted-text bg-[#1A1714] transition-all"
+                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all"
                         title="Add Image"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -899,7 +899,7 @@ export default function QuickNotesPage() {
                           handleCopyNote(activeNote);
                           setIsStyleSheetOpen(false);
                         }}
-                        className={`p-2.5 flex-1 rounded-xl flex items-center justify-center border transition-all ${copiedNoteId === activeNote.id ? 'bg-[#8A9A5B]/10 border-[#8A9A5B]/30 text-[#8A9A5B]' : 'border-hairline text-muted-text bg-[#1A1714]'}`}
+                        className={`p-2.5 flex-1 rounded-xl flex items-center justify-center border transition-all ${copiedNoteId === activeNote.id ? 'bg-[#8A9A5B]/10 border-[#8A9A5B]/30 text-[#8A9A5B]' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
                         title="Copy Note"
                       >
                         {copiedNoteId === activeNote.id ? (

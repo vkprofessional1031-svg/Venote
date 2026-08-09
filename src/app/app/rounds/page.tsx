@@ -516,13 +516,13 @@ export default function RoundsPage() {
             
             <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
-                <h1 className="font-serif italic font-bold text-4xl text-primary-text tracking-tight mb-2">Prep</h1>
+                <h1 className="font-serif italic font-bold text-4xl text-primary-text tracking-tight mb-2">Job</h1>
                 <p className="text-muted-text text-sm">Track your job applications, interviews, and prep.</p>
               </div>
             </header>
 
             {/* Add Bar with Toggles */}
-            <div className="bg-card/50 backdrop-blur-md rounded-2xl p-4 border border-hairline shadow-sm relative group">
+            <div className="glass-panel-modal rounded-[24px] p-4 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] relative group">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-accent/5 via-transparent to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
               
               <div className="relative z-10 flex flex-col gap-4">
@@ -531,13 +531,13 @@ export default function RoundsPage() {
                 <div className="flex bg-[#1A1714] rounded-lg p-1 w-fit border border-hairline self-start">
                   <button 
                     onClick={() => setInputMode('quick')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${inputMode === 'quick' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${inputMode === 'quick' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                   >
                     Quick Add
                   </button>
                   <button 
                     onClick={() => setInputMode('manual')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode === 'manual' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode === 'manual' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -675,7 +675,7 @@ export default function RoundsPage() {
                           <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
                           Due Soon
                         </h2>
-                        <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-4 flex flex-col gap-4">
+                        <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-4 flex flex-col gap-4">
                           {allUpcomingRounds.map((round) => (
                             <div key={round.id} className="flex flex-col gap-1 border-l-2 border-red-500/50 pl-3 py-1">
                               <div className="flex justify-between items-start gap-4">
@@ -697,14 +697,14 @@ export default function RoundsPage() {
                     <div className="flex flex-col gap-3">
                       <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Applications</h2>
                       {applications.length === 0 ? (
-                        <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 text-center text-muted-text">
+                        <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 text-center text-muted-text">
                           <p className="text-sm">No applications yet.</p>
                           <p className="text-xs text-muted-text/70 mt-1">Add one in Job Tracker below or use Quick Add above.</p>
                         </div>
                       ) : (
                         <div className="flex flex-col gap-4">
                           {applications.map((app) => (
-                            <div key={app.id} className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden group">
+                            <div key={app.id} className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden group">
                               <div className="p-4 border-b border-white/5 flex justify-between items-start bg-white/[0.02]">
                                 <div>
                                   <div className="font-bold text-lg text-primary-text flex items-center gap-2">
@@ -729,10 +729,10 @@ export default function RoundsPage() {
                                 <button
                                   onClick={(e) => handleOpenStatusDropdown(e, app.id)}
                                   className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border flex items-center gap-1.5 transition-colors ${
-                                    app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
-                                    app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
-                                    app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' :
-                                    'bg-white/5 text-muted-text border-white/10 hover:bg-white/10'
+                                    app.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                    app.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
+                                    app.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
+                                    'bg-muted-text text-white border-transparent hover:brightness-110'
                                   }`}
                                 >
                                   {app.status === 'in_progress' ? 'In Progress' : app.status}
@@ -801,7 +801,7 @@ export default function RoundsPage() {
                   <div className="flex flex-col gap-6">
                     <div className="flex flex-col gap-3">
                       <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Prep Reps</h2>
-                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-5 flex flex-col gap-5">
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 flex flex-col gap-5">
                         {prepSessions.length === 0 ? (
                           <p className="text-sm text-muted-text italic">No prep sessions logged yet.</p>
                         ) : (
@@ -861,7 +861,7 @@ export default function RoundsPage() {
                     </button>
                   </div>
                   {/* Desktop View: Spreadsheet-style Table */}
-                  <div className="hidden md:block bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden">
+                  <div className="hidden md:block glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm border-collapse min-w-[620px]">
                         <thead>
@@ -958,10 +958,10 @@ export default function RoundsPage() {
                                   <button
                                     onClick={(e) => handleOpenStatusDropdown(e, app.id)}
                                     className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border flex items-center gap-1 transition-colors ${
-                                      app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
-                                      app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
-                                      app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' :
-                                      'bg-white/5 text-muted-text border-white/10 hover:bg-white/10'
+                                      app.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                      app.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
+                                      app.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
+                                      'bg-muted-text text-white border-transparent hover:brightness-110'
                                     }`}
                                   >
                                     <span>
@@ -1105,7 +1105,7 @@ export default function RoundsPage() {
                   {/* Mobile View: Stacked Cards */}
                   <div className="block md:hidden flex flex-col gap-3">
                     {applications.length === 0 ? (
-                      <div className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] p-6 text-center text-muted-text">
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-6 text-center text-muted-text">
                         <p className="text-sm font-medium text-primary-text/80">No applications yet</p>
                         <button
                           onClick={handleAddNewApplicationRow}
@@ -1121,7 +1121,7 @@ export default function RoundsPage() {
                       <>
                         <div className="flex flex-col gap-3.5">
                           {applications.map((app) => (
-                            <div key={app.id} className="bg-card rounded-xl border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.25)] overflow-hidden">
+                            <div key={app.id} className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                               {/* Card Header: Company, Role, and Trash Delete button */}
                               <div className="p-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-start gap-2">
                                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
@@ -1200,10 +1200,10 @@ export default function RoundsPage() {
                                     <button
                                       onClick={(e) => handleOpenStatusDropdown(e, app.id)}
                                       className={`px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded border flex items-center gap-1.5 transition-colors ${
-                                        app.status === 'accepted' ? 'bg-[#8A9A5B]/20 text-[#8A9A5B] border-[#8A9A5B]/30 hover:bg-[#8A9A5B]/30' :
-                                        app.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' :
-                                        app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20' :
-                                        'bg-white/5 text-muted-text border-white/10 hover:bg-white/10'
+                                        app.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                        app.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
+                                        app.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
+                                        'bg-muted-text text-white border-transparent hover:brightness-110'
                                       }`}
                                     >
                                       <span>

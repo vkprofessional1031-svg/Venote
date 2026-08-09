@@ -746,7 +746,7 @@ export default function Home() {
 
                   <div className="w-full max-w-3xl relative">
                   <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
-                    <form onSubmit={handleStructureSubmit} className="bg-card border border-hairline rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 md:p-1.5 ring-1 ring-white/5 focus-within:ring-primary-accent/30 focus-within:border-primary-accent/50 gap-2 md:gap-0 max-w-3xl mx-auto">
+                    <form onSubmit={handleStructureSubmit} className="glass-panel-modal border border-white/10 rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 ring-1 ring-white/5 focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] gap-2 md:gap-0 max-w-3xl mx-auto transition-all duration-300">
                       <input
                         ref={organizeInputRef}
                         type="text"
