@@ -88,12 +88,24 @@ export default function LandingPage() {
       <div 
         aria-hidden="true" 
         className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full pointer-events-none -z-10" 
-        style={{ background: 'radial-gradient(circle, rgba(255,92,56,0.15) 0%, transparent 70%)' }}
+        style={{ 
+          background: `
+            radial-gradient(circle at 45% 45%, rgba(255,92,56,0.1) 0%, rgba(255,92,56,0.07) 20%, rgba(255,92,56,0.035) 45%, rgba(255,92,56,0.01) 70%, transparent 100%),
+            radial-gradient(circle at 55% 55%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%)
+          `,
+          mixBlendMode: 'screen'
+        }}
       />
       <div 
         aria-hidden="true" 
         className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full pointer-events-none -z-10" 
-        style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)' }}
+        style={{ 
+          background: `
+            radial-gradient(circle at 40% 50%, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.07) 20%, rgba(139,92,246,0.035) 45%, rgba(139,92,246,0.01) 70%, transparent 100%),
+            radial-gradient(circle at 60% 50%, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.05) 20%, rgba(139,92,246,0.02) 45%, rgba(139,92,246,0.005) 70%, transparent 100%)
+          `,
+          mixBlendMode: 'screen'
+        }}
       />
 
       {/* Navigation */}
@@ -153,12 +165,24 @@ export default function LandingPage() {
         <div 
           aria-hidden="true" 
           className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[450px] h-[350px] rounded-full pointer-events-none" 
-          style={{ background: 'radial-gradient(circle, rgba(232,184,109,0.12) 0%, transparent 70%)' }}
+          style={{ 
+            background: `
+              radial-gradient(circle at 45% 45%, rgba(232,184,109,0.08) 0%, rgba(232,184,109,0.05) 20%, rgba(232,184,109,0.02) 45%, rgba(232,184,109,0.005) 70%, transparent 100%),
+              radial-gradient(circle at 55% 55%, rgba(232,184,109,0.06) 0%, rgba(232,184,109,0.04) 20%, rgba(232,184,109,0.015) 45%, rgba(232,184,109,0.003) 70%, transparent 100%)
+            `,
+            mixBlendMode: 'screen'
+          }}
         />
         <div 
           aria-hidden="true" 
           className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] rounded-full pointer-events-none" 
-          style={{ background: 'radial-gradient(circle, rgba(255,92,56,0.12) 0%, transparent 70%)' }}
+          style={{ 
+            background: `
+              radial-gradient(circle at 48% 40%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%),
+              radial-gradient(circle at 52% 60%, rgba(255,92,56,0.06) 0%, rgba(255,92,56,0.04) 20%, rgba(255,92,56,0.015) 45%, rgba(255,92,56,0.003) 70%, transparent 100%)
+            `,
+            mixBlendMode: 'screen'
+          }}
         />
 
         <div className="max-w-6xl mx-auto relative z-10">
@@ -242,7 +266,13 @@ export default function LandingPage() {
         <div 
           aria-hidden="true" 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none" 
-          style={{ background: 'radial-gradient(circle, rgba(255,92,56,0.15) 0%, transparent 70%)' }}
+          style={{ 
+            background: `
+              radial-gradient(circle at 45% 50%, rgba(255,92,56,0.1) 0%, rgba(255,92,56,0.07) 20%, rgba(255,92,56,0.035) 45%, rgba(255,92,56,0.01) 70%, transparent 100%),
+              radial-gradient(circle at 55% 50%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%)
+            `,
+            mixBlendMode: 'screen'
+          }}
         />
         <div className="relative z-10 flex flex-col items-center">
           <h2 className="font-serif italic font-bold text-4xl md:text-5xl tracking-tight mb-8">Ready to clear your mind?</h2>

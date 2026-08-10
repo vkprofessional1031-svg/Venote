@@ -57,16 +57,17 @@ body {
   height: 380px;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 92, 56, 0.4) 0%,
-    rgba(139, 92, 246, 0.2) 40%,
-    rgba(232, 184, 109, 0.1) 65%,
+    rgba(255, 92, 56, 0.5) 0%,
+    rgba(139, 92, 246, 0.25) 45%,
+    rgba(232, 184, 109, 0.12) 70%,
     transparent 80%
   );
+  filter: blur(85px);
   pointer-events: none;
   user-select: none;
   z-index: 0;
-  animation: ambientGlowPulse 10s ease-in-out infinite;
   border-radius: 9999px;
+  animation: ambientGlowPulse 10s ease-in-out infinite;
   will-change: transform, opacity;
 }
 
