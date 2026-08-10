@@ -65,6 +65,35 @@ export default function ExpensesPage() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Swipe to delete state
+  const [swipedTxId, setSwipedTxId] = useState<string | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchCurrentX, setTouchCurrentX] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, id: string) => {
+    if (touchStartX === null) return;
+    setTouchCurrentX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, id: string) => {
+    if (touchStartX === null || touchCurrentX === null) return;
+    const diff = touchStartX - touchCurrentX;
+    
+    if (diff > 40) {
+      setSwipedTxId(id);
+    } else if (diff < -40) {
+      if (swipedTxId === id) setSwipedTxId(null);
+    }
+    
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  };
+  
   // AI Quick Add state
   const [aiInput, setAiInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -840,50 +869,76 @@ export default function ExpensesPage() {
                   <div className="flex flex-col gap-3">
                     <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Recent</h2>
                     <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
-                      {allTransactions.map((tx, idx) => (
-                        <div key={`${tx.id}-${tx.isIncome}`} className={`flex items-start justify-between gap-3 p-5 hover:bg-white/5 transition-colors group ${idx !== allTransactions.length - 1 ? 'border-b border-white/10' : ''}`}>
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center border border-white/10 text-muted-text flex-shrink-0 mt-0.5">
-                              {tx.isIncome ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                              ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="flex flex-col flex-1 min-w-0">
-                              <div className="text-[15px] font-medium text-primary-text truncate">{tx.description}</div>
-                              <div className="text-xs text-muted-text flex items-center gap-2 flex-wrap mt-0.5">
-                                <span>{isMounted ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : tx.date}</span>
-                                <span className="w-1 h-1 rounded-full bg-white/20" />
-                                <span className="text-primary-accent/80 font-medium whitespace-nowrap">{tx.category}</span>
-                              </div>
-                              {(!tx.isIncome && (tx as any).split_details) && (
-                                <div className="text-xs text-muted-text/80 mt-1.5 pl-2 border-l-2 border-primary-accent/30 italic break-words whitespace-normal">
-                                  {(tx as any).split_details}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 flex-shrink-0 ml-2 mt-0.5">
-                            <div className={`text-right font-medium tracking-tight text-lg ${tx.isIncome ? 'text-green-400' : 'text-primary-text'}`}>
-                              {tx.isIncome ? '+' : '-'}{activeSymbol}{Number(tx.amount).toFixed(2)}
-                            </div>
-                            <button 
-                              onClick={() => handleDelete(tx.id, tx.isIncome)}
-                              className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none p-1"
-                              title="Delete"
+                      {allTransactions.map((tx, idx) => {
+                        const uniqueId = `${tx.id}-${tx.isIncome}`;
+                        return (
+                        <div key={uniqueId} className={`group relative w-full overflow-hidden ${idx !== allTransactions.length - 1 ? 'border-b border-white/10' : ''}`}>
+                          <div 
+                            className="flex w-full transition-transform duration-300 ease-out"
+                            style={{ transform: swipedTxId === uniqueId ? 'translateX(-80px)' : 'translateX(0)' }}
+                          >
+                            <div
+                              onClick={() => { if (swipedTxId === uniqueId) setSwipedTxId(null); }}
+                              onTouchStart={(e) => handleTouchStart(e, uniqueId)}
+                              onTouchMove={(e) => handleTouchMove(e, uniqueId)}
+                              onTouchEnd={(e) => handleTouchEnd(e, uniqueId)}
+                              className="w-full shrink-0 flex items-start justify-between gap-3 p-5 hover:bg-white/5 transition-colors cursor-pointer md:cursor-default"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center border border-white/10 text-muted-text flex-shrink-0 mt-0.5">
+                                  {tx.isIncome ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                  ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  <div className="text-[15px] font-medium text-primary-text truncate">{tx.description}</div>
+                                  <div className="text-xs text-muted-text flex items-center gap-2 flex-wrap mt-0.5">
+                                    <span>{isMounted ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : tx.date}</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/20" />
+                                    <span className="text-primary-accent/80 font-medium whitespace-nowrap">{tx.category}</span>
+                                  </div>
+                                  {(!tx.isIncome && (tx as any).split_details) && (
+                                    <div className="text-xs text-muted-text/80 mt-1.5 pl-2 border-l-2 border-primary-accent/30 italic break-words whitespace-normal">
+                                      {(tx as any).split_details}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 flex-shrink-0 ml-2 mt-0.5">
+                                <div className={`text-right font-medium tracking-tight text-lg ${tx.isIncome ? 'text-green-400' : 'text-primary-text'}`}>
+                                  {tx.isIncome ? '+' : '-'}{activeSymbol}{Number(tx.amount).toFixed(2)}
+                                </div>
+                                <button 
+                                  onClick={() => handleDelete(tx.id, tx.isIncome)}
+                                  className="hidden md:block text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none p-1"
+                                  title="Delete"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* Mobile Swipe Actions */}
+                            <div className="w-[80px] shrink-0 flex items-stretch md:hidden bg-background">
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(tx.id, tx.isIncome); setSwipedTxId(null); }} className="w-full flex flex-col items-center justify-center bg-red-600 text-white transition-opacity active:opacity-70">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-[10px] font-medium">Delete</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

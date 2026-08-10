@@ -153,7 +153,7 @@ export default function AppSidebar({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
               </svg>
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
-                Progress
+                Dashboard
               </div>
             </Link>
           </div>
