@@ -87,11 +87,13 @@ export default function LandingPage() {
       {/* Background ambient orbs for refraction */}
       <div 
         aria-hidden="true" 
-        className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-[#FF5C38]/10 rounded-full blur-[120px] pointer-events-none -z-10" 
+        className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full pointer-events-none -z-10" 
+        style={{ background: 'radial-gradient(circle, rgba(255,92,56,0.15) 0%, transparent 70%)' }}
       />
       <div 
         aria-hidden="true" 
-        className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#8B5CF6]/10 rounded-full blur-[140px] pointer-events-none -z-10" 
+        className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full pointer-events-none -z-10" 
+        style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)' }}
       />
 
       {/* Navigation */}
@@ -150,11 +152,13 @@ export default function LandingPage() {
         {/* Ambient background refraction glow */}
         <div 
           aria-hidden="true" 
-          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[450px] h-[350px] bg-[#E8B86D]/08 rounded-full blur-[100px] pointer-events-none" 
+          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[450px] h-[350px] rounded-full pointer-events-none" 
+          style={{ background: 'radial-gradient(circle, rgba(232,184,109,0.12) 0%, transparent 70%)' }}
         />
         <div 
           aria-hidden="true" 
-          className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] bg-[#FF5C38]/08 rounded-full blur-[110px] pointer-events-none" 
+          className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] rounded-full pointer-events-none" 
+          style={{ background: 'radial-gradient(circle, rgba(255,92,56,0.12) 0%, transparent 70%)' }}
         />
 
         <div className="max-w-6xl mx-auto relative z-10">
@@ -237,7 +241,8 @@ export default function LandingPage() {
       <section className="py-28 px-6 text-center flex flex-col items-center relative">
         <div 
           aria-hidden="true" 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-primary-accent/10 rounded-full blur-[100px] pointer-events-none" 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none" 
+          style={{ background: 'radial-gradient(circle, rgba(255,92,56,0.15) 0%, transparent 70%)' }}
         />
         <div className="relative z-10 flex flex-col items-center">
           <h2 className="font-serif italic font-bold text-4xl md:text-5xl tracking-tight mb-8">Ready to clear your mind?</h2>

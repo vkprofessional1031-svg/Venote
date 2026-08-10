@@ -376,6 +376,7 @@ export default function QuickNotesPage() {
         onCloseMenu={() => setIsMobileMenuOpen(false)} 
         session={session} 
         onNewNote={handleNewNote}
+        hideProfile={isStyleSheetOpen}
       >
         <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
           <div className="flex items-center gap-2">
@@ -500,7 +501,14 @@ export default function QuickNotesPage() {
           }
         />
 
-        <div className="flex-1 flex flex-col items-center">
+        <div className="flex-1 flex flex-col items-center relative z-0">
+          
+          {/* Ambient Glows */}
+          <div className="absolute inset-0 pointer-events-none z-[-1] overflow-hidden flex items-center justify-center">
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] md:w-[800px] h-[600px] md:h-[800px] bg-[radial-gradient(circle_at_center,rgba(255,92,56,0.12)_0%,transparent_60%)]" />
+            <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-[radial-gradient(circle_at_center,rgba(255,143,119,0.08)_0%,transparent_60%)] mix-blend-screen" />
+          </div>
+
           {!activeNote ? (
             <div className="w-full max-w-[800px] px-4 py-8 pb-32 md:px-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] md:min-h-screen">
               <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
@@ -513,109 +521,77 @@ export default function QuickNotesPage() {
               </div>
             </div>
           ) : (
-            <div className="w-full max-w-4xl px-4 md:px-8 py-8 md:py-16 space-y-6 relative">
+            <div className="w-full max-w-4xl px-4 md:px-8 py-6 md:py-10 space-y-6 relative">
+              
+              {/* Page Header */}
+              <div className="w-full flex flex-row items-end justify-between mb-2">
+                <div>
+                  <h1 className="font-serif italic font-bold text-4xl text-primary-text tracking-tight mb-2">Quick Notes</h1>
+                  <p className="text-muted-text text-sm">Capture thoughts, tasks, and ideas</p>
+                </div>
+                <button 
+                  onClick={handleNewNote}
+                  className="px-4 py-3 md:py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/10 shadow-lg text-primary-text transition-all text-[15px] md:text-sm font-medium flex items-center gap-2 active:scale-95"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <span className="hidden sm:inline">New note</span>
+                </button>
+              </div>
+
               <div 
-                className="w-full glass-panel-modal rounded-[24px] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.4)] border border-white/10 transition-colors"
+                className="w-full bg-white/[0.045] backdrop-blur-[28px] rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.4)] border-[0.5px] border-white/[0.09] transition-colors"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
               >
-                <div className="p-4 md:p-6 lg:p-8">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-3 md:gap-0 relative">
-                    <div className="flex items-center gap-3 flex-wrap">
+                <div className="p-5 md:p-8 lg:p-12">
+                  <div className="flex items-center justify-between mb-8 w-full">
+                    <div className="flex items-center gap-3">
                       <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-1 rounded bg-tertiary-accent/10 text-tertiary-accent flex items-center gap-1.5 font-bold shrink-0">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      QUICK NOTE
-                    </span>
-
-                    {/* Desktop Toolbar */}
-                    <div className="hidden md:flex items-center gap-1 p-1 glass-panel border border-white/10 rounded-lg w-fit">
-                      <select
-                        value={activeNote.fontFamily}
-                        onChange={(e) => handleUpdate(activeNote.id, { fontFamily: e.target.value })}
-                        className="bg-transparent text-[13px] text-primary-text outline-none cursor-pointer border-none pl-1.5 pr-0.5"
-                      >
-                        <option value="Plus Jakarta Sans" className="bg-[#1A1714]">Plus Jakarta Sans</option>
-                        <option value="Fraunces" className="bg-[#1A1714]">Fraunces</option>
-                        <option value="Lora" className="bg-[#1A1714]">Lora</option>
-                        <option value="Space Mono" className="bg-[#1A1714]">Space Mono</option>
-                      </select>
-
-                      <div className="w-px h-3.5 bg-hairline mx-1" />
-
-                      <select
-                        value={activeNote.fontSize}
-                        onChange={(e) => handleUpdate(activeNote.id, { fontSize: e.target.value })}
-                        className="bg-transparent text-[13px] text-primary-text outline-none cursor-pointer border-none pl-1.5 pr-0.5"
-                      >
-                        <option value="13px" className="bg-[#1A1714]">13px</option>
-                        <option value="15px" className="bg-[#1A1714]">15px</option>
-                        <option value="17px" className="bg-[#1A1714]">17px</option>
-                        <option value="20px" className="bg-[#1A1714]">20px</option>
-                      </select>
-
-                      <div className="w-px h-3.5 bg-hairline mx-1" />
-
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(activeNote.id, { isBold: !activeNote.isBold })}
-                          className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.isBold ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        <span className="hidden sm:inline">QUICK NOTE</span>
+                        <span className="sm:hidden">NOTE</span>
+                      </span>
+                      {saveState && saveState !== 'idle' && (
+                        <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-500/70' : 'text-[#8A9A5B]'}`}>
+                          {saveState === 'saving' ? 'Saving...' : 'Saved'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      {/* Minimal Font Controls - Hidden on mobile */}
+                      <div className="hidden md:flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-lg">
+                        <select
+                          value={activeNote.fontFamily}
+                          onChange={(e) => handleUpdate(activeNote.id, { fontFamily: e.target.value })}
+                          className="bg-transparent text-[13px] text-primary-text outline-none cursor-pointer border-none pl-1.5 pr-0.5"
                         >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(activeNote.id, { isItalic: !activeNote.isItalic })}
-                          className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.isItalic ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
+                          <option value="Plus Jakarta Sans" className="bg-[#1A1714]">Sans</option>
+                          <option value="Fraunces" className="bg-[#1A1714]">Serif</option>
+                          <option value="Space Mono" className="bg-[#1A1714]">Mono</option>
+                        </select>
+                        <div className="w-px h-3.5 bg-hairline mx-1" />
+                        <select
+                          value={activeNote.fontSize}
+                          onChange={(e) => handleUpdate(activeNote.id, { fontSize: e.target.value })}
+                          className="bg-transparent text-[13px] text-primary-text outline-none cursor-pointer border-none pl-1.5 pr-0.5"
                         >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(activeNote.id, { isUnderline: !activeNote.isUnderline })}
-                          className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.isUnderline ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
-                        >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><line x1="4" y1="21" x2="20" y2="21"></line></svg>
-                        </button>
+                          <option value="13px" className="bg-[#1A1714]">S</option>
+                          <option value="15px" className="bg-[#1A1714]">M</option>
+                          <option value="17px" className="bg-[#1A1714]">L</option>
+                          <option value="20px" className="bg-[#1A1714]">XL</option>
+                        </select>
                       </div>
 
-                      <div className="w-px h-3.5 bg-hairline mx-1" />
-
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(activeNote.id, { textAlign: 'left' })}
-                          className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.textAlign === 'left' ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
-                        >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(activeNote.id, { textAlign: 'center' })}
-                          className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.textAlign === 'center' ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
-                        >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="19" y1="12" x2="5" y2="12"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(activeNote.id, { textAlign: 'right' })}
-                          className={`p-1 rounded hover:bg-white/5 transition-colors ${activeNote.textAlign === 'right' ? 'text-[#FF5C38]' : 'text-muted-text hover:text-primary-text'}`}
-                          title="Align Right"
-                        >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="7" y2="18"></line></svg>
-                        </button>
-                      </div>
-
-                      <div className="w-px h-3.5 bg-hairline mx-1" />
-
-                      <div className="flex items-center gap-0.5">
+                      {/* Toolbar Actions - Unified Row */}
+                      <div className="flex items-center gap-0.5 bg-white/5 border border-white/10 rounded-lg p-1">
                         <button
                           type="button"
                           onClick={() => noteEditorRef.current?.insertChecklist()}
-                          className="p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
+                          className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
                           title="Checklist"
                         >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg className="w-4 h-4 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="9 11 12 14 22 4"></polyline>
                             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                           </svg>
@@ -623,30 +599,51 @@ export default function QuickNotesPage() {
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
+                          className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
                           title="Add Image"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 md:w-3.5 md:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleCopyNote(activeNote)}
-                          className={`p-1 rounded transition-colors ${copiedNoteId === activeNote.id ? 'text-[#8A9A5B] bg-[#8A9A5B]/10' : 'text-muted-text hover:text-primary-text hover:bg-white/5'}`}
+                          className={`p-1.5 md:p-1 rounded transition-colors ${copiedNoteId === activeNote.id ? 'text-[#8A9A5B] bg-[#8A9A5B]/10' : 'text-muted-text hover:text-primary-text hover:bg-white/5'}`}
                           title={copiedNoteId === activeNote.id ? "Copied!" : "Copy Note to Clipboard"}
                         >
                           {copiedNoteId === activeNote.id ? (
-                            <svg className="w-3.5 h-3.5 text-[#8A9A5B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                              <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           ) : (
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                             </svg>
                           )}
                         </button>
+                        
+                        <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => handleArchiveToggle(e, activeNote.id, !!activeNote.isArchived)}
+                          className="hidden md:flex p-1.5 md:p-1 rounded text-muted-text hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title={activeNote.isArchived ? "Unarchive" : "Archive Note"}
+                        >
+                          {activeNote.isArchived ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-3.5 md:w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+                              <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+
                         <input 
                           type="file" 
                           ref={fileInputRef} 
@@ -660,34 +657,6 @@ export default function QuickNotesPage() {
                             }
                           }}
                         />
-                      </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
-                      {saveState && saveState !== 'idle' && (
-                        <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-500/70' : 'text-[#8A9A5B]'}`}>
-                          {saveState === 'saving' ? 'Saving...' : 'Saved'}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={(e) => handleArchiveToggle(e, activeNote.id, !!activeNote.isArchived)}
-                          className="p-1.5 text-muted-text hover:text-primary-text hover:bg-white/5 rounded-lg transition-colors"
-                          title={activeNote.isArchived ? "Unarchive" : "Archive"}
-                        >
-                          {activeNote.isArchived ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-                              <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -771,10 +740,10 @@ export default function QuickNotesPage() {
         {isStyleSheetOpen && activeNote && (
           <>
             <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] md:hidden"
               onClick={() => setIsStyleSheetOpen(false)}
             />
-            <div className="fixed bottom-0 left-0 right-0 glass-panel-modal border-t border-white/10 rounded-t-[32px] p-6 z-50 md:hidden animate-in slide-in-from-bottom shadow-[0_-8px_40px_rgba(0,0,0,0.4)] safe-area-pb pb-8">
+            <div className="fixed bottom-0 left-0 right-0 glass-panel-modal border-t border-white/10 rounded-t-[32px] p-6 z-[101] md:hidden animate-in slide-in-from-bottom shadow-[0_-8px_40px_rgba(0,0,0,0.4)] safe-area-pb pb-8">
               <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6" />
               
               <div className="space-y-6">
@@ -811,109 +780,78 @@ export default function QuickNotesPage() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-mono tracking-wider text-muted-text uppercase mb-3">Style and align</h4>
-                  <div className="flex gap-2">
-                    <div className="grid grid-cols-3 gap-2 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(activeNote.id, { isBold: !activeNote.isBold })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isBold ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                      >
-                        <span className="font-bold font-serif text-lg leading-none pt-1">B</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(activeNote.id, { isItalic: !activeNote.isItalic })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isItalic ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                      >
-                        <span className="italic font-serif text-lg leading-none pt-1">I</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(activeNote.id, { isUnderline: !activeNote.isUnderline })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isUnderline ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                      >
-                        <span className="underline font-serif text-lg leading-none pt-1">U</span>
-                      </button>
-                    </div>
-                    <div className="w-px bg-hairline my-2" />
-                    <div className="grid grid-cols-3 gap-2 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(activeNote.id, { textAlign: 'left' })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'left' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(activeNote.id, { textAlign: 'center' })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'center' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="19" y1="12" x2="5" y2="12"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(activeNote.id, { textAlign: 'right' })}
-                        className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.textAlign === 'right' ? 'bg-primary-accent/10 border-primary-accent text-primary-accent' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="7" y2="18"></line></svg>
-                      </button>
-                    </div>
+                  <h4 className="text-xs font-mono tracking-wider text-muted-text uppercase mb-3">Actions</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        noteEditorRef.current?.insertChecklist();
+                        setIsStyleSheetOpen(false);
+                      }}
+                      className="p-2.5 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all"
+                      title="Checklist"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 11 12 14 22 4"></polyline>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                      </svg>
+                    </button>
                     
-                    <div className="w-px bg-hairline my-2" />
-                    
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          noteEditorRef.current?.insertChecklist();
-                          setIsStyleSheetOpen(false);
-                        }}
-                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all"
-                        title="Checklist"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="9 11 12 14 22 4"></polyline>
-                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                        </svg>
-                      </button>
-                      
-                      <button
-                        type="button"
-                        onClick={() => {
-                          fileInputRef.current?.click();
-                          setIsStyleSheetOpen(false);
-                        }}
-                        className="p-2.5 flex-1 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all"
-                        title="Add Image"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setIsStyleSheetOpen(false);
+                      }}
+                      className="p-2.5 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all"
+                      title="Add Image"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleCopyNote(activeNote);
-                          setIsStyleSheetOpen(false);
-                        }}
-                        className={`p-2.5 flex-1 rounded-xl flex items-center justify-center border transition-all ${copiedNoteId === activeNote.id ? 'bg-[#8A9A5B]/10 border-[#8A9A5B]/30 text-[#8A9A5B]' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
-                        title="Copy Note"
-                      >
-                        {copiedNoteId === activeNote.id ? (
-                          <svg className="w-4 h-4 text-[#8A9A5B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                          </svg>
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleCopyNote(activeNote);
+                        setIsStyleSheetOpen(false);
+                      }}
+                      className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${copiedNoteId === activeNote.id ? 'bg-[#8A9A5B]/10 border-[#8A9A5B]/30 text-[#8A9A5B]' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10'}`}
+                      title="Copy Note"
+                    >
+                      {copiedNoteId === activeNote.id ? (
+                        <svg className="w-4 h-4 text-[#8A9A5B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      )}
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        handleArchiveToggle(e, activeNote.id, !!activeNote.isArchived);
+                        setIsStyleSheetOpen(false);
+                      }}
+                      className={`p-2.5 rounded-xl flex items-center justify-center border transition-all ${activeNote.isArchived ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 hover:text-red-400'}`}
+                      title={activeNote.isArchived ? "Unarchive" : "Archive Note"}
+                    >
+                      {activeNote.isArchived ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+                          <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

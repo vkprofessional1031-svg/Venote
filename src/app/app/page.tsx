@@ -41,6 +41,7 @@ export default function Home() {
   const { showToast } = useToast();
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const organizeInputRef = useRef<HTMLInputElement>(null);
+  const organizeMobileInputRef = useRef<HTMLInputElement>(null);
 
   const [speechSupported, setSpeechSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -325,6 +326,7 @@ export default function Home() {
     // Use timeout to ensure the empty state is rendered before focusing
     setTimeout(() => {
       organizeInputRef.current?.focus();
+      organizeMobileInputRef.current?.focus();
     }, 0);
   };
 
@@ -602,8 +604,61 @@ export default function Home() {
   const displayName = session?.user?.user_metadata?.name || session?.user?.email || '';
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
+  const renderOrganizeForm = (isMobile: boolean) => (
+    <form onSubmit={handleStructureSubmit} className="glass-panel-modal border border-white/10 rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 ring-1 ring-white/5 focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] gap-2 md:gap-0 w-full max-w-3xl mx-auto transition-all duration-300">
+      <input
+        ref={isMobile ? organizeMobileInputRef : organizeInputRef}
+        type="text"
+        className="flex-1 bg-transparent outline-none text-primary-text text-base placeholder:text-muted-text font-sans px-4 py-2.5 md:pl-5 md:pr-3 min-w-0"
+        placeholder="Paste a brain dump, a transcript, a raw list of ideas, a URL, or a voice note..."
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        disabled={loading}
+      />
+      
+      <div className="shrink-0 md:pr-1 flex items-center gap-1 justify-end">
+        {speechSupported && (
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={loading}
+            className={`p-3 rounded-full transition-all ${
+              isListening
+                ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
+                : 'text-muted-text hover:text-primary-text hover:bg-background/50'
+            }`}
+            title={isListening ? "Stop listening" : "Start voice input"}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={loading || !inputText.trim()}
+          className={`w-full md:w-auto px-5 py-2.5 md:py-2 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
+            (!inputText.trim() || loading) ? 'opacity-40 cursor-not-allowed' : 'opacity-100 hover:shadow-[0_0_15px_rgba(255,92,56,0.3)]'
+          }`}
+        >
+          {loading ? (
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor"/>
+            </svg>
+          )}
+          {loading ? 'Organizing...' : 'Organize'}
+        </button>
+      </div>
+    </form>
+  );
+
   return (
-    <div className="min-h-screen bg-background text-primary-text flex font-sans relative">
+    <div className="h-[100dvh] overflow-hidden bg-background text-primary-text flex font-sans relative">
       <AppSidebar 
         activePath="/app" 
         isMobileMenuOpen={isMobileMenuOpen} 
@@ -709,6 +764,7 @@ export default function Home() {
       </AppSidebar>
 
       {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 h-[100dvh]">
       <main className="flex-1 overflow-y-auto flex flex-col w-full min-w-0">
         
         {/* Mobile Header */}
@@ -742,62 +798,12 @@ export default function Home() {
                     <p className="text-base md:text-lg text-muted-text font-medium max-w-2xl mx-auto">
                       Dump anything here — I'll turn it into notes, tasks, and tables.
                     </p>
-                  </div>
-
-                  <div className="w-full max-w-3xl relative">
-                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 md:static md:p-0 md:bg-transparent md:backdrop-blur-none md:border-none md:z-auto">
-                    <form onSubmit={handleStructureSubmit} className="glass-panel-modal border border-white/10 rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 ring-1 ring-white/5 focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] gap-2 md:gap-0 max-w-3xl mx-auto transition-all duration-300">
-                      <input
-                        ref={organizeInputRef}
-                        type="text"
-                        className="flex-1 bg-transparent outline-none text-primary-text text-base placeholder:text-muted-text font-sans px-4 py-2.5 md:pl-5 md:pr-3"
-                        placeholder="Paste a brain dump, a transcript, a raw list of ideas, a URL, or a voice note..."
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        disabled={loading}
-                      />
-                      
-                      <div className="shrink-0 md:pr-1 flex items-center gap-1">
-                        {speechSupported && (
-                          <button
-                            type="button"
-                            onClick={toggleListening}
-                            disabled={loading}
-                            className={`p-3 rounded-full transition-all ${
-                              isListening
-                                ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
-                                : 'text-muted-text hover:text-primary-text hover:bg-background/50'
-                            }`}
-                            title={isListening ? "Stop listening" : "Start voice input"}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                            </svg>
-                          </button>
-                        )}
-                        <button
-                          type="submit"
-                          disabled={loading || !inputText.trim()}
-                          className={`w-full md:w-auto px-5 py-2.5 md:py-2 bg-[#3A221C] text-primary-accent font-medium rounded-[24px] md:rounded-full transition-all flex items-center justify-center gap-2 border border-primary-accent/20 hover:bg-primary-accent hover:text-primary-text ${
-                            (!inputText.trim() || loading) ? 'opacity-40 cursor-not-allowed' : 'opacity-100 hover:shadow-[0_0_15px_rgba(255,92,56,0.3)]'
-                          }`}
-                        >
-                          {loading ? (
-                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor"/>
-                            </svg>
-                          )}
-                          {loading ? 'Organizing...' : 'Organize'}
-                        </button>
+                    <div className="w-full max-w-3xl relative mt-8">
+                      <div className="hidden md:block w-full">
+                        {renderOrganizeForm(false)}
                       </div>
-                    </form>
+                    </div>
                   </div>
-                </div>
               
               {error && (
                 <div className="absolute bottom-[100%] left-0 right-0 mb-4 p-4 text-sm text-red-300 bg-red-950/40 rounded-xl border border-red-900/50 flex items-center gap-2 backdrop-blur-md z-10 mx-4 md:mx-0">
@@ -909,6 +915,14 @@ export default function Home() {
         )}
         </div>
       </main>
+
+      {/* Mobile Input Box - Sibling to scroll container! */}
+      {!activeEntry && (
+        <div className="md:hidden shrink-0 p-4 bg-background/80 backdrop-blur-xl border-t border-hairline z-20 w-full">
+          {renderOrganizeForm(true)}
+        </div>
+      )}
+      </div>
     </div>
   );
 }
