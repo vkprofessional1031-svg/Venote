@@ -27,7 +27,7 @@ export default function Login() {
       }
 
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -37,16 +37,18 @@ export default function Login() {
           },
         });
         if (error) throw error;
-        // On success, redirect to home
-        router.push('/app');
+        // On success, redirect to default view
+        const { data: settings } = await supabase.from('user_settings').select('default_view').eq('user_id', data.user?.id).single();
+        router.push(settings?.default_view || '/app');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        // On success, redirect to home
-        router.push('/app');
+        // On success, redirect to default view
+        const { data: settings } = await supabase.from('user_settings').select('default_view').eq('user_id', data.user?.id).single();
+        router.push(settings?.default_view || '/app');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during authentication.');

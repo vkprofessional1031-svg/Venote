@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -102,8 +102,63 @@ export default function ExpensesPage() {
   // Manual Add state
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualEntryType, setManualEntryType] = useState<'expense' | 'income'>('expense');
-  const [manualForm, setManualForm] = useState({ amount: '', description: '', category: 'General', source: '', date: '' });
+  const [manualForm, setManualForm] = useState({ amount: '', description: '', category: 'General', source: '', date: '', receipt_url: '' });
   const [isMounted, setIsMounted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !session?.user?.id) return;
+    
+    setIsUploadingReceipt(true);
+    setAiError('');
+
+    try {
+      // 1. Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${session.user.id}/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage.from('receipt-images').upload(filePath, file);
+      if (uploadError) throw new Error('Failed to upload receipt image.');
+
+      const { data: { publicUrl } } = supabase.storage.from('receipt-images').getPublicUrl(filePath);
+
+      // 2. Pass public URL to Vision API
+      const response = await fetch('/api/receipt-structure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: publicUrl, currencySymbol: activeSymbol })
+      });
+      
+      if (!response.ok) throw new Error('Failed to analyze receipt.');
+      
+      const data = await response.json();
+      const result = data.result;
+      
+      if (!result) throw new Error('Could not parse receipt data.');
+      
+      // 3. Pre-fill manual form and open it
+      setManualEntryType('expense');
+      setManualForm({
+        amount: result.amount ? String(result.amount) : '',
+        description: result.merchant || '',
+        category: result.category || 'General',
+        source: '',
+        date: result.date || new Date().toISOString().split('T')[0],
+        receipt_url: publicUrl
+      });
+      setShowManualForm(true);
+      
+    } catch (err: any) {
+      console.error(err);
+      setAiError(err.message || 'Error processing receipt.');
+    } finally {
+      setIsUploadingReceipt(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -272,7 +327,8 @@ export default function ExpensesPage() {
           amount: parseFloat(manualForm.amount),
           description: manualForm.description,
           category: manualForm.category || 'General',
-          date: manualForm.date
+          date: manualForm.date,
+          receipt_url: manualForm.receipt_url || null
         });
         if (error) throw error;
       }
@@ -280,7 +336,7 @@ export default function ExpensesPage() {
       await reloadTransactions();
       
       setShowManualForm(false);
-      setManualForm({ amount: '', description: '', category: 'General', source: '', date: new Date().toISOString().split('T')[0] });
+      setManualForm({ amount: '', description: '', category: 'General', source: '', date: new Date().toISOString().split('T')[0], receipt_url: '' });
     } catch (err) {
       console.error('Failed to add manual entry', err);
     }
@@ -588,35 +644,7 @@ export default function ExpensesPage() {
         isMobileMenuOpen={isMobileMenuOpen} 
         onCloseMenu={() => setIsMobileMenuOpen(false)} 
         session={session}
-        hideProfile={true}
-      >
-        <div className="px-4 md:px-5 pt-2">
-          <label className="block text-[11px] font-mono tracking-wider text-muted-text uppercase mb-1.5 pl-1">Currency</label>
-          <div className="relative">
-            <select
-              value={userCurrency || 'auto'}
-              onChange={async (e) => {
-                const newCurrency = e.target.value === 'auto' ? null : e.target.value;
-                setUserCurrency(newCurrency);
-                if (session?.user?.id) {
-                  await supabase.from('user_settings').update({ currency: newCurrency }).eq('user_id', session.user.id);
-                }
-              }}
-              className="w-full bg-[#1A1714] text-primary-text border border-hairline rounded-xl pl-3 pr-10 py-2.5 text-sm focus:outline-none focus:border-primary-accent transition-colors appearance-none"
-            >
-              <option value="auto">Auto (detected)</option>
-              {CURRENCIES.map(c => (
-                <option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>
-              ))}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-text">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </AppSidebar>
+      />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full bg-background relative min-w-0">
@@ -734,7 +762,7 @@ export default function ExpensesPage() {
                 {aiError && (
                   <div className="text-red-400 text-xs px-11">{aiError}</div>
                 )}
-                <div className="px-11">
+                <div className="px-11 flex items-center justify-between">
                   <button 
                     type="button" 
                     onClick={() => setShowManualForm(!showManualForm)}
@@ -742,6 +770,34 @@ export default function ExpensesPage() {
                   >
                     {showManualForm ? "Hide manual form" : "Add manually instead"}
                   </button>
+
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment" 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      onChange={handleReceiptUpload} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingReceipt}
+                      className="flex items-center gap-1.5 text-xs text-muted-text hover:text-primary-text transition-colors disabled:opacity-50"
+                      title="Upload Receipt"
+                    >
+                      {isUploadingReceipt ? (
+                        <div className="w-4 h-4 border-2 border-primary-text/30 border-t-primary-text rounded-full animate-spin" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      )}
+                      <span>{isUploadingReceipt ? "Analyzing..." : "Scan Receipt"}</span>
+                    </button>
+                  </div>
                 </div>
               </form>
 

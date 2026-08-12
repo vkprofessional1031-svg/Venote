@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { insertPrepItems, recalculateApplicationStatus } from '@/utils/prep';
@@ -17,6 +17,8 @@ interface JobApplication {
   job_url: string | null;
   status: string;
   status_manually_set: boolean;
+  resume_version: string | null;
+  resume_file_url: string | null;
   rounds: ApplicationRound[];
 }
 
@@ -61,6 +63,49 @@ export default function RoundsPage() {
   // Inline editing state for Table View
   const [editingCell, setEditingCell] = useState<{ appId: string; field: string } | null>(null);
   const [editingValue, setEditingValue] = useState('');
+
+  const resumeFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingResumeId, setUploadingResumeId] = useState<string | null>(null);
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const appId = e.target.dataset.appId;
+    if (!file || !session?.user?.id || !appId) return;
+    
+    setUploadingResumeId(appId);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${session.user.id}/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage.from('resume-files').upload(filePath, file);
+      if (uploadError) throw new Error('Failed to upload resume.');
+
+      const { data: { publicUrl } } = supabase.storage.from('resume-files').getPublicUrl(filePath);
+
+      // Optimistic UI update
+      setApplications(prev => prev.map(app => 
+        app.id === appId ? { ...app, resume_file_url: publicUrl } : app
+      ));
+
+      // Database update
+      const { error } = await supabase
+        .from('job_applications')
+        .update({ resume_file_url: publicUrl })
+        .eq('id', appId);
+      if (error) throw error;
+      
+    } catch (err) {
+      console.error('Failed to upload resume:', err);
+      alert('Failed to upload resume.');
+    } finally {
+      setUploadingResumeId(null);
+      if (resumeFileInputRef.current) {
+        resumeFileInputRef.current.value = '';
+        delete resumeFileInputRef.current.dataset.appId;
+      }
+    }
+  };
 
   // Status dropdown floating state
   const [statusDropdownState, setStatusDropdownState] = useState<{
@@ -378,6 +423,8 @@ export default function RoundsPage() {
           applied_date: today,
           job_url: null,
           notes: null,
+          resume_version: null,
+          resume_file_url: null,
         })
         .select(`
           id,
@@ -389,6 +436,8 @@ export default function RoundsPage() {
           job_url,
           status,
           status_manually_set,
+          resume_version,
+          resume_file_url,
           created_at
         `)
         .single();
@@ -860,6 +909,13 @@ export default function RoundsPage() {
                       <span>Add Application</span>
                     </button>
                   </div>
+                  <input 
+                    type="file" 
+                    accept=".pdf,.doc,.docx" 
+                    className="hidden" 
+                    ref={resumeFileInputRef} 
+                    onChange={handleResumeUpload} 
+                  />
                   {/* Desktop View: Spreadsheet-style Table */}
                   <div className="hidden md:block glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
                     <div className="overflow-x-auto">
@@ -870,6 +926,7 @@ export default function RoundsPage() {
                             <th className="py-3 px-3.5 font-medium">Role</th>
                             <th className="py-3 px-3.5 font-medium">Status</th>
                             <th className="py-3 px-3.5 font-medium">Link to Listing</th>
+                            <th className="py-3 px-3.5 font-medium">Resume</th>
                             <th className="py-3 px-3.5 font-medium">Notes</th>
                             <th className="py-3 px-3.5 font-medium">Date Applied</th>
                             <th className="py-3 px-2 w-8 text-right"></th>
@@ -1024,6 +1081,73 @@ export default function RoundsPage() {
                                       )}
                                     </div>
                                   )}
+                                </td>
+
+                                {/* Resume */}
+                                <td className="py-2.5 px-3.5 align-middle max-w-[160px]">
+                                  <div className="flex items-center justify-between gap-2 group/resume">
+                                    <div className="flex-1 min-w-0">
+                                      {editingCell?.appId === app.id && editingCell?.field === 'resume_version' ? (
+                                        <input
+                                          type="text"
+                                          value={editingValue}
+                                          onChange={(e) => setEditingValue(e.target.value)}
+                                          onBlur={() => handleSaveInlineEdit(app.id, 'resume_version', editingValue)}
+                                          onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'resume_version')}
+                                          className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                          autoFocus
+                                          placeholder="v1, tailored..."
+                                        />
+                                      ) : (
+                                        <div
+                                          onClick={() => handleStartInlineEdit(app.id, 'resume_version', app.resume_version)}
+                                          className="cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                          title={app.resume_version || 'Click to add resume version'}
+                                        >
+                                          {app.resume_version ? (
+                                            <span className="text-muted-text">{app.resume_version}</span>
+                                          ) : (
+                                            <span className="text-muted-text/40 italic">Add version...</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                      {app.resume_file_url ? (
+                                        <a
+                                          href={app.resume_file_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-primary-accent hover:bg-primary-accent/10 p-1 rounded transition-colors block"
+                                          title="View attached resume"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                          </svg>
+                                        </a>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            if (resumeFileInputRef.current) {
+                                              resumeFileInputRef.current.dataset.appId = app.id;
+                                              resumeFileInputRef.current.click();
+                                            }
+                                          }}
+                                          disabled={uploadingResumeId === app.id}
+                                          className="text-muted-text/40 hover:text-primary-text opacity-0 group-hover/resume:opacity-100 p-1 rounded transition-all focus:outline-none disabled:opacity-50"
+                                          title="Attach resume PDF"
+                                        >
+                                          {uploadingResumeId === app.id ? (
+                                            <div className="w-3.5 h-3.5 border-2 border-primary-text/30 border-t-primary-text rounded-full animate-spin" />
+                                          ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                            </svg>
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
                                 </td>
 
                                 {/* 5. Notes */}
@@ -1269,6 +1393,74 @@ export default function RoundsPage() {
                                         )}
                                       </div>
                                     )}
+                                  </div>
+                                </div>
+
+                                {/* Field: RESUME */}
+                                <div className="py-2.5 flex items-center justify-between gap-3 group/resume-mobile">
+                                  <span className="text-[10px] font-semibold text-muted-text/70 uppercase tracking-wider w-16 shrink-0">RESUME</span>
+                                  <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                                    <div className="flex-1 min-w-0">
+                                      {editingCell?.appId === app.id && editingCell?.field === 'resume_version' ? (
+                                        <input
+                                          type="text"
+                                          value={editingValue}
+                                          onChange={(e) => setEditingValue(e.target.value)}
+                                          onBlur={() => handleSaveInlineEdit(app.id, 'resume_version', editingValue)}
+                                          onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'resume_version')}
+                                          className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
+                                          autoFocus
+                                          placeholder="v1, tailored..."
+                                        />
+                                      ) : (
+                                        <div
+                                          onClick={() => handleStartInlineEdit(app.id, 'resume_version', app.resume_version)}
+                                          className="cursor-pointer hover:bg-white/5 rounded px-1.5 -mx-1.5 py-0.5 transition-colors truncate"
+                                          title={app.resume_version || 'Tap to add resume version'}
+                                        >
+                                          {app.resume_version ? (
+                                            <span className="text-muted-text">{app.resume_version}</span>
+                                          ) : (
+                                            <span className="text-muted-text/40 italic">Add version...</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-shrink-0 flex items-center">
+                                      {app.resume_file_url ? (
+                                        <a
+                                          href={app.resume_file_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-primary-accent hover:bg-primary-accent/10 p-1.5 rounded transition-colors block"
+                                          title="View attached resume"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                          </svg>
+                                        </a>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            if (resumeFileInputRef.current) {
+                                              resumeFileInputRef.current.dataset.appId = app.id;
+                                              resumeFileInputRef.current.click();
+                                            }
+                                          }}
+                                          disabled={uploadingResumeId === app.id}
+                                          className="text-muted-text/50 hover:text-primary-text p-1.5 rounded transition-colors focus:outline-none disabled:opacity-50"
+                                          title="Attach resume PDF"
+                                        >
+                                          {uploadingResumeId === app.id ? (
+                                            <div className="w-4 h-4 border-2 border-primary-text/30 border-t-primary-text rounded-full animate-spin" />
+                                          ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                            </svg>
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
 

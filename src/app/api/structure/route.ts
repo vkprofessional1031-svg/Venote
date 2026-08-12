@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       : ORGANIZE_SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0]);
 
     const payload = {
-      model: "llama-3.3-70b-versatile",
+      model: "qwen/qwen3.6-27b",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userText }

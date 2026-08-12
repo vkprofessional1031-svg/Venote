@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { supabase } from '@/lib/supabase';
 
 interface AppMobileHeaderProps {
   onOpenMenu: () => void;
@@ -7,9 +10,22 @@ interface AppMobileHeaderProps {
 }
 
 export default function AppMobileHeader({ onOpenMenu, rightContent }: AppMobileHeaderProps) {
+  const [defaultView, setDefaultView] = useState('/app');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session?.user?.id) {
+        supabase.from('user_settings').select('default_view').eq('user_id', data.session.user.id).single()
+          .then(({ data: settings }) => {
+            if (settings?.default_view) setDefaultView(settings.default_view);
+          });
+      }
+    });
+  }, []);
+
   return (
     <div className="md:hidden flex items-center justify-between p-4 border-b border-hairline bg-background sticky top-0 z-30">
-      <Link href="/app" className="flex items-center gap-3">
+      <Link href={defaultView} className="flex items-center gap-3">
         <button 
           type="button"
           onClick={(e) => { e.preventDefault(); onOpenMenu(); }}

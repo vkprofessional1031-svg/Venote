@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const payload = {
-      model: "llama-3.3-70b-versatile",
+      model: "qwen/qwen3.6-27b",
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTION },
         { role: "user", content: userText }

@@ -29,15 +29,17 @@ export default function AuthCallback() {
       // We manually check getSession() in case the onAuthStateChange event already fired.
       const { data } = await supabase.auth.getSession();
       if (data.session && mounted) {
-        router.push('/app');
+        const { data: settings } = await supabase.from('user_settings').select('default_view').eq('user_id', data.session.user.id).single();
+        if (mounted) router.push(settings?.default_view || '/app');
       }
     };
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || session) && mounted) {
-        router.push('/app');
+        const { data: settings } = await supabase.from('user_settings').select('default_view').eq('user_id', session!.user.id).single();
+        if (mounted) router.push(settings?.default_view || '/app');
       }
     });
 
@@ -46,7 +48,8 @@ export default function AuthCallback() {
     const timeout = setTimeout(async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session && mounted) {
-        router.push('/app');
+        const { data: settings } = await supabase.from('user_settings').select('default_view').eq('user_id', data.session.user.id).single();
+        if (mounted) router.push(settings?.default_view || '/app');
       } else if (mounted) {
         router.push('/login');
       }
