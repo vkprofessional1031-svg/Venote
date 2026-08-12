@@ -105,6 +105,9 @@ export default function ExpensesPage() {
   const [manualForm, setManualForm] = useState({ amount: '', description: '', category: 'General', source: '', date: '', receipt_url: '' });
   const [isMounted, setIsMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
+  const mobileReceiptMenuRef = useRef<HTMLDivElement>(null);
+  const [showMobileReceiptMenu, setShowMobileReceiptMenu] = useState(false);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,8 +160,32 @@ export default function ExpensesPage() {
     } finally {
       setIsUploadingReceipt(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (libraryInputRef.current) libraryInputRef.current.value = '';
     }
   };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (mobileReceiptMenuRef.current && !mobileReceiptMenuRef.current.contains(event.target as Node)) {
+        setShowMobileReceiptMenu(false);
+      }
+    }
+    
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowMobileReceiptMenu(false);
+      }
+    }
+
+    if (showMobileReceiptMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showMobileReceiptMenu]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -278,7 +305,7 @@ export default function ExpensesPage() {
       const response = await fetch('/api/structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiInput, currencySymbol: activeSymbol })
+        body: JSON.stringify({ text: aiInput, currencySymbol: activeSymbol, domain: 'wallet' })
       });
       
       if (!response.ok) throw new Error('Failed to process text');
@@ -771,7 +798,7 @@ export default function ExpensesPage() {
                     {showManualForm ? "Hide manual form" : "Add manually instead"}
                   </button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 relative">
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -780,11 +807,20 @@ export default function ExpensesPage() {
                       ref={fileInputRef} 
                       onChange={handleReceiptUpload} 
                     />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={libraryInputRef} 
+                      onChange={handleReceiptUpload} 
+                    />
+                    
+                    {/* Desktop Button - Hidden on mobile */}
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => libraryInputRef.current?.click()}
                       disabled={isUploadingReceipt}
-                      className="flex items-center gap-1.5 text-xs text-muted-text hover:text-primary-text transition-colors disabled:opacity-50"
+                      className="hidden md:flex items-center gap-1.5 text-xs text-muted-text hover:text-primary-text transition-colors disabled:opacity-50"
                       title="Upload Receipt"
                     >
                       {isUploadingReceipt ? (
@@ -797,6 +833,59 @@ export default function ExpensesPage() {
                       )}
                       <span>{isUploadingReceipt ? "Analyzing..." : "Scan Receipt"}</span>
                     </button>
+
+                    {/* Mobile Button - Hidden on desktop */}
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileReceiptMenu(true)}
+                      disabled={isUploadingReceipt}
+                      className="flex md:hidden items-center gap-1.5 text-xs text-muted-text hover:text-primary-text transition-colors disabled:opacity-50"
+                      title="Scan Receipt Options"
+                    >
+                      {isUploadingReceipt ? (
+                        <div className="w-4 h-4 border-2 border-primary-text/30 border-t-primary-text rounded-full animate-spin" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      )}
+                      <span>{isUploadingReceipt ? "Analyzing..." : "Scan Receipt"}</span>
+                    </button>
+
+                    {/* Mobile Receipt Menu Popup */}
+                    {showMobileReceiptMenu && (
+                      <div ref={mobileReceiptMenuRef} className="absolute right-0 top-full mt-2 w-48 bg-background border border-hairline rounded-xl shadow-lg overflow-hidden z-[60] md:hidden animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            fileInputRef.current?.click();
+                            setShowMobileReceiptMenu(false);
+                          }}
+                          className="w-full px-4 py-3 text-sm text-left text-primary-text hover:bg-white/5 flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Take Photo
+                        </button>
+                        <div className="h-px bg-hairline" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            libraryInputRef.current?.click();
+                            setShowMobileReceiptMenu(false);
+                          }}
+                          className="w-full px-4 py-3 text-sm text-left text-primary-text hover:bg-white/5 flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Choose from Library
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </form>
