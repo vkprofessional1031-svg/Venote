@@ -1498,15 +1498,18 @@ export default function SchedulePage() {
 
       {/* Block Edit / Create Modal */}
       {isModalOpen && editingBlock && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="glass-panel-modal border border-white/10 rounded-[24px] w-full max-w-md p-6 shadow-[0_8px_40px_rgba(0,0,0,0.4)] space-y-4">
+        <div className="fixed inset-0 z-50 flex flex-col md:flex-row md:items-center justify-end md:justify-center bg-black/60 backdrop-blur-sm md:p-4 animate-in fade-in duration-150">
+          {/* Mobile backdrop tap to close */}
+          <div className="absolute inset-0 md:hidden" onClick={() => { setIsModalOpen(false); setEditingBlock(null); }} />
+          
+          <div className="relative glass-panel-modal border border-white/10 rounded-t-[32px] md:rounded-[24px] w-full md:max-w-md p-6 pb-[max(env(safe-area-inset-bottom,24px),24px)] md:pb-6 shadow-[0_-8px_40px_rgba(0,0,0,0.4)] md:shadow-[0_8px_40px_rgba(0,0,0,0.4)] space-y-5 md:space-y-4 mt-auto md:mt-0 animate-in slide-in-from-bottom md:slide-in-from-bottom-0 md:zoom-in-95 duration-200 z-10">
             <div className="flex items-center justify-between border-b border-hairline pb-3">
-              <h3 className="text-lg font-serif font-bold text-primary-text">
+              <h3 className="text-xl md:text-lg font-serif font-bold text-primary-text">
                 {isNewBlock ? 'Create Time Block' : 'Edit Time Block'}
               </h3>
               <button
                 onClick={() => { setIsModalOpen(false); setEditingBlock(null); }}
-                className="p-1 rounded-lg text-muted-text hover:text-primary-text hover:bg-background"
+                className="p-2 md:p-1 rounded-full md:rounded-lg text-muted-text hover:text-primary-text hover:bg-background bg-background/50 md:bg-transparent"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1514,60 +1517,88 @@ export default function SchedulePage() {
               </button>
             </div>
 
-            <div className="space-y-3.5 text-xs">
+            <div className="space-y-5 md:space-y-3.5 text-sm md:text-xs">
               {/* Title */}
               <div>
-                <label className="block text-muted-text font-medium mb-1">Title</label>
+                <label className="block text-muted-text font-medium mb-1.5 md:mb-1">Title</label>
                 <input
                   type="text"
                   value={editingBlock.title || ''}
                   onChange={(e) => setEditingBlock(prev => ({ ...prev!, title: e.target.value }))}
                   placeholder="e.g. Deep Work, LeetCode Practice, Meeting..."
-                  className="w-full px-3.5 py-2.5 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent"
+                  className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent"
                   autoFocus
                 />
               </div>
 
-              {/* Start & End Time */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Date & Time fields */}
+              <div className="space-y-5 md:space-y-3.5">
+                {/* Date */}
                 <div>
-                  <label className="block text-muted-text font-medium mb-1">Start Time</label>
+                  <label className="block text-muted-text font-medium mb-1.5 md:mb-1">Date</label>
                   <input
-                    type="datetime-local"
-                    value={editingBlock.start_time ? new Date(new Date(editingBlock.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
+                    type="date"
+                    value={editingBlock.start_time ? new Date(new Date(editingBlock.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) : ''}
                     onChange={(e) => {
-                      const d = new Date(e.target.value);
-                      setEditingBlock(prev => ({ ...prev!, start_time: d.toISOString() }));
+                      const newDate = e.target.value;
+                      if (!newDate) return;
+                      const localStart = editingBlock.start_time ? new Date(new Date(editingBlock.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(11, 16) : '09:00';
+                      const localEnd = editingBlock.end_time ? new Date(new Date(editingBlock.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(11, 16) : '10:00';
+                      setEditingBlock(prev => ({ 
+                        ...prev!, 
+                        start_time: new Date(`${newDate}T${localStart}`).toISOString(),
+                        end_time: new Date(`${newDate}T${localEnd}`).toISOString()
+                      }));
                     }}
-                    className="w-full px-3 py-2 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[11px]"
+                    className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent block appearance-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-muted-text font-medium mb-1">End Time</label>
-                  <input
-                    type="datetime-local"
-                    value={editingBlock.end_time ? new Date(new Date(editingBlock.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
-                    onChange={(e) => {
-                      const d = new Date(e.target.value);
-                      setEditingBlock(prev => ({ ...prev!, end_time: d.toISOString() }));
-                    }}
-                    className="w-full px-3 py-2 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[11px]"
-                  />
+                
+                {/* Start & End Time */}
+                <div className="grid grid-cols-2 gap-4 md:gap-3">
+                  <div>
+                    <label className="block text-muted-text font-medium mb-1.5 md:mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      value={editingBlock.start_time ? new Date(new Date(editingBlock.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(11, 16) : ''}
+                      onChange={(e) => {
+                        const newTime = e.target.value;
+                        if (!newTime) return;
+                        const localDate = editingBlock.start_time ? new Date(new Date(editingBlock.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                        setEditingBlock(prev => ({ ...prev!, start_time: new Date(`${localDate}T${newTime}`).toISOString() }));
+                      }}
+                      className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[14px] md:text-[13px] appearance-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-muted-text font-medium mb-1.5 md:mb-1">End Time</label>
+                    <input
+                      type="time"
+                      value={editingBlock.end_time ? new Date(new Date(editingBlock.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(11, 16) : ''}
+                      onChange={(e) => {
+                        const newTime = e.target.value;
+                        if (!newTime) return;
+                        const localDate = editingBlock.end_time ? new Date(new Date(editingBlock.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+                        setEditingBlock(prev => ({ ...prev!, end_time: new Date(`${localDate}T${newTime}`).toISOString() }));
+                      }}
+                      className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[14px] md:text-[13px] appearance-none"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Category Color Picker */}
               <div>
-                <label className="block text-muted-text font-medium mb-1.5">Category Color</label>
-                <div className="flex items-center gap-2">
+                <label className="block text-muted-text font-medium mb-2.5 md:mb-1.5">Category Color</label>
+                <div className="flex items-center gap-3 md:gap-2">
                   {COLOR_PALETTES.map(p => (
                     <button
                       key={p.value}
                       type="button"
                       onClick={() => setEditingBlock(prev => ({ ...prev!, color: p.value }))}
                       style={{ backgroundColor: p.value }}
-                      className={`w-7 h-7 rounded-full transition-transform cursor-pointer ${
-                        editingBlock.color === p.value ? 'scale-125 ring-2 ring-white shadow-md' : 'hover:scale-110 opacity-70'
+                      className={`w-10 h-10 md:w-7 md:h-7 rounded-full transition-transform cursor-pointer ${
+                        editingBlock.color === p.value ? 'scale-110 md:scale-125 ring-2 ring-white shadow-md' : 'hover:scale-105 md:hover:scale-110 opacity-70'
                       }`}
                       title={p.label}
                     />
@@ -1577,41 +1608,41 @@ export default function SchedulePage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-muted-text font-medium mb-1">Notes (Optional)</label>
+                <label className="block text-muted-text font-medium mb-1.5 md:mb-1">Notes (Optional)</label>
                 <textarea
                   rows={3}
                   value={editingBlock.notes || ''}
                   onChange={(e) => setEditingBlock(prev => ({ ...prev!, notes: e.target.value }))}
                   placeholder="Add details, links, or objectives..."
-                  className="w-full px-3.5 py-2 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent resize-none"
+                  className="w-full px-4 py-3 md:px-3.5 md:py-2 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent resize-none"
                 />
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-hairline">
+            <div className="flex flex-col md:flex-row md:items-center justify-between pt-5 md:pt-3 border-t border-hairline gap-3 md:gap-0">
               {!isNewBlock ? (
                 <button
                   type="button"
                   onClick={handleDeleteBlock}
-                  className="px-3.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-400/10 rounded-xl transition-colors cursor-pointer"
+                  className="w-full md:w-auto px-4 py-3 md:px-3.5 md:py-2 text-sm md:text-xs font-semibold text-red-400 hover:bg-red-400/10 rounded-xl transition-colors cursor-pointer text-center"
                 >
                   Delete Block
                 </button>
-              ) : <div />}
+              ) : <div className="hidden md:block" />}
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col-reverse md:flex-row items-stretch md:items-center gap-3 md:gap-2">
                 <button
                   type="button"
                   onClick={() => { setIsModalOpen(false); setEditingBlock(null); }}
-                  className="px-4 py-2 text-xs font-semibold text-muted-text hover:text-primary-text hover:bg-background rounded-xl transition-colors"
+                  className="w-full md:w-auto px-4 py-3 md:px-4 md:py-2 text-sm md:text-xs font-semibold text-muted-text hover:text-primary-text hover:bg-background rounded-xl transition-colors text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveBlock}
-                  className="px-5 py-2 text-xs font-semibold bg-primary-accent text-white rounded-xl hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)] transition-all cursor-pointer"
+                  className="w-full md:w-auto px-4 py-3 md:px-5 md:py-2 text-sm md:text-xs font-semibold bg-primary-accent text-white rounded-xl hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)] transition-all cursor-pointer text-center"
                 >
                   Save Block
                 </button>

@@ -663,6 +663,7 @@ export default function ExpensesPage() {
     ...incomes.map(i => ({ ...i, isIncome: true, category: i.source }))
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+
   return (
     <div className="flex h-screen bg-background overflow-hidden relative selection:bg-primary-accent/20">
       
@@ -996,7 +997,7 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-center p-12">
                 <div className="w-8 h-8 border-4 border-primary-accent border-t-transparent rounded-full animate-spin"></div>
               </div>
-            ) : expenses.length === 0 ? (
+            ) : allTransactions.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-muted-text mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
