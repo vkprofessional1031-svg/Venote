@@ -21,7 +21,18 @@ interface QuickNote {
   createdAt: number;
   updatedAt: number;
   isArchived?: boolean;
-  imageUrls?: string[];
+}
+
+function getPreviewText(body: string): string {
+  if (!body) return '';
+  const stripped = body
+    .replace(/<img[^>]*>/gi, '')           // remove inline images entirely, no placeholder
+    .replace(/!\[.*?\]\(.*?\)/g, '')       // remove markdown image syntax too
+    .replace(/<[^>]+>/g, '')               // strip any other HTML tags
+    .replace(/[*_~`#>-]/g, '')             // strip common markdown symbols
+    .replace(/\s+/g, ' ')
+    .trim();
+  return stripped; // empty string if the note is images-only
 }
 
 export default function QuickNotesPage() {
@@ -44,6 +55,7 @@ export default function QuickNotesPage() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const noteEditorRef = useRef<NoteEditorRef>(null);
@@ -98,8 +110,7 @@ export default function QuickNotesPage() {
             isUnderline: row.is_underline || false,
             createdAt: new Date(row.created_at).getTime(),
             updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : new Date(row.created_at).getTime(),
-            isArchived: row.is_archived || false,
-            imageUrls: row.image_urls || []
+            isArchived: row.is_archived || false
           }));
           setNotes(formatted);
         }
@@ -143,7 +154,6 @@ export default function QuickNotesPage() {
         isUnderline: data.is_underline || false,
         createdAt: new Date(data.created_at).getTime(),
         updatedAt: new Date(data.created_at).getTime(), // same as created
-        imageUrls: []
       };
 
       setNotes(prev => [newNote, ...prev]);
@@ -186,16 +196,25 @@ export default function QuickNotesPage() {
         setActiveNoteId(null);
       }
       
-      if (noteToDelete && noteToDelete.imageUrls && noteToDelete.imageUrls.length > 0) {
-        const pathsToRemove = noteToDelete.imageUrls.map(url => {
-          const parts = url.split('/note-images/');
-          return parts.length > 1 ? parts[1] : null;
-        }).filter(Boolean) as string[];
+      if (noteToDelete && noteToDelete.body) {
+        const imgRegex = /!\[.*?\]\(([^\s)]+)/g;
+        let match;
+        const urls = [];
+        while ((match = imgRegex.exec(noteToDelete.body)) !== null) {
+          urls.push(match[1]);
+        }
         
-        if (pathsToRemove.length > 0) {
-          supabase.storage.from('note-images').remove(pathsToRemove).then(({ error }) => {
-            if (error) console.error('Failed to delete images:', error);
-          });
+        if (urls.length > 0) {
+          const pathsToRemove = urls.map(url => {
+            const parts = url.split('/note-images/');
+            return parts.length > 1 ? parts[1] : null;
+          }).filter(Boolean) as string[];
+          
+          if (pathsToRemove.length > 0) {
+            supabase.storage.from('note-images').remove(pathsToRemove).then(({ error }) => {
+              if (error) console.error('Failed to delete images:', error);
+            });
+          }
         }
       }
       
@@ -230,7 +249,6 @@ export default function QuickNotesPage() {
         is_bold: updatedNote.isBold,
         is_italic: updatedNote.isItalic,
         is_underline: updatedNote.isUnderline,
-        image_urls: updatedNote.imageUrls,
         updated_at: new Date().toISOString()
       }).eq('id', id);
 
@@ -264,28 +282,13 @@ export default function QuickNotesPage() {
     }
   };
 
-  const handleUpdateImages = (id: string, newUrls: string[]) => {
-    setNotes(prevNotes => prevNotes.map(note => 
-      note.id === id ? { ...note, imageUrls: newUrls } : note
-    ));
-    supabase.from('quick_notes').update({
-      image_urls: newUrls,
-      updated_at: new Date().toISOString()
-    }).eq('id', id).then(({error}) => {
-      if (error) {
-        console.error('Failed to update images', error);
-      }
-    });
-  };
-
-  const handleFileUpload = async (files: FileList | File[], noteId: string, currentUrls: string[]) => {
+  const handleFileUpload = async (files: FileList | File[], noteId: string) => {
     if (!session?.user?.id) return;
     
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
 
     setIsUploading(true);
-    const newUrls = [...currentUrls];
     const uploadPathPrefix = `${session.user.id}/quick/${noteId}`;
 
     for (const file of imageFiles) {
@@ -302,38 +305,90 @@ export default function QuickNotesPage() {
       }
 
       const { data: { publicUrl } } = supabase.storage.from('note-images').getPublicUrl(filePath);
-      newUrls.push(publicUrl);
-    }
-
-    if (newUrls.length > currentUrls.length) {
-      handleUpdateImages(noteId, newUrls);
+      noteEditorRef.current?.insertImage(publicUrl);
     }
     
     setIsUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-
-  const handleDeleteImage = async (e: React.MouseEvent, noteId: string, currentUrls: string[], urlToRemove: string) => {
-    e.stopPropagation();
-
-    try {
-      const urlObj = new URL(urlToRemove);
-      const parts = urlObj.pathname.split('/note-images/');
-      if (parts.length > 1) {
-        await supabase.storage.from('note-images').remove([parts[1]]);
-      }
-    } catch (err) {
-      console.error('Failed to parse URL for deletion', err);
-    }
-
-    handleUpdateImages(noteId, currentUrls.filter(u => u !== urlToRemove));
-  };
   
+  const handleDownloadPdf = async () => {
+    if (!activeNote || !noteEditorRef.current) return;
+    
+    setIsDownloadingPdf(true);
+    try {
+      const htmlContent = noteEditorRef.current.getHTML();
+      const title = activeNote.title || 'Untitled Note';
+      
+      // Dynamic import to avoid blowing up initial bundle size
+      const html2pdfModule = await import('html2pdf.js');
+      // Fix for esm/cjs interop depending on how html2pdf.js is exported
+      const html2pdf = (html2pdfModule.default ? html2pdfModule.default : html2pdfModule) as any;
+
+      // Recreate the light/print-friendly HTML template
+      const printContainer = document.createElement('div');
+      printContainer.innerHTML = `
+        <div style="font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.6; font-size: 14px; padding: 20px;">
+          <h1 style="font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 32px; margin-bottom: 24px; border-bottom: 2px solid #e5e5e5; padding-bottom: 8px;">
+            ${title}
+          </h1>
+          <div class="prose" style="max-width: none;">
+            ${htmlContent}
+          </div>
+        </div>
+      `;
+
+      // Apply basic styles to ensure html2canvas captures them
+      const styleBlock = document.createElement('style');
+      styleBlock.innerHTML = `
+        .prose img { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .prose ul, .prose ol { padding-left: 24px; }
+        .prose .tiptap-task-list { list-style: none; padding-left: 0; }
+        .prose .tiptap-task-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+        .prose .tiptap-task-item input[type="checkbox"] { margin-top: 4px; width: 16px; height: 16px; accent-color: #FF5C38; }
+        .prose .tiptap-task-item[data-checked="true"] > div { text-decoration: line-through; color: #888; }
+        .prose pre { background: #f6f8fa; padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid #e5e5e5; }
+        .prose code { font-family: 'Space Mono', monospace; background: #f6f8fa; padding: 2px 4px; border-radius: 4px; font-size: 0.9em; }
+        .prose blockquote { border-left: 4px solid #e5e5e5; padding-left: 16px; color: #555; margin-left: 0; font-style: italic; }
+        .prose p { margin-top: 0; margin-bottom: 1em; }
+        .prose mark { background-color: rgba(255, 92, 56, 0.2); padding: 0 2px; border-radius: 2px; }
+      `;
+      printContainer.appendChild(styleBlock);
+
+      // CRITICAL: Force crossorigin="anonymous" on all images to prevent html2canvas CORS tainting,
+      // and append a cache-busting query parameter so the browser doesn't serve a non-CORS cached version.
+      const images = printContainer.querySelectorAll('img');
+      images.forEach(img => {
+        img.setAttribute('crossOrigin', 'anonymous');
+        if (img.src && !img.src.includes('?')) {
+          img.src = img.src + '?nocache=' + Date.now();
+        }
+      });
+
+      const filename = `${title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      
+      const opt = {
+        margin:       15,
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(opt).from(printContainer).save();
+
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      alert('Failed to download PDF. Please try again.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (activeNoteId && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const activeNote = notes.find(n => n.id === activeNoteId);
-      if (activeNote) handleFileUpload(e.dataTransfer.files, activeNoteId, activeNote.imageUrls || []);
+      handleFileUpload(e.dataTransfer.files, activeNoteId);
     }
   };
 
@@ -343,7 +398,7 @@ export default function QuickNotesPage() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     if (activeNoteId && e.clipboardData.files && e.clipboardData.files.length > 0) {
-      if (activeNote) handleFileUpload(e.clipboardData.files, activeNoteId, activeNote.imageUrls || []);
+      handleFileUpload(e.clipboardData.files, activeNoteId);
     }
   };
 
@@ -447,7 +502,7 @@ export default function QuickNotesPage() {
                     {note.title || 'Untitled'}
                   </h3>
                   <p className="text-xs md:text-sm text-muted-text truncate mt-1">
-                    {note.body || 'No content'}
+                    {getPreviewText(note.body) || 'No content'}
                   </p>
                 </div>
 
@@ -628,6 +683,25 @@ export default function QuickNotesPage() {
                         
                         <button
                           type="button"
+                          onClick={handleDownloadPdf}
+                          disabled={isDownloadingPdf}
+                          className="hidden md:flex p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors disabled:opacity-50"
+                          title="Download PDF"
+                        >
+                          {isDownloadingPdf ? (
+                            <svg className="animate-spin w-4 h-4 md:w-3.5 md:h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 md:w-3.5 md:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          )}
+                        </button>
+                        
+                        <button
+                          type="button"
                           onClick={(e) => handleArchiveToggle(e, activeNote.id, !!activeNote.isArchived)}
                           className="hidden md:flex p-1.5 md:p-1 rounded text-muted-text hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title={activeNote.isArchived ? "Unarchive" : "Archive Note"}
@@ -652,8 +726,7 @@ export default function QuickNotesPage() {
                           multiple 
                           onChange={(e) => {
                             if (e.target.files && activeNoteId) {
-                              const note = notes.find(n => n.id === activeNoteId);
-                              if (note) handleFileUpload(e.target.files, activeNoteId, note.imageUrls || []);
+                              handleFileUpload(e.target.files, activeNoteId);
                             }
                           }}
                         />
@@ -687,38 +760,16 @@ export default function QuickNotesPage() {
                     onPaste={handlePaste}
                   />
 
-                  {/* Image Thumbnails */}
-                  {(activeNote.imageUrls?.length || isUploading) ? (
-                    <div className="mt-6 pt-4 border-t border-hairline/50">
-                      <div className="flex flex-wrap gap-3">
-                        {activeNote.imageUrls?.map((url, i) => (
-                          <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-hairline bg-black/20 shrink-0">
-                            <img 
-                              src={url} 
-                              alt="Attachment" 
-                              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
-                              onClick={() => setLightboxUrl(url)}
-                            />
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteImage(e, activeNote.id, activeNote.imageUrls || [], url)}
-                              className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
-                            >
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                            </button>
-                          </div>
-                        ))}
-                        {isUploading && (
-                          <div className="w-20 h-20 rounded-lg border border-hairline border-dashed bg-black/10 flex items-center justify-center animate-pulse shrink-0">
-                            <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          </div>
-                        )}
+                  {isUploading && (
+                    <div className="mt-6 pt-4 border-t border-hairline/50 flex justify-center">
+                      <div className="w-8 h-8 flex items-center justify-center animate-pulse">
+                        <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
                       </div>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             </div>
@@ -851,6 +902,21 @@ export default function QuickNotesPage() {
                           <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
                         </svg>
                       )}
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleDownloadPdf();
+                        setIsStyleSheetOpen(false);
+                      }}
+                      disabled={isDownloadingPdf}
+                      className="p-2.5 rounded-xl flex items-center justify-center border border-white/10 text-muted-text glass-panel-subtle hover:bg-white/10 transition-all disabled:opacity-50"
+                      title="Download PDF"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
                     </button>
                   </div>
                 </div>

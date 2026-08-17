@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, NodeViewProps } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import TaskList from '@tiptap/extension-task-list';
@@ -12,6 +12,102 @@ import Highlight from '@tiptap/extension-highlight';
 import Image from '@tiptap/extension-image';
 import { Markdown } from 'tiptap-markdown';
 import { SlashCommands, getSuggestionItems, renderItems } from './SlashCommand';
+
+const ResizableImageView = (props: NodeViewProps) => {
+  const { node, updateAttributes, deleteNode, selected } = props;
+  const [width, setWidth] = React.useState<number | string>(node.attrs.width || '100%');
+  const imgRef = React.useRef<HTMLImageElement>(null);
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.pageX;
+    const startWidth = imgRef.current?.clientWidth || 0;
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const currentX = moveEvent.pageX;
+      const newWidth = Math.max(100, startWidth + (currentX - startX));
+      setWidth(newWidth);
+    };
+    
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      const finalWidth = imgRef.current?.clientWidth || 0;
+      updateAttributes({ width: finalWidth });
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deleteNode();
+  };
+
+  return (
+    <NodeViewWrapper className="relative inline-block my-4 max-w-full group">
+      <img
+        ref={imgRef}
+        src={node.attrs.src}
+        alt={node.attrs.alt}
+        width={width}
+        className="rounded-xl shadow-md border max-w-full h-auto block transition-colors border-white/10"
+      />
+      <button
+        type="button"
+        onClick={handleDelete}
+        className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-red-500/80 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 transition-all z-10 opacity-0 group-hover:opacity-100"
+        title="Delete image"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+      <div
+        className="absolute bottom-0 right-0 w-5 h-5 bg-black/60 hover:bg-black/90 cursor-nwse-resize rounded-tl-lg hidden md:flex items-center justify-center shadow-lg border-t border-l border-white/20 transition-colors z-10"
+        onMouseDown={handleMouseDown}
+        title="Resize image"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </div>
+    </NodeViewWrapper>
+  );
+};
+
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        renderHTML: attributes => {
+          if (!attributes.width) return {};
+          return { width: attributes.width };
+        }
+      },
+    };
+  },
+  
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          const widthAttr = node.attrs.width ? ` width="${node.attrs.width}"` : '';
+          const altAttr = node.attrs.alt ? ` alt="${state.esc(node.attrs.alt)}"` : '';
+          state.write(`<img src="${node.attrs.src}"${altAttr}${widthAttr} />`);
+        }
+      }
+    };
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageView);
+  },
+});
 
 interface NoteEditorProps {
   value: string;
@@ -25,6 +121,8 @@ interface NoteEditorProps {
 export interface NoteEditorRef {
   insertChecklist: () => void;
   focus: () => void;
+  insertImage: (url: string) => void;
+  getHTML: () => string;
 }
 
 export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, onChange, style, className, placeholder, onPaste }, ref) => {
@@ -52,11 +150,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
           class: 'bg-[#FF5C38]/30 text-[#F5EDD9] rounded-sm px-1',
         },
       }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'rounded-xl max-w-full h-auto shadow-md border border-white/10 my-4',
-        },
-      }),
+      ResizableImage,
       SlashCommands.configure({
         suggestion: {
           items: getSuggestionItems,
@@ -105,6 +199,12 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
     insertChecklist: () => {
       editor?.commands.toggleTaskList();
       editor?.commands.focus();
+    },
+    insertImage: (url: string) => {
+      editor?.chain().focus().setImage({ src: url }).run();
+    },
+    getHTML: () => {
+      return editor?.getHTML() || '';
     }
   }));
 
@@ -246,6 +346,11 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         .tiptap p {
           margin-top: 0;
           margin-bottom: 0.25rem;
+        }
+
+        .ProseMirror img.ProseMirror-selectednode,
+        .ProseMirror div[data-node-view-wrapper].ProseMirror-selectednode {
+          outline: none !important;
         }
       `}} />
     </div>
