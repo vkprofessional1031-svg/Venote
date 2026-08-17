@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "driver.js/dist/driver.css";
 
 @theme inline {
   --color-background: #0E0C0B;
@@ -148,4 +149,82 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover,
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* Driver.js Custom Popover Styling */
+.driver-popover {
+  background: rgba(20, 16, 14, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5) !important;
+  color: #F5EDD9 !important;
+  padding: 20px !important;
+}
+
+.driver-popover-title {
+  font-family: "Fraunces", Georgia, serif !important;
+  font-style: italic;
+  font-weight: 700;
+  color: #F5EDD9 !important;
+  font-size: 18px !important;
+}
+
+.driver-popover-description {
+  color: rgba(245, 237, 217, 0.7) !important;
+  font-size: 14px !important;
+  line-height: 1.5;
+}
+
+.driver-popover-progress-text {
+  color: rgba(245, 237, 217, 0.5) !important;
+  font-size: 12px !important;
+}
+
+.driver-popover-navigation-btns button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #F5EDD9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 8px 16px !important;
+  font-family: inherit !important;
+  text-shadow: none !important;
+  transition: all 0.2s;
+}
+
+.driver-popover-navigation-btns button:hover {
+  background: rgba(255, 92, 56, 0.15) !important;
+  border-color: rgba(255, 92, 56, 0.4) !important;
+}
+
+.driver-popover-next-btn {
+  background: #FF5C38 !important;
+  border-color: #FF5C38 !important;
+  color: white !important;
+}
+
+.driver-popover-next-btn:hover {
+  filter: brightness(1.1);
+}
+
+.driver-popover-close-btn {
+  color: rgba(245, 237, 217, 0.5) !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: #F5EDD9 !important;
+}
+
+.driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: rgba(20, 16, 14, 0.85) !important;
+}
+.driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: rgba(20, 16, 14, 0.85) !important;
+}
+.driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: rgba(20, 16, 14, 0.85) !important;
+}
+.driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: rgba(20, 16, 14, 0.85) !important;
 }

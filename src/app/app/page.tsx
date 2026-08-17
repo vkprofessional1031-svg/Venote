@@ -12,6 +12,7 @@ import TableView from '@/components/TableView';
 import TagManager from '@/components/TagManager';
 import RoadmapView from '@/components/RoadmapView';
 import { useToast } from '@/components/ToastProvider';
+import OnboardingTour from '@/components/OnboardingTour';
 
 import EntriesList, { Entry, SortOption } from '@/components/EntriesList';
 import { insertWalletItems } from '@/utils/transactions';
@@ -605,7 +606,7 @@ export default function Home() {
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?';
 
   const renderOrganizeForm = (isMobile: boolean) => (
-    <form onSubmit={handleStructureSubmit} className="glass-panel-modal border border-white/10 rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 ring-1 ring-white/5 focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] gap-2 md:gap-0 w-full max-w-3xl mx-auto transition-all duration-300">
+    <form data-tour="organize-input" onSubmit={handleStructureSubmit} className="glass-panel-modal border border-white/10 rounded-[24px] md:rounded-full shadow-2xl relative flex flex-col md:flex-row items-stretch md:items-center p-1.5 ring-1 ring-white/5 focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] gap-2 md:gap-0 w-full max-w-3xl mx-auto transition-all duration-300">
       <input
         ref={isMobile ? organizeMobileInputRef : organizeInputRef}
         type="text"
@@ -659,6 +660,7 @@ export default function Home() {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-background text-primary-text flex font-sans relative">
+      <OnboardingTour userId={session?.user?.id} setIsMobileMenuOpen={setIsMobileMenuOpen} />
       <AppSidebar 
         activePath="/app" 
         isMobileMenuOpen={isMobileMenuOpen} 
@@ -790,6 +792,16 @@ export default function Home() {
 
                 <div className="relative z-10 w-full flex flex-col items-center">
                   <div className="flex flex-col items-center mb-8 md:mb-12 text-center w-full">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/app?tour=true')}
+                      className="mb-5 px-3.5 py-1.5 rounded-full glass-panel-subtle text-muted-text border border-white/10 hover:border-primary-accent/40 hover:text-primary-accent transition-all text-xs font-medium flex items-center gap-2 shadow-sm group"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 group-hover:animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                      Take a tour
+                    </button>
                     <h1 className="font-serif italic font-bold text-4xl md:text-[40px] lg:text-[44px] tracking-tight leading-[1.1] mb-3 flex flex-col items-center">
                       <span className="text-primary-text">What's on your</span>
                       <span className="text-primary-accent mt-1">mind?</span>

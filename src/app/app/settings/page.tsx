@@ -227,6 +227,20 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 
+                {/* Guided Tour */}
+                <div className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-primary-text mb-1">Guided Tour</span>
+                    <span className="text-xs text-muted-text">Replay the quick interactive tour of Flowspace features.</span>
+                  </div>
+                  <button 
+                    onClick={() => router.push('/app?tour=true')}
+                    className="shrink-0 px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium"
+                  >
+                    Take a tour
+                  </button>
+                </div>
+                
               </div>
             </section>
 

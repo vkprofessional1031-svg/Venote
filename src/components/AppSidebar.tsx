@@ -193,6 +193,7 @@ export default function AppSidebar({
             <Link
               href="/app/schedule"
               title="Schedule"
+              data-tour="nav-schedule"
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/schedule"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
@@ -230,6 +231,7 @@ export default function AppSidebar({
             <Link
               href="/app/expenses"
               title="Wallet"
+              data-tour="nav-wallet"
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-2xl transition-all border group relative ${
                 activePath === "/app/expenses"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
@@ -245,6 +247,7 @@ export default function AppSidebar({
             <Link
               href="/app/rounds"
               title="Job"
+              data-tour="nav-job"
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-2xl transition-all border group relative ${
                 activePath === "/app/rounds"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
@@ -298,6 +301,7 @@ export default function AppSidebar({
             )}
 
             <div
+              data-tour="nav-settings"
               className={`flex items-center gap-3 px-1 cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-colors ${isDesktopCollapsed ? 'md:justify-center' : ''}`}
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               title={isDesktopCollapsed ? displayName : undefined}
