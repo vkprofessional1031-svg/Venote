@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useImperativeHandle, forwardRef, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, NodeViewProps } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
@@ -10,6 +11,10 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import Image from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import { Markdown } from 'tiptap-markdown';
 import { SlashCommands, getSuggestionItems, renderItems } from './SlashCommand';
 
@@ -116,6 +121,7 @@ interface NoteEditorProps {
   className?: string;
   placeholder?: string;
   onPaste?: (e: React.ClipboardEvent) => void;
+  onTableActiveChange?: (isActive: boolean) => void;
 }
 
 export interface NoteEditorRef {
@@ -123,9 +129,15 @@ export interface NoteEditorRef {
   focus: () => void;
   insertImage: (url: string) => void;
   getHTML: () => string;
+  insertTable: () => void;
 }
 
-export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, onChange, style, className, placeholder, onPaste }, ref) => {
+export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, onChange, style, className, placeholder, onPaste, onTableActiveChange }, ref) => {
+  const [tableMenuState, setTableMenuState] = useState<{ isOpen: boolean; x: number; y: number }>({ isOpen: false, x: 0, y: 0 });
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const closeTableMenu = () => setTableMenuState({ isOpen: false, x: 0, y: 0 });
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -157,6 +169,10 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
           render: renderItems,
         },
       }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Markdown,
     ],
     content: value,
@@ -179,6 +195,11 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
       // Use Markdown extension to get raw markdown
       const markdown = (editor.storage as any).markdown.getMarkdown();
       onChange(markdown);
+    },
+    onSelectionUpdate: ({ editor }) => {
+      if (onTableActiveChange) {
+        onTableActiveChange(editor.isActive('table'));
+      }
     },
   });
 
@@ -203,24 +224,75 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
     insertImage: (url: string) => {
       editor?.chain().focus().setImage({ src: url }).run();
     },
+    insertTable: () => {
+      if (editor?.isActive('table')) {
+        return;
+      }
+      editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    },
     getHTML: () => {
       return editor?.getHTML() || '';
     }
   }));
 
+  // Close the context menu on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && tableMenuState.isOpen) {
+        closeTableMenu();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tableMenuState.isOpen]);
+
+  // Handle table menu auto-close when selection changes outside table
+  useEffect(() => {
+    if (!editor?.isActive('table') && tableMenuState.isOpen) {
+      closeTableMenu();
+    }
+  }, [editor?.state.selection, editor, tableMenuState.isOpen]);
+
   return (
     <div 
       className={`w-full cursor-text ${className || ''}`} 
+      style={style}
       onClick={(e) => {
         // Only focus if the user isn't currently highlighting text
         if (!window.getSelection()?.toString()) {
           editor?.commands.focus();
         }
       }}
+      onContextMenu={(e) => {
+        if ((e.target as HTMLElement).closest('table')) {
+          e.preventDefault();
+          setTableMenuState({ isOpen: true, x: e.clientX, y: e.clientY });
+        }
+      }}
+      onTouchStart={(e) => {
+        if ((e.target as HTMLElement).closest('table')) {
+          const touch = e.touches[0];
+          longPressTimerRef.current = setTimeout(() => {
+            setTableMenuState({ isOpen: true, x: touch.clientX, y: touch.clientY });
+          }, 500);
+        }
+      }}
+      onTouchEnd={() => {
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      }}
+      onTouchMove={() => {
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      }}
     >
       {editor && (
         <BubbleMenu 
-          editor={editor} 
+          editor={editor}
+          shouldShow={({ state, editor, view, from, to }) => {
+            const { selection } = state;
+            if (selection.empty) return false;
+            if (editor.isActive('image')) return false;
+            return true;
+          }}
           className="flex items-center gap-1 p-1 md:p-1.5 bg-[#1C1816]/95 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.4)]"
         >
           <button
@@ -253,6 +325,115 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
              <svg className="w-4 h-4 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
           </button>
         </BubbleMenu>
+      )}
+
+      {typeof document !== 'undefined' && tableMenuState.isOpen && createPortal(
+        <>
+          <div 
+            className="fixed inset-0 z-[9998]" 
+            onClick={(e) => {
+              e.stopPropagation();
+              closeTableMenu();
+            }} 
+            onContextMenu={(e) => { 
+              e.preventDefault(); 
+              closeTableMenu(); 
+            }} 
+          />
+          <div 
+            className="fixed z-[9999] w-64 flex flex-col gap-2 p-1.5 bg-[#1C1816]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all"
+            style={{ top: tableMenuState.y, left: tableMenuState.x }}
+          >
+            <div className="flex flex-col gap-3 w-full px-3 pt-2">
+              {/* Column Width */}
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-muted-text">Column Width</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      let attrs = editor.getAttributes('tableCell');
+                      if (!attrs || Object.keys(attrs).length === 0) {
+                        attrs = editor.getAttributes('tableHeader');
+                      }
+                      const currentWidth = (attrs.colwidth && attrs.colwidth[0]) ? attrs.colwidth[0] : 100;
+                      editor.chain().focus().setCellAttribute('colwidth', [Math.max(50, currentWidth - 20)]).run();
+                      closeTableMenu();
+                    }}
+                    className="w-8 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 font-mono text-sm transition-colors"
+                  >
+                    −
+                  </button>
+                  <button
+                    onClick={() => {
+                      let attrs = editor.getAttributes('tableCell');
+                      if (!attrs || Object.keys(attrs).length === 0) {
+                        attrs = editor.getAttributes('tableHeader');
+                      }
+                      const currentWidth = (attrs.colwidth && attrs.colwidth[0]) ? attrs.colwidth[0] : 100;
+                      editor.chain().focus().setCellAttribute('colwidth', [currentWidth + 20]).run();
+                      closeTableMenu();
+                    }}
+                    className="w-8 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 font-mono text-sm transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Rows */}
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-muted-text">Rows</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => { editor.chain().focus().addRowAfter().run(); closeTableMenu(); }}
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 text-xs transition-colors"
+                  >
+                    + Add
+                  </button>
+                  <button
+                    onClick={() => { editor.chain().focus().deleteRow().run(); closeTableMenu(); }}
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-red-400/10 text-red-400/80 hover:text-red-300 hover:bg-red-400/20 text-xs transition-colors"
+                  >
+                    − Remove
+                  </button>
+                </div>
+              </div>
+
+              {/* Columns */}
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-muted-text">Columns</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => { editor.chain().focus().addColumnAfter().run(); closeTableMenu(); }}
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 text-xs transition-colors"
+                  >
+                    + Add
+                  </button>
+                  <button
+                    onClick={() => { editor.chain().focus().deleteColumn().run(); closeTableMenu(); }}
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-red-400/10 text-red-400/80 hover:text-red-300 hover:bg-red-400/20 text-xs transition-colors"
+                  >
+                    − Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full h-px bg-white/10 my-2" />
+
+            {/* Delete Table */}
+            <div className="w-full px-3 pb-2">
+              <button
+                onClick={() => { editor.chain().focus().deleteTable().run(); closeTableMenu(); }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm text-red-400/90 hover:text-red-300 hover:bg-red-400/10 transition-colors font-medium border border-red-400/20"
+                title="Delete Table"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                Delete Table
+              </button>
+            </div>
+          </div>
+        </>, document.body
       )}
       <EditorContent editor={editor} />
       
@@ -351,6 +532,48 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         .ProseMirror img.ProseMirror-selectednode,
         .ProseMirror div[data-node-view-wrapper].ProseMirror-selectednode {
           outline: none !important;
+        }
+
+        .tiptap table {
+          border-collapse: collapse;
+          table-layout: fixed;
+          width: 100%;
+          margin: 0;
+          overflow: hidden;
+        }
+
+        .tiptap table td,
+        .tiptap table th {
+          min-width: 1em;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 6px 8px;
+          vertical-align: top;
+          box-sizing: border-box;
+          position: relative;
+        }
+
+        .tiptap table th {
+          font-weight: bold;
+          text-align: left;
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .tiptap table .column-resize-handle {
+          background-color: rgba(255, 92, 56, 0.5);
+          bottom: -2px;
+          position: absolute;
+          right: -2px;
+          pointer-events: none;
+          top: 0;
+          width: 4px;
+          transition: background-color 0.2s ease;
+        }
+
+        .tiptap table .column-resize-handle:hover,
+        .tiptap table th:hover .column-resize-handle,
+        .tiptap table td:hover .column-resize-handle {
+          background-color: rgba(255, 92, 56, 0.9);
+          cursor: col-resize;
         }
       `}} />
     </div>

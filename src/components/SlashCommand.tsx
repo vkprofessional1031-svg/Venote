@@ -5,7 +5,7 @@ import { ReactRenderer } from '@tiptap/react';
 import tippy from 'tippy.js';
 import { SlashCommandList } from './SlashCommandList';
 
-export const getSuggestionItems = ({ query }: { query: string }) => {
+export const getSuggestionItems = ({ query, editor }: { query: string, editor: any }) => {
   return [
     {
       title: 'Heading 1',
@@ -40,7 +40,19 @@ export const getSuggestionItems = ({ query }: { query: string }) => {
         }
       },
     },
-  ].filter(item => item.title.toLowerCase().startsWith(query.toLowerCase())).slice(0, 5);
+    {
+      title: 'Table',
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>,
+      action: (editor: any, range: any) => {
+        editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+      },
+    },
+  ].filter(item => {
+    if (item.title === 'Table' && editor?.isActive('table')) {
+      return false;
+    }
+    return item.title.toLowerCase().startsWith(query.toLowerCase());
+  }).slice(0, 6);
 };
 
 export const renderItems = () => {

@@ -57,6 +57,7 @@ export default function QuickNotesPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [isTableActive, setIsTableActive] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const noteEditorRef = useRef<NoteEditorRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -653,6 +654,19 @@ export default function QuickNotesPage() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => noteEditorRef.current?.insertTable()}
+                          disabled={isTableActive}
+                          className={`p-1.5 md:p-1 rounded transition-colors ${
+                            isTableActive
+                              ? 'text-muted-text/30 cursor-not-allowed opacity-50'
+                              : 'text-muted-text hover:text-primary-text hover:bg-white/5'
+                          }`}
+                          title={isTableActive ? "Cannot nest tables" : "Insert Table"}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => fileInputRef.current?.click()}
                           className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
                           title="Add Image"
@@ -758,6 +772,7 @@ export default function QuickNotesPage() {
                     }}
                     className="w-full text-muted-text hover:text-primary-text focus-within:text-primary-text min-h-[120px] transition-colors leading-relaxed"
                     onPaste={handlePaste}
+                    onTableActiveChange={setIsTableActive}
                   />
 
                   {isUploading && (
@@ -832,7 +847,7 @@ export default function QuickNotesPage() {
 
                 <div>
                   <h4 className="text-xs font-mono tracking-wider text-muted-text uppercase mb-3">Actions</h4>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -846,6 +861,22 @@ export default function QuickNotesPage() {
                         <polyline points="9 11 12 14 22 4"></polyline>
                         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                       </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        noteEditorRef.current?.insertTable();
+                        setIsStyleSheetOpen(false);
+                      }}
+                      disabled={isTableActive}
+                      className={`p-2.5 rounded-xl flex items-center justify-center border border-white/10 glass-panel-subtle transition-all ${
+                        isTableActive
+                          ? 'text-muted-text/30 cursor-not-allowed opacity-50'
+                          : 'text-muted-text hover:bg-white/10 hover:text-primary-text'
+                      }`}
+                      title={isTableActive ? "Cannot nest tables" : "Insert Table"}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
                     </button>
                     
                     <button
