@@ -264,7 +264,7 @@ export default function AppSidebar({
           {/* Settings link removed - now in profile popup */}
         </div>
 
-        <div className={isDesktopCollapsed ? 'md:hidden' : ''}>{children}</div>
+        <div className={`flex-1 flex flex-col min-h-0 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>{children}</div>
 
         {!hideProfile && (
           <div className="mt-auto p-3 md:p-4 border-t border-white/10 glass-panel-subtle shrink-0 relative z-10" ref={profileMenuRef}>
