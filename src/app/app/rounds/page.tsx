@@ -1,5 +1,7 @@
 'use client';
 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +40,18 @@ interface PrepSession {
   date: string;
   company_reference: string | null;
 }
+
+const sanitizeMarkdown = (text: string): string => {
+  return text
+    // Ensure a blank line before any heading that isn't already preceded by one
+    .replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2')
+    // Ensure a blank line after a table's last row before non-table content follows
+    .replace(/(\|[^\n]*\|)\n([^\|\n])/g, '$1\n\n$2')
+    // Ensure a blank line before a table starts, if directly preceded by other text
+    .replace(/([^\n])\n(\|)/g, '$1\n\n$2');
+};
+
+const cleanContent = (text: string) => sanitizeMarkdown(text.replace(/<think>[\s\S]*?<\/think>/g, '').trim());
 
 export default function RoundsPage() {
   const router = useRouter();
@@ -114,6 +128,14 @@ export default function RoundsPage() {
     left: number;
   } | null>(null);
 
+  // Chat State
+  const [activeChat, setActiveChat] = useState<{ appId: string, mode: 'research' | 'mock' } | null>(null);
+  const [isChatPickerOpen, setIsChatPickerOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{role: 'user'|'assistant', content: string, isSynthetic?: boolean}[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   // Manual Form States
   const [manualApp, setManualApp] = useState({ company: '', role: '', source: '', applied_date: '', notes: '', job_url: '' });
   const [manualRound, setManualRound] = useState({ application_id: '', round_name: '', deadline_date: '', deadline_time: '', status: 'upcoming', notes: '' });
@@ -182,6 +204,117 @@ export default function RoundsPage() {
       setLoading(false);
     }
   };
+
+  const loadChatHistory = async () => {
+    if (!activeChat || !session) return;
+    setChatLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('interview_prep_chats')
+        .select('*')
+        .eq('job_application_id', activeChat.appId)
+        .eq('mode', activeChat.mode)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setChatMessages(data.map(msg => ({ 
+          role: msg.role as 'user'|'assistant', 
+          content: msg.content
+        })));
+      } else {
+        // Auto-trigger first message
+        const initialMessage = activeChat.mode === 'research' 
+          ? "Give me an initial research plan for this role" 
+          : "Give me an initial mock interview kickoff for this role";
+        
+        await triggerChatAPI(initialMessage, [], true);
+      }
+    } catch (err) {
+      console.error('Error loading chat history:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const triggerChatAPI = async (userContent: string, previousMessages: {role: 'user'|'assistant', content: string, isSynthetic?: boolean}[], isSynthetic = false) => {
+    if (!activeChat || !session) return;
+    
+    const app = applications.find(a => a.id === activeChat.appId);
+    if (!app) return;
+
+    if (!isSynthetic) {
+      await supabase.from('interview_prep_chats').insert({
+        user_id: session.user.id,
+        job_application_id: activeChat.appId,
+        mode: activeChat.mode,
+        role: 'user',
+        content: userContent
+      });
+    }
+
+    const newMessages = [...previousMessages, { role: 'user' as const, content: userContent, isSynthetic }];
+    setChatMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const response = await fetch('/api/interview-prep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobApplicationId: activeChat.appId,
+          mode: activeChat.mode,
+          company: app.company,
+          role: app.role,
+          notes: app.notes,
+          messages: newMessages.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+
+      if (!response.ok) throw new Error('API Error');
+
+      const assistantContent = await response.text();
+
+      await supabase.from('interview_prep_chats').insert({
+        user_id: session.user.id,
+        job_application_id: activeChat.appId,
+        mode: activeChat.mode,
+        role: 'assistant',
+        content: assistantContent
+      });
+
+      console.log('RAW ASSISTANT CONTENT:', JSON.stringify(assistantContent));
+      setChatMessages(prev => [...prev, { role: 'assistant', content: assistantContent }]);
+    } catch (err) {
+      console.error('Error sending message:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!chatInput.trim() || chatLoading || !activeChat) return;
+
+    const content = chatInput.trim();
+    setChatInput('');
+    await triggerChatAPI(content, chatMessages);
+  };
+
+  useEffect(() => {
+    if (activeChat) {
+      loadChatHistory();
+    } else {
+      setChatMessages([]);
+    }
+  }, [activeChat, session]);
+
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
 
   useEffect(() => {
     fetchData();
@@ -786,9 +919,10 @@ export default function RoundsPage() {
                                 >
                                   {app.status === 'in_progress' ? 'In Progress' : app.status}
                                 </button>
+
                                 <button 
                                   onClick={() => handleDeleteApplication(app.id)}
-                                  className="text-muted-text hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none"
+                                  className="text-muted-text hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-opacity focus:outline-none"
                                   title="Delete Application"
                                 >
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1205,17 +1339,20 @@ export default function RoundsPage() {
                                   )}
                                 </td>
 
-                                {/* Row Delete Action */}
+                                {/* Actions */}
                                 <td className="py-2.5 px-2 align-middle text-right">
-                                  <button
-                                    onClick={() => handleDeleteApplication(app.id)}
-                                    className="text-muted-text/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 focus:outline-none"
-                                    title="Delete Application"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
+                                  <div className="flex items-center justify-end gap-2">
+
+                                    <button
+                                      onClick={() => handleDeleteApplication(app.id)}
+                                      className="text-muted-text/40 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 focus:outline-none"
+                                      title="Delete Application"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </div>
                                 </td>
 
                               </tr>
@@ -1302,16 +1439,19 @@ export default function RoundsPage() {
                                   )}
                                 </div>
 
-                                {/* Delete Button */}
-                                <button
-                                  onClick={() => handleDeleteApplication(app.id)}
-                                  className="text-muted-text/40 hover:text-red-400 p-1.5 focus:outline-none rounded transition-colors"
-                                  title="Delete Application"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
+                                {/* Actions */}
+                                <div className="flex items-center gap-1">
+
+                                  <button
+                                    onClick={() => handleDeleteApplication(app.id)}
+                                    className="text-muted-text/40 hover:text-red-400 p-1.5 focus:outline-none rounded transition-colors"
+                                    title="Delete Application"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
 
                               {/* Card Body: Labeled Fields */}
@@ -1550,6 +1690,210 @@ export default function RoundsPage() {
             
           </div>
         </div>
+
+        {/* Interview Prep Chat Modal */}
+        {activeChat && (() => {
+          const app = applications.find(a => a.id === activeChat.appId);
+          if (!app) return null;
+
+          return (
+            <div className="fixed inset-0 z-[100] flex flex-col justify-end md:justify-center md:items-center bg-background/40 md:bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+              <div 
+                className="absolute inset-0"
+                onClick={() => setActiveChat(null)}
+              />
+              <div className="relative w-full h-full md:w-[90vw] md:h-[90vh] md:max-w-5xl flex flex-col glass-panel-modal border-t md:border border-white/10 rounded-t-[32px] md:rounded-[24px] shadow-2xl animate-in slide-in-from-bottom md:zoom-in-95 overflow-hidden">
+                {/* Header */}
+                <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-white/[0.02]">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-primary-text">{app.company}</h3>
+                      <p className="text-xs text-muted-text">{app.role}</p>
+                    </div>
+                    <button 
+                      onClick={() => setActiveChat(null)}
+                      className="p-1.5 text-muted-text hover:text-primary-text hover:bg-white/5 rounded-full transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {/* Mode Toggle */}
+                  <div className="flex bg-black/20 p-1 rounded-xl">
+                    <button
+                      onClick={() => setActiveChat({ appId: activeChat.appId, mode: 'research' })}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeChat.mode === 'research' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    >
+                      Research & Prep
+                    </button>
+                    <button
+                      onClick={() => setActiveChat({ appId: activeChat.appId, mode: 'mock' })}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeChat.mode === 'mock' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    >
+                      Mock Interview
+                    </button>
+                  </div>
+                </div>
+
+                {/* Messages Area */}
+                <div 
+                  className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+                  }}
+                >
+                  {chatMessages.length === 0 && chatLoading ? (
+                    <div className="flex justify-center p-4">
+                      <div className="animate-spin h-5 w-5 border-2 border-primary-accent border-t-transparent rounded-full"></div>
+                    </div>
+                  ) : (
+                    chatMessages.filter(msg => !msg.isSynthetic).map((msg, i) => (
+                      <div key={i} className={`flex flex-col group ${msg.role === 'user' ? 'ml-auto items-end max-w-[85%]' : 'mr-auto items-start w-full relative'}`}>
+                        {msg.role === 'user' && (
+                          <span className="text-[10px] text-muted-text/50 mb-1 px-1 uppercase tracking-wider font-semibold">
+                            You
+                          </span>
+                        )}
+                        {msg.role === 'assistant' && (
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(msg.content)}
+                            className="absolute -left-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                            title="Copy to clipboard"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        )}
+                        <div className={`${
+                          msg.role === 'user' 
+                            ? 'px-4 py-2.5 rounded-2xl text-sm bg-primary-accent/20 text-primary-text border border-primary-accent/30 rounded-br-sm' 
+                            : 'text-sm text-primary-text/90 w-full md:pl-6 max-w-3xl mx-auto'
+                        } break-words`}>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              h1: ({children}) => <h1 className="text-base font-bold text-primary-text mt-3 mb-2 first:mt-0">{children}</h1>,
+                              h2: ({children}) => <h2 className="text-sm font-bold text-primary-text mt-3 mb-1.5 first:mt-0">{children}</h2>,
+                              h3: ({children}) => <h3 className="text-sm font-semibold text-primary-text mt-2.5 mb-1 first:mt-0">{children}</h3>,
+                              p: ({children}) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                              ul: ({children}) => <ul className="list-disc ml-4 mb-2 last:mb-0 space-y-1">{children}</ul>,
+                              ol: ({children}) => <ol className="list-decimal ml-4 mb-2 last:mb-0 space-y-1">{children}</ol>,
+                              li: ({children}) => <li className="leading-relaxed">{children}</li>,
+                              strong: ({children}) => <strong className="font-bold text-primary-text">{children}</strong>,
+                              em: ({children}) => <em className="italic">{children}</em>,
+                              hr: () => <hr className="border-white/10 my-3" />,
+                              code: ({children}) => <code className="bg-black/30 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
+                              pre: ({children}) => <pre className="bg-black/30 p-3 rounded-lg overflow-x-auto text-xs font-mono my-2">{children}</pre>,
+                              a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary-accent underline">{children}</a>,
+                              table: ({children}) => <div className="overflow-x-auto my-3 rounded-lg border border-white/10"><table className="w-full text-xs border-collapse">{children}</table></div>,
+                              thead: ({children}) => <thead className="bg-white/5">{children}</thead>,
+                              tbody: ({children}) => <tbody>{children}</tbody>,
+                              tr: ({children}) => <tr className="border-b border-white/5 last:border-0">{children}</tr>,
+                              th: ({children}) => <th className="text-left px-3 py-2 font-semibold text-primary-text">{children}</th>,
+                              td: ({children}) => <td className="px-3 py-2 text-muted-text align-top">{children}</td>,
+                            }}
+                          >
+                            {cleanContent(msg.content)}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {chatLoading && chatMessages.length > 0 && (
+                    <div className="mr-auto">
+                      <div className="px-4 py-2 bg-white/5 rounded-2xl rounded-bl-sm border border-white/5 flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce"></span>
+                        <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-75"></span>
+                        <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-150"></span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatMessagesEndRef} />
+                </div>
+
+                {/* Input Area */}
+                <form onSubmit={handleSendMessage} className="p-3 border-t border-white/5 bg-white/[0.02] flex gap-2">
+                  <textarea
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder={activeChat.mode === 'mock' ? 'Answer...' : 'Ask something...'}
+                    rows={1}
+                    className="flex-1 bg-[#1A1714] text-sm text-primary-text border border-hairline rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary-accent/50 resize-none max-h-32 overflow-y-auto"
+                    style={{ height: 'auto' }}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = 'auto';
+                      el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim() || chatLoading}
+                    className="p-2.5 bg-primary-accent text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-primary-accent/90 shrink-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Global Chat Launcher */}
+        {!activeChat && applications.length > 0 && (
+          <button
+            onClick={() => applications.length === 1 ? setActiveChat({ appId: applications[0].id, mode: 'research' }) : setIsChatPickerOpen(true)}
+            className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 p-3 bg-primary-accent text-white rounded-full shadow-lg shadow-primary-accent/20 hover:bg-primary-accent/90 transition-all hover:scale-105"
+            title="Interview Prep Assistant"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Chat Job Picker Modal */}
+        {isChatPickerOpen && (
+          <div className="fixed inset-0 z-[100] flex justify-center items-center bg-background/40 md:bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div 
+              className="absolute inset-0"
+              onClick={() => setIsChatPickerOpen(false)}
+            />
+            <div className="relative w-full max-w-sm m-4 flex flex-col glass-panel-modal border border-white/10 rounded-[24px] shadow-2xl animate-in zoom-in-95 overflow-hidden">
+              <div className="p-4 border-b border-white/5 bg-white/[0.02]">
+                <h3 className="font-bold text-primary-text">Select Application</h3>
+                <p className="text-xs text-muted-text mt-1">Which role do you want to prep for?</p>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto p-2 custom-scrollbar">
+                {applications.map(app => (
+                  <button
+                    key={app.id}
+                    onClick={() => {
+                      setActiveChat({ appId: app.id, mode: 'research' });
+                      setIsChatPickerOpen(false);
+                    }}
+                    className="w-full text-left p-3 hover:bg-white/5 rounded-xl transition-colors flex flex-col gap-1"
+                  >
+                    <span className="font-bold text-primary-text text-sm">{app.company}</span>
+                    <span className="text-xs text-muted-text">{app.role}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Fixed Floating Status Dropdown Menu (immune to row / table clipping) */}
         {statusDropdownState && (() => {
