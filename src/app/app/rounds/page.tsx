@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { insertPrepItems, recalculateApplicationStatus } from '@/utils/prep';
+import { motion, AnimatePresence } from 'framer-motion';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 
@@ -73,6 +74,35 @@ export default function RoundsPage() {
   const [aiInput, setAiInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
+
+  // Stacked Cards State
+  const [activeIndex, setActiveIndex] = useState(0);
+  const isScrollLockedRef = useRef(false);
+  const stackContainerRef = useRef<HTMLDivElement>(null);
+  const appColors = ['#6366f1', '#a855f7', '#10b981', '#f59e0b', '#ef4444'];
+  const getAppColor = (i: number) => appColors[i % appColors.length];
+
+  useEffect(() => {
+    const el = stackContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (isScrollLockedRef.current || applications.length <= 1) return;
+      isScrollLockedRef.current = true;
+
+      if (e.deltaY > 0) {
+        setActiveIndex(prev => (prev + 1) % applications.length);
+      } else if (e.deltaY < 0) {
+        setActiveIndex(prev => (prev - 1 + applications.length) % applications.length);
+      }
+
+      setTimeout(() => { isScrollLockedRef.current = false; }, 400);
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [applications.length]);
 
   // Inline editing state for Table View
   const [editingCell, setEditingCell] = useState<{ appId: string; field: string } | null>(null);
@@ -167,7 +197,8 @@ export default function RoundsPage() {
       // Fetch applications with their rounds
       const { data: appsData, error: appsError } = await supabase
         .from('job_applications')
-        .select('*, rounds:application_rounds(*)');
+        .select('*, rounds:application_rounds(*)')
+        .eq('user_id', session.user.id);
 
       if (appsError) throw appsError;
 
@@ -175,6 +206,7 @@ export default function RoundsPage() {
       const { data: prepData, error: prepError } = await supabase
         .from('prep_sessions')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('date', { ascending: false });
 
       if (prepError) throw prepError;
@@ -637,6 +669,14 @@ export default function RoundsPage() {
       .map(r => ({ ...r, company: app.company, role: app.role }))
   ).sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
 
+  // Derive status counts for stats dashboard
+  const statusCounts = {
+    applied: applications.filter(a => a.status === 'applied').length,
+    interviewing: applications.filter(a => a.status === 'in_progress').length,
+    offers: applications.filter(a => a.status === 'accepted').length,
+    rejected: applications.filter(a => a.status === 'rejected').length,
+  };
+
   // Derive prep session grouping
   const getRelativeDateLabel = (dateStr: string) => {
     if (!isMounted) return dateStr;
@@ -848,7 +888,7 @@ export default function RoundsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   
                   {/* Left Col: Due Soon & Applications Cards */}
-                  <div className="flex flex-col gap-6">
+                  <div className={`flex-col gap-6 ${allUpcomingRounds.length === 0 ? 'hidden md:flex' : 'flex'}`}>
                     
                     {/* 1. Due Soon Section */}
                     {allUpcomingRounds.length > 0 && (
@@ -875,109 +915,241 @@ export default function RoundsPage() {
                       </div>
                     )}
 
-                    {/* 2. Applications Section (Card View) */}
-                    <div className="flex flex-col gap-3">
-                      <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Applications</h2>
+                    {/* 2. Applications Section (Scroll Cycling Stack) */}
+                    <div className="hidden md:flex flex-col gap-3">
                       {applications.length === 0 ? (
                         <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 text-center text-muted-text">
                           <p className="text-sm">No applications yet.</p>
                           <p className="text-xs text-muted-text/70 mt-1">Add one in Job Tracker below or use Quick Add above.</p>
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-4">
-                          {applications.map((app) => (
-                            <div key={app.id} className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden group">
-                              <div className="p-4 border-b border-white/5 flex justify-between items-start bg-white/[0.02]">
-                                <div>
-                                  <div className="font-bold text-lg text-primary-text flex items-center gap-2">
-                                    <span>{app.company}</span>
-                                    {app.job_url && (
-                                      <a
-                                        href={formatExternalUrl(app.job_url)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-muted-text hover:text-primary-accent transition-colors"
-                                        title="Open job listing"
-                                      >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                      </a>
-                                    )}
-                                  </div>
-                                  <div className="text-sm text-muted-text">{app.role}</div>
-                                </div>
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={(e) => handleOpenStatusDropdown(e, app.id)}
-                                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-md border flex items-center gap-1.5 transition-colors ${
-                                    app.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
-                                    app.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
-                                    app.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
-                                    'bg-muted-text text-white border-transparent hover:brightness-110'
-                                  }`}
-                                >
-                                  {app.status === 'in_progress' ? 'In Progress' : app.status}
-                                </button>
-
-                                <button 
-                                  onClick={() => handleDeleteApplication(app.id)}
-                                  className="text-muted-text hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-opacity focus:outline-none"
-                                  title="Delete Application"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-                            <div className="p-4 flex flex-col gap-3">
-                              {app.rounds.length === 0 ? (
-                                <p className="text-sm text-muted-text italic">No rounds tracked yet.</p>
-                              ) : (
-                                app.rounds.map((round, idx) => (
-                                  <div key={round.id} className="flex items-start gap-3 relative">
-                                    {idx !== app.rounds.length - 1 && (
-                                      <div className="absolute left-2.5 top-6 bottom-[-16px] w-[1px] bg-white/10" />
-                                    )}
-                                    <button 
-                                      onClick={() => handleToggleRoundStatus(round.id, round.status, app.id)}
-                                      className={`w-5 h-5 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors z-10 ${
-                                        round.status === 'completed' || round.status === 'passed' 
-                                          ? 'bg-primary-accent border-primary-accent text-background' 
-                                          : 'bg-background border-white/20 hover:border-primary-accent'
-                                      }`}
-                                    >
-                                      {(round.status === 'completed' || round.status === 'passed') && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
-                                    </button>
-                                    <div className="flex flex-col flex-1">
-                                      <div className={`text-[15px] font-medium ${round.status === 'completed' || round.status === 'passed' ? 'text-muted-text line-through opacity-70' : 'text-primary-text'}`}>
-                                        {round.round_name}
+                        <div 
+                          className="flex flex-col gap-4 relative"
+                          ref={stackContainerRef}
+                        >
+                          {/* Detail Panel / Stack */}
+                          <div className="relative group perspective-1000">
+                            {/* Peeking background cards */}
+                            {applications.length > 1 && (
+                              <>
+                                {applications.length > 2 && (() => {
+                                  const thirdIndex = (activeIndex + 2) % applications.length;
+                                  const thirdApp = applications[thirdIndex];
+                                  const thirdColor = getAppColor(thirdIndex);
+                                  return (
+                                    <div className="absolute top-0 inset-x-4 h-full glass-panel-modal rounded-[24px] border border-white/5 pointer-events-none transform translate-y-6 scale-[0.92] opacity-30 z-0 transition-all duration-300 ease-out group-hover:translate-y-12 group-hover:opacity-40 delay-150 flex flex-col justify-end p-4">
+                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-150 transform translate-y-4 group-hover:translate-y-0 flex flex-col items-center pb-2">
+                                        <div className="flex items-center gap-1.5">
+                                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: thirdColor }} />
+                                          <span className="font-bold text-xs text-primary-text">{thirdApp?.company || 'Company'}</span>
+                                        </div>
+                                        <span className="text-[10px] text-muted-text font-mono truncate max-w-[80%]">{thirdApp?.role || 'Role'}</span>
                                       </div>
-                                      {round.deadline && (
-                                        <div className={`text-xs mt-0.5 ${round.status === 'upcoming' ? 'text-primary-accent/80' : 'text-muted-text'}`}>
-                                          {isMounted ? new Date(round.deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
-                                        </div>
-                                      )}
-                                      {round.notes && (
-                                        <div className="text-xs text-muted-text mt-1 bg-white/5 p-2 rounded-md italic">
-                                          {round.notes}
-                                        </div>
-                                      )}
                                     </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
+                                  );
+                                })()}
+                                {(() => {
+                                  const secondIndex = (activeIndex + 1) % applications.length;
+                                  const secondApp = applications[secondIndex];
+                                  const secondColor = getAppColor(secondIndex);
+                                  return (
+                                    <div className="absolute top-0 inset-x-2 h-full glass-panel-modal rounded-[24px] border border-white/10 pointer-events-none transform translate-y-3 scale-[0.96] opacity-60 z-0 transition-all duration-300 ease-out group-hover:translate-y-6 group-hover:opacity-80 delay-75 flex flex-col justify-end p-4">
+                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 transform translate-y-2 group-hover:translate-y-0 flex flex-col items-center pb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: secondColor }} />
+                                          <span className="font-bold text-sm text-primary-text">{secondApp?.company || 'Company'}</span>
+                                        </div>
+                                        <span className="text-[11px] text-muted-text font-mono truncate max-w-[80%]">{secondApp?.role || 'Role'}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </>
+                            )}
+
+                            {/* Main Active Card */}
+                            <AnimatePresence mode="wait">
+                              {(() => {
+                                const activeApp = applications[activeIndex] || applications[0];
+                                const activeColor = getAppColor(activeIndex);
+                                
+                                return (
+                                  <motion.div
+                                    key={activeApp.id}
+                                    initial={{ opacity: 0, y: 20, scale: 0.96 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -20, scale: 0.96 }}
+                                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                                    className="relative z-10 glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden bg-background/95 backdrop-blur-xl transition-all duration-300 ease-out group-hover:-translate-y-1"
+                                    style={{ '--card-color': activeColor } as any}
+                                  >
+                                    {/* Color Accent Bar */}
+                                    <div className="h-1 w-full transition-colors duration-300" style={{ backgroundColor: activeColor }} />
+                                    
+                                    <style dangerouslySetInnerHTML={{__html: `
+                                      .group:hover .glass-panel-modal {
+                                        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 8px 24px -4px var(--card-color);
+                                      }
+                                    `}} />
+                                    
+                                    {/* Header */}
+                                    <div className="p-4 md:p-5 border-b border-white/5 flex flex-col gap-1 bg-white/[0.02]">
+                                      <div className="flex justify-between items-start gap-4">
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="w-2.5 h-2.5 rounded-full mt-0.5" style={{ backgroundColor: activeColor }} />
+                                          <div className="font-bold text-xl text-primary-text flex items-center gap-2">
+                                            <span>{activeApp.company}</span>
+                                            {activeApp.job_url && (
+                                              <a
+                                                href={activeApp.job_url.startsWith('http') ? activeApp.job_url : `https://${activeApp.job_url}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-muted-text hover:text-primary-accent transition-colors"
+                                                title="Open job listing"
+                                              >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                              </a>
+                                            )}
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={(e) => {
+                                              // Prevent triggering swipe
+                                              e.stopPropagation();
+                                              handleOpenStatusDropdown(e as any, activeApp.id);
+                                            }}
+                                            className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md border flex items-center gap-1.5 transition-colors ${
+                                              activeApp.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                              activeApp.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
+                                              activeApp.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
+                                              'bg-white/10 text-primary-text border-transparent hover:bg-white/20'
+                                            }`}
+                                          >
+                                            {activeApp.status === 'in_progress' ? 'In Progress' : activeApp.status}
+                                          </button>
+                                          
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteApplication(activeApp.id);
+                                            }}
+                                            className="text-muted-text hover:text-red-400 p-1 transition-colors focus:outline-none"
+                                            title="Delete Application"
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="text-sm text-muted-text font-mono pl-6 md:pl-7">{activeApp.role}</div>
+                                    </div>
+
+                                    <div className="p-4 md:p-5 flex flex-col gap-6">
+                                      {/* Info Tiles */}
+                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col gap-1">
+                                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Applied</span>
+                                          <span className="text-sm text-primary-text font-medium">{activeApp.applied_date ? new Date(activeApp.applied_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'}) : 'Unknown'}</span>
+                                        </div>
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col gap-1">
+                                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Rounds</span>
+                                          <span className="text-sm text-primary-text font-medium">{activeApp.rounds.length > 0 ? activeApp.rounds.length : 'None tracked'}</span>
+                                        </div>
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col gap-1 col-span-2 md:col-span-1">
+                                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Status</span>
+                                          <span className="text-sm text-primary-text font-medium uppercase">{activeApp.status === 'in_progress' ? 'In Progress' : activeApp.status}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Notes */}
+                                      {activeApp.notes && (
+                                        <div className="flex flex-col gap-2">
+                                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Notes</span>
+                                          <div className="text-sm text-muted-text italic bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed">
+                                            {activeApp.notes}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Interview Rounds */}
+                                      <div className="flex flex-col gap-3">
+                                        <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Interview Rounds</span>
+                                        {activeApp.rounds.length === 0 ? (
+                                          <div className="border border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center gap-3 text-center">
+                                            <p className="text-sm text-muted-text italic">No rounds tracked yet.</p>
+                                            <button 
+                                              onClick={(e) => { 
+                                                e.stopPropagation();
+                                                setInputMode('manual'); 
+                                                setManualType('round');
+                                                setManualRound(prev => ({ ...prev, application_id: activeApp.id }));
+                                              }}
+                                              className="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-primary-text text-sm rounded-full border border-white/10 transition-colors flex items-center gap-1.5"
+                                            >
+                                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                              </svg>
+                                              Add Round
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col gap-3">
+                                            {activeApp.rounds.map((round, idx) => (
+                                              <div key={round.id} className="flex items-start gap-3 relative">
+                                                {idx !== activeApp.rounds.length - 1 && (
+                                                  <div className="absolute left-2.5 top-6 bottom-[-16px] w-[1px] bg-white/10" />
+                                                )}
+                                                <button 
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleToggleRoundStatus(round.id, round.status, activeApp.id);
+                                                  }}
+                                                  className={`w-5 h-5 mt-0.5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors z-10 ${
+                                                    round.status === 'completed' || round.status === 'passed' 
+                                                      ? 'bg-primary-accent border-primary-accent text-background' 
+                                                      : 'bg-background border-white/20 hover:border-primary-accent'
+                                                  }`}
+                                                >
+                                                  {(round.status === 'completed' || round.status === 'passed') && (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                  )}
+                                                </button>
+                                                <div className="flex flex-col flex-1">
+                                                  <div className={`text-[15px] font-medium ${round.status === 'completed' || round.status === 'passed' ? 'text-muted-text line-through opacity-70' : 'text-primary-text'}`}>
+                                                    {round.round_name}
+                                                  </div>
+                                                  {round.deadline && (
+                                                    <div className={`text-xs mt-0.5 ${round.status === 'upcoming' ? 'text-primary-accent/80' : 'text-muted-text'}`}>
+                                                      {isMounted ? new Date(round.deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+                                                    </div>
+                                                  )}
+                                                  {round.notes && (
+                                                    <div className="text-xs text-muted-text mt-1 bg-white/5 p-2 rounded-md italic">
+                                                      {round.notes}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                              })()}
+                            </AnimatePresence>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
 
                   {/* Right Col: 4. Prep Reps */}
@@ -1024,6 +1196,39 @@ export default function RoundsPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* Stats Dashboard */}
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 p-5 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Applied</span>
+                        </div>
+                        <span className="text-3xl font-bold text-blue-500">{statusCounts.applied}</span>
+                      </div>
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 p-5 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Interviewing</span>
+                        </div>
+                        <span className="text-3xl font-bold text-primary-text">{statusCounts.interviewing}</span>
+                      </div>
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 p-5 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-[#8A9A5B]" />
+                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Offers</span>
+                        </div>
+                        <span className="text-3xl font-bold text-primary-text">{statusCounts.offers}</span>
+                      </div>
+                      <div className="glass-panel-modal rounded-[24px] border border-white/10 p-5 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Rejected</span>
+                        </div>
+                        <span className="text-3xl font-bold text-primary-text">{statusCounts.rejected}</span>
+                      </div>
+                    </div>
+
                   </div>
 
                 </div>
