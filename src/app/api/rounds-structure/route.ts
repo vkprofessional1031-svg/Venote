@@ -76,12 +76,13 @@ export async function POST(request: Request) {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const payload = {
-      model: "qwen/qwen3.6-27b",
+      model: "qwen/qwen3.8-27b",
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0]) },
         { role: "user", content: userText }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      reasoning_format: "hidden"
     };
 
     const response = await fetch(url, {

@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     
     // We use the Meta vision model supported by Groq
     const payload = {
-      model: "qwen/qwen3.6-27b",
+      model: "qwen/qwen3.8-27b",
       messages: [
         {
           role: "user",
@@ -54,7 +54,8 @@ export async function POST(request: Request) {
           ]
         }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      reasoning_format: "hidden"
     };
 
     const response = await fetch(url, {

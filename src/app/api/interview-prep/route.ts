@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const payload = {
-      model: "qwen/qwen3.6-27b",
+      model: "qwen/qwen3.8-27b",
       reasoning_format: "hidden",
       reasoning_effort: "none",
       max_tokens: 8192,
