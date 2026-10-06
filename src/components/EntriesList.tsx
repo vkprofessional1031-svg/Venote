@@ -17,6 +17,47 @@ export interface Entry {
 }
 export type SortOption = 'newest' | 'oldest' | 'az' | 'edited';
 
+export const getSnippet = (entry: any) => {
+  const res = entry.results?.[0];
+  if (!res) return '';
+  if (res.type === 'note') {
+    return res.body ? res.body.substring(0, 50) + '...' : 'No content';
+  } else if (res.type === 'tasks') {
+    const total = res.items?.length || 0;
+    const done = res.items?.filter((i: any) => i.done).length || 0;
+    return `${total} items · ${done} completed`;
+  } else if (res.type === 'table') {
+    return res.columns?.join(' · ') || 'Table data';
+  } else if (res.type === 'roadmap') {
+    return `${res.milestones?.length || 0} steps to: ${res.goal || 'Goal'}`;
+  } else if (res.type === 'chat') {
+    const msgs = res.messages || [];
+    const userMsgs = msgs.filter((m: any) => m.role === 'user');
+    if (userMsgs.length > 0) {
+      return userMsgs[userMsgs.length - 1].content.substring(0, 50) + '...';
+    }
+    return 'Chat session';
+  }
+  return '';
+};
+
+export const getBadgeStyle = (type: string) => {
+  switch (type) {
+    case 'tasks':
+      return 'bg-primary-accent/10 text-primary-accent';
+    case 'note':
+      return 'bg-tertiary-accent/10 text-tertiary-accent';
+    case 'table':
+      return 'bg-secondary-accent/10 text-secondary-accent';
+    case 'roadmap':
+      return 'bg-[#1D9E75]/10 text-[#1D9E75]';
+    case 'chat':
+      return 'bg-blue-500/10 text-blue-500';
+    default:
+      return 'bg-muted-text/10 text-muted-text';
+  }
+};
+
 interface EntriesListProps {
   entries: Entry[];
   activeTagFilter: string | null;
@@ -123,21 +164,7 @@ export default function EntriesList({
       </div>
     );
   };
-  
-  const getBadgeStyle = (type: string) => {
-    switch (type) {
-      case 'tasks':
-        return 'bg-primary-accent/10 text-primary-accent';
-      case 'note':
-        return 'bg-tertiary-accent/10 text-tertiary-accent';
-      case 'table':
-        return 'bg-secondary-accent/10 text-secondary-accent';
-      case 'roadmap':
-        return 'bg-[#1D9E75]/10 text-[#1D9E75]';
-      default:
-        return 'bg-muted-text/10 text-muted-text';
-    }
-  };
+
 
   const formatDate = (ts: number) => {
     const d = new Date(ts);
@@ -151,23 +178,6 @@ export default function EntriesList({
     if (isYesterday) return 'Yesterday';
     
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getSnippet = (entry: any) => {
-    const res = entry.results?.[0];
-    if (!res) return '';
-    if (res.type === 'note') {
-      return res.body ? res.body.substring(0, 50) + '...' : 'No content';
-    } else if (res.type === 'tasks') {
-      const total = res.items?.length || 0;
-      const done = res.items?.filter((i: any) => i.done).length || 0;
-      return `${total} items · ${done} completed`;
-    } else if (res.type === 'table') {
-      return res.columns?.join(' · ') || 'Table data';
-    } else if (res.type === 'roadmap') {
-      return `${res.milestones?.length || 0} steps to: ${res.goal || 'Goal'}`;
-    }
-    return '';
   };
 
   const { pinnedEntries, unpinnedEntries, filteredEntries } = useMemo(() => {
@@ -302,6 +312,9 @@ export default function EntriesList({
                       )}
                       {res.type === 'table' && (
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      )}
+                      {res.type === 'chat' && (
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                       )}
                       {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
                     </span>
@@ -491,6 +504,9 @@ export default function EntriesList({
                       )}
                       {res.type === 'table' && (
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      )}
+                      {res.type === 'chat' && (
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                       )}
                       {res.type === 'tasks' ? 'TASK' : res.type?.toUpperCase() || 'UNKNOWN'}
                     </span>

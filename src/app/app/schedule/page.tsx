@@ -179,6 +179,7 @@ export default function SchedulePage() {
         .select('*')
         .eq('user_id', session.user.id)
         .eq('is_archived', false)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (!entriesError && entriesData) {

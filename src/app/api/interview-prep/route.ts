@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { groqStream } from '@/lib/groqStream';
 
 export async function POST(request: Request) {
   const apiKey = process.env.GROQ_API_KEY;
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       reasoning_format: "hidden",
       reasoning_effort: "none",
       max_tokens: 8192,
+      stream: true,
       messages: [
         { role: "system", content: systemInstruction },
         ...messages
@@ -68,32 +70,55 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
+      signal: request.signal,
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      let errorMsg = 'Failed to fetch from Groq API';
+      try {
+         const data = await response.json();
+         errorMsg = data.error?.message || errorMsg;
+      } catch (e) {}
       return NextResponse.json(
-        { error: data.error?.message || 'Failed to fetch from Groq API' },
+        { error: errorMsg },
         { status: response.status }
       );
     }
 
-    const choice = data.choices?.[0];
-    const aiMessage = choice?.message?.content || '';
-    let strippedMessage = aiMessage.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    
-    console.log('Groq finish_reason:', choice?.finish_reason, '| Response length:', strippedMessage.length, '| Raw content length:', aiMessage.length);
-
-    if (choice?.finish_reason === 'length') {
-      strippedMessage += '\n\n*(Response cut off — ask me to continue)*';
+    if (!response.body) {
+      return NextResponse.json({ error: 'No response body' }, { status: 500 });
     }
 
-    return new NextResponse(strippedMessage, {
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of groqStream(response.body!)) {
+            controller.enqueue(new TextEncoder().encode(JSON.stringify(event) + '\n'));
+          }
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+             controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: 'error', message: error.message || 'Stream error' }) + '\n'));
+          }
+        } finally {
+          try { controller.close(); } catch (e) {}
+        }
+      },
+      cancel() {
+        // Handled by signal propagation implicitly
+      }
+    });
+
+    return new NextResponse(stream, {
       status: 200,
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { 
+        'Content-Type': 'application/x-ndjson',
+        'Cache-Control': 'no-cache, no-transform'
+      },
     });
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      return new NextResponse(null, { status: 499 });
+    }
     console.error('Groq API Error:', error);
     return NextResponse.json(
       { error: error.message || 'An unexpected error occurred.' },

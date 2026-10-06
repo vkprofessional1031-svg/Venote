@@ -24,6 +24,14 @@ export const metadata: Metadata = {
   description: "Venote — type anything, I'll organize it for you.",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

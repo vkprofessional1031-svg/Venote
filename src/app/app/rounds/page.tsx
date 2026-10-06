@@ -3,6 +3,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useState, useEffect, useRef } from 'react';
+import { readNdjson } from '@/lib/readStream';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { insertPrepItems, recalculateApplicationStatus } from '@/utils/prep';
@@ -161,10 +162,13 @@ export default function RoundsPage() {
   // Chat State
   const [activeChat, setActiveChat] = useState<{ appId: string, mode: 'research' | 'mock' } | null>(null);
   const [isChatPickerOpen, setIsChatPickerOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{role: 'user'|'assistant', content: string, isSynthetic?: boolean}[]>([]);
+  const [chatMessages, setChatMessages] = useState<{id?: string, role: 'user'|'assistant', content: string, isSynthetic?: boolean}[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const pendingUpdateRef = useRef<string | null>(null);
   const isNearBottomRef = useRef(true);
   // Manual Form States
   const [manualApp, setManualApp] = useState({ company: '', role: '', source: '', applied_date: '', notes: '', job_url: '' });
@@ -252,6 +256,7 @@ export default function RoundsPage() {
 
       if (data && data.length > 0) {
         setChatMessages(data.map(msg => ({ 
+          id: msg.id,
           role: msg.role as 'user'|'assistant', 
           content: msg.content
         })));
@@ -273,6 +278,12 @@ export default function RoundsPage() {
   const triggerChatAPI = async (userContent: string, previousMessages: {role: 'user'|'assistant', content: string, isSynthetic?: boolean}[], isSynthetic = false) => {
     if (!activeChat || !session) return;
     
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const ac = new AbortController();
+    abortControllerRef.current = ac;
+
     const app = applications.find(a => a.id === activeChat.appId);
     if (!app) return;
 
@@ -289,6 +300,25 @@ export default function RoundsPage() {
     const newMessages = [...previousMessages, { role: 'user' as const, content: userContent, isSynthetic }];
     setChatMessages(newMessages);
     setChatLoading(true);
+    setIsStreaming(true);
+    pendingUpdateRef.current = null;
+    let fullAssistantContent = '';
+    let stopped = false;
+
+    const flushInterval = setInterval(() => {
+      if (pendingUpdateRef.current !== null) {
+        setChatMessages(prev => {
+           const updated = [...prev];
+           const lastMsg = updated[updated.length - 1];
+           if (lastMsg?.role === 'assistant') {
+              lastMsg.content = pendingUpdateRef.current!;
+              return updated;
+           } else {
+              return [...updated, { role: 'assistant', content: pendingUpdateRef.current! }];
+           }
+        });
+      }
+    }, 50);
 
     try {
       const response = await fetch('/api/interview-prep', {
@@ -301,27 +331,100 @@ export default function RoundsPage() {
           role: app.role,
           notes: app.notes,
           messages: newMessages.map(m => ({ role: m.role, content: m.content }))
-        })
+        }),
+        signal: ac.signal
       });
 
-      if (!response.ok) throw new Error('API Error');
-
-      const assistantContent = await response.text();
-
-      await supabase.from('interview_prep_chats').insert({
-        user_id: session.user.id,
-        job_application_id: activeChat.appId,
-        mode: activeChat.mode,
-        role: 'assistant',
-        content: assistantContent
-      });
-
-      console.log('RAW ASSISTANT CONTENT:', JSON.stringify(assistantContent));
-      setChatMessages(prev => [...prev, { role: 'assistant', content: assistantContent }]);
-    } catch (err) {
-      console.error('Error sending message:', err);
-    } finally {
+      if (!response.ok) {
+         setChatLoading(false);
+         setIsStreaming(false);
+         throw new Error('API Error');
+      }
+      
       setChatLoading(false);
+      
+      await readNdjson(response, {
+        onDelta: (text) => {
+          fullAssistantContent += text;
+          pendingUpdateRef.current = fullAssistantContent;
+        },
+        onDone: (reason) => {
+          if (reason === 'length') {
+             fullAssistantContent += '\n\n*(Response cut off — ask me to continue)*';
+             pendingUpdateRef.current = fullAssistantContent;
+          }
+        }
+      }, ac.signal);
+
+    } catch (err: any) {
+      if (err.name === 'AbortError' || ac.signal.aborted) {
+        stopped = true;
+        fullAssistantContent += '\n\n*(Stopped)*';
+        pendingUpdateRef.current = fullAssistantContent;
+      } else {
+        console.error('Error sending message:', err);
+      }
+    } finally {
+      clearInterval(flushInterval);
+      if (pendingUpdateRef.current !== null) {
+        setChatMessages(prev => {
+           const updated = [...prev];
+           const lastMsg = updated[updated.length - 1];
+           if (lastMsg?.role === 'assistant') {
+              lastMsg.content = pendingUpdateRef.current!;
+              return updated;
+           } else {
+              return [...updated, { role: 'assistant', content: pendingUpdateRef.current! }];
+           }
+        });
+      }
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+      
+      if (fullAssistantContent.trim()) {
+        const { data } = await supabase.from('interview_prep_chats').insert({
+          user_id: session.user.id,
+          job_application_id: activeChat.appId,
+          mode: activeChat.mode,
+          role: 'assistant',
+          content: fullAssistantContent
+        }).select().single();
+        
+        if (data) {
+           setChatMessages(prev => {
+              const updated = [...prev];
+              const lastMsg = updated[updated.length - 1];
+              if (lastMsg?.role === 'assistant' && lastMsg.content === fullAssistantContent) {
+                 lastMsg.id = data.id;
+              }
+              return updated;
+           });
+        }
+      }
+    }
+  };
+
+  const handleRegenerate = async (index: number) => {
+    const msg = chatMessages[index];
+    if (msg.role !== 'assistant') return;
+
+    if (msg.id) {
+       await supabase.from('interview_prep_chats').delete().eq('id', msg.id);
+    }
+    
+    const previousMessages = chatMessages.slice(0, index);
+    
+    if (index === 1 && previousMessages.length === 1 && previousMessages[0].isSynthetic) {
+      setChatMessages([]);
+      await triggerChatAPI(previousMessages[0].content, [], true);
+      return;
+    }
+
+    setChatMessages(previousMessages);
+    const lastUserMsg = previousMessages[previousMessages.length - 1];
+    if (lastUserMsg && lastUserMsg.role === 'user') {
+       const preUserMessages = previousMessages.slice(0, -1);
+       await triggerChatAPI(lastUserMsg.content, preUserMessages, true);
     }
   };
 
@@ -340,13 +443,18 @@ export default function RoundsPage() {
     } else {
       setChatMessages([]);
     }
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [activeChat, session]);
 
   useEffect(() => {
     if (isNearBottomRef.current) {
-      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: isStreaming ? 'auto' : 'smooth' });
     }
-  }, [chatMessages]);
+  }, [chatMessages, isStreaming]);
 
   useEffect(() => {
     fetchData();
@@ -1963,15 +2071,28 @@ export default function RoundsPage() {
                           </span>
                         )}
                         {msg.role === 'assistant' && (
-                          <button 
-                            onClick={() => navigator.clipboard.writeText(msg.content)}
-                            className="absolute -left-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
-                            title="Copy to clipboard"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          </button>
+                          <div className="absolute -left-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+                            <button 
+                              onClick={() => navigator.clipboard.writeText(msg.content)}
+                              className="p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                              title="Copy to clipboard"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                            {chatMessages.indexOf(msg) === chatMessages.length - 1 && !isStreaming && (
+                              <button 
+                                onClick={() => handleRegenerate(chatMessages.indexOf(msg))}
+                                className="p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                                title="Regenerate response"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                         )}
                         <div className={`${
                           msg.role === 'user' 
@@ -2004,6 +2125,11 @@ export default function RoundsPage() {
                           >
                             {cleanContent(msg.content)}
                           </ReactMarkdown>
+                          {isStreaming && chatMessages.indexOf(msg) === chatMessages.length - 1 && msg.role === 'assistant' && (
+                            <div className="mt-1 flex items-center gap-2 text-muted-text/50">
+                              <span className="w-2 h-2 bg-primary-text/60 rounded-full animate-pulse"></span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
@@ -2041,15 +2167,28 @@ export default function RoundsPage() {
                       el.style.height = Math.min(el.scrollHeight, 128) + 'px';
                     }}
                   />
-                  <button
-                    type="submit"
-                    disabled={!chatInput.trim() || chatLoading}
-                    className="p-2.5 bg-primary-accent text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-primary-accent/90 shrink-0"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                    </svg>
-                  </button>
+                  {isStreaming ? (
+                    <button
+                      type="button"
+                      onClick={() => abortControllerRef.current?.abort()}
+                      className="p-2.5 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all shrink-0"
+                      title="Stop generating"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <rect x="6" y="6" width="8" height="8" rx="1" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim() || chatLoading}
+                      className="p-2.5 bg-primary-accent text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-primary-accent/90 shrink-0"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                      </svg>
+                    </button>
+                  )}
                 </form>
               </div>
             </div>

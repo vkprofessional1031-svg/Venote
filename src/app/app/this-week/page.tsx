@@ -104,7 +104,7 @@ export default function ThisWeekView() {
           { data: blocks },
           { data: budgets }
         ] = await Promise.all([
-          supabase.from('entries').select('id, created_at, results, is_archived').eq('user_id', userId).eq('is_archived', false),
+          supabase.from('entries').select('id, created_at, results, is_archived').eq('user_id', userId).eq('is_archived', false).is('deleted_at', null),
           supabase.from('expenses').select('amount, date, category').eq('user_id', userId).gte('date', mondayDateStr).lte('date', sundayDateStr),
           supabase.from('incomes').select('amount, date').eq('user_id', userId).gte('date', mondayDateStr).lte('date', sundayDateStr),
           supabase.from('job_applications').select('id, status').eq('user_id', userId).neq('status', 'Rejected'),

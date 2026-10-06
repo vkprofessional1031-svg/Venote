@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 
-const SYSTEM_INSTRUCTION = `You are a smart domain routing engine. Given raw user input, classify it strictly into one of three domains: 'organize', 'wallet', or 'prep'.
+const SYSTEM_INSTRUCTION = `You are a smart domain routing engine. Given raw user input, classify it strictly into one of four domains: 'organize', 'wallet', 'prep', or 'ask'.
 
 Routing Rules:
-- 'wallet': For personal financial transactions where the user is logging what they spent, bought, paid, earned, or received (e.g. "Spent $20 on lunch", "Coffee $4.50", "Uber home $24", "Got paid $500 freelance", "Paid $120 for groceries split with Sam").
-- 'prep': For job search, interview preparation, applications, recruiter screenings, online assessments (OAs), rounds, mock interviews, or LeetCode practice (e.g. "Applied to Netflix for backend role", "Google OA due Friday", "Did 3 LeetCode problems", "Rejected by Stripe", "Amazon onsite on Monday").
+- 'wallet': For personal financial transactions where the user is logging what they spent, bought, paid, earned, or received (e.g. "Spent $20 on lunch", "Got paid $500 freelance").
+- 'prep': For job search, interview preparation, applications, recruiter screenings, online assessments (OAs), rounds, mock interviews, or LeetCode practice (e.g. "Applied to Netflix for backend role", "Google OA due Friday").
 - 'organize': For general notes, tasks, todo lists, brainstorming, roadmaps, AND comparison tables / structured data.
-  * CRITICAL: Multiple distinct entities each with a price/attribute described comparatively (e.g. "Riverside apartment is $1800, Oakwood is $2100, Maple is $1600", "MacBook Air is $1000, Pro is $2000", "Option A vs Option B") MUST route to 'organize' (as a comparison table), NOT 'wallet'.
-  * Simple checklists, reminders, or general thoughts (e.g. "todo: buy milk", "ideas for novel", "plan for vacation") MUST route to 'organize'.
+- 'ask': For questions about the user's own tracked data (spending, income, applications, rounds, schedule, notes) where they want to retrieve or summarize existing data (e.g. "how much did I spend this week", "which applications have no update"). Statements that log something still route to wallet/prep/organize. A question mark alone does not decide it.
 
 CRITICAL: Return a single JSON object with a "domain" string key. Do not output anything else.`;
 
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!['organize', 'wallet', 'prep'].includes(parsedData.domain)) {
+    if (!['organize', 'wallet', 'prep', 'ask'].includes(parsedData.domain)) {
       parsedData.domain = 'organize';
     }
 

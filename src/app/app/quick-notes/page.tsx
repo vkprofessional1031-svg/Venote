@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 import { NoteEditor, NoteEditorRef } from '@/components/NoteEditor';
+import { useToast } from '@/components/ToastProvider';
+import { purgeExpiredTrash } from '@/utils/trash';
+import { TrashList } from '@/components/TrashList';
 
 interface QuickNote {
   id: string;
@@ -49,7 +52,7 @@ export default function QuickNotesPage() {
   
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
+  const [viewMode, setViewMode] = useState<'normal' | 'archived' | 'trash'>('normal');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -61,6 +64,7 @@ export default function QuickNotesPage() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const noteEditorRef = useRef<NoteEditorRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   // Initialize Auth
   useEffect(() => {
@@ -68,6 +72,7 @@ export default function QuickNotesPage() {
       setSession(session);
       setAuthLoading(false);
       if (!session) router.push('/login');
+      else purgeExpiredTrash(supabase, session.user.id);
     });
 
     const {
@@ -83,47 +88,47 @@ export default function QuickNotesPage() {
     return () => subscription.unsubscribe();
   }, [router]);
 
+  const fetchNotes = useCallback(async () => {
+    if (authLoading || !session?.user?.id) return;
+    setNotesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('quick_notes')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      if (data) {
+        const formatted = data.map(row => ({
+          id: row.id,
+          title: row.title || '',
+          body: row.body || '',
+          fontFamily: row.font_family || 'Plus Jakarta Sans',
+          fontSize: row.font_size || '15px',
+          textAlign: row.text_align || 'left',
+          isBold: row.is_bold || false,
+          isItalic: row.is_italic || false,
+          isUnderline: row.is_underline || false,
+          createdAt: new Date(row.created_at).getTime(),
+          updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : new Date(row.created_at).getTime(),
+          isArchived: row.is_archived || false
+        }));
+        setNotes(formatted);
+      }
+    } catch (err) {
+      console.error('Failed to fetch quick notes:', err);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, [session, authLoading]);
+
   // Fetch Notes
   useEffect(() => {
-    if (authLoading || !session?.user?.id) return;
-    
-    const fetchNotes = async () => {
-      setNotesLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('quick_notes')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        
-        if (data) {
-          const formatted = data.map(row => ({
-            id: row.id,
-            title: row.title || '',
-            body: row.body || '',
-            fontFamily: row.font_family || 'Plus Jakarta Sans',
-            fontSize: row.font_size || '15px',
-            textAlign: row.text_align || 'left',
-            isBold: row.is_bold || false,
-            isItalic: row.is_italic || false,
-            isUnderline: row.is_underline || false,
-            createdAt: new Date(row.created_at).getTime(),
-            updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : new Date(row.created_at).getTime(),
-            isArchived: row.is_archived || false
-          }));
-          setNotes(formatted);
-        }
-      } catch (err) {
-        console.error('Failed to fetch quick notes:', err);
-      } finally {
-        setNotesLoading(false);
-      }
-    };
-    
     fetchNotes();
-  }, [session, authLoading]);
+  }, [fetchNotes]);
 
   // Handle New Note
   const handleNewNote = async () => {
@@ -188,39 +193,38 @@ export default function QuickNotesPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (confirm('Delete this entry?')) {
-      const noteToDelete = notes.find(n => n.id === id);
-      
-      const newNotes = notes.filter((note) => note.id !== id);
-      setNotes(newNotes);
-      if (activeNoteId === id) {
-        setActiveNoteId(null);
+    const noteToDelete = notes.find(n => n.id === id);
+    if (!noteToDelete) return;
+    if (noteToDelete.id.startsWith('temp-')) {
+      setNotes(notes.filter((note) => note.id !== id));
+      if (activeNoteId === id) setActiveNoteId(null);
+      return;
+    }
+
+    const newNotes = notes.filter((note) => note.id !== id);
+    setNotes(newNotes);
+    if (activeNoteId === id) {
+      setActiveNoteId(null);
+    }
+    
+    showToast('Moved to Trash', 'success', {
+      label: 'Undo',
+      onClick: async () => {
+        setNotes(prev => {
+          const restored = [...prev, noteToDelete];
+          return restored.sort((a, b) => b.createdAt - a.createdAt);
+        });
+        await supabase.from('quick_notes').update({ deleted_at: null }).eq('id', id);
       }
-      
-      if (noteToDelete && noteToDelete.body) {
-        const imgRegex = /!\[.*?\]\(([^\s)]+)/g;
-        let match;
-        const urls = [];
-        while ((match = imgRegex.exec(noteToDelete.body)) !== null) {
-          urls.push(match[1]);
-        }
-        
-        if (urls.length > 0) {
-          const pathsToRemove = urls.map(url => {
-            const parts = url.split('/note-images/');
-            return parts.length > 1 ? parts[1] : null;
-          }).filter(Boolean) as string[];
-          
-          if (pathsToRemove.length > 0) {
-            supabase.storage.from('note-images').remove(pathsToRemove).then(({ error }) => {
-              if (error) console.error('Failed to delete images:', error);
-            });
-          }
-        }
-      }
-      
-      supabase.from('quick_notes').delete().eq('id', id).then(({error}) => {
-        if (error) console.error('Failed to delete note', error);
+    });
+
+    const { error } = await supabase.from('quick_notes').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+    if (error) {
+      console.error('Failed to soft delete note', error);
+      showToast('Failed to delete note', 'error');
+      setNotes(prev => {
+        const restored = [...prev, noteToDelete];
+        return restored.sort((a, b) => b.createdAt - a.createdAt);
       });
     }
   };
@@ -406,9 +410,9 @@ export default function QuickNotesPage() {
   const activeNote = notes.find(n => n.id === activeNoteId);
 
   const filteredNotes = notes.filter(n => {
-    if (showArchived) {
+    if (viewMode === 'archived') {
       if (!n.isArchived) return false;
-    } else {
+    } else if (viewMode === 'normal') {
       if (n.isArchived) return false;
     }
     return n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -442,7 +446,7 @@ export default function QuickNotesPage() {
               </svg>
               <input
                 type="text"
-                placeholder="Search your notes..."
+                placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-background border border-hairline rounded-xl text-sm focus:outline-none focus:border-muted-text transition-all placeholder:text-muted-text text-primary-text"
@@ -451,12 +455,12 @@ export default function QuickNotesPage() {
             <button
               type="button"
               onClick={() => {
-                setShowArchived(!showArchived);
+                setViewMode(viewMode === 'archived' ? 'normal' : 'archived');
                 setActiveNoteId(null);
               }}
               title="Archived"
               className={`shrink-0 p-2.5 rounded-xl transition-colors border ${
-                showArchived 
+                viewMode === 'archived'
                   ? 'bg-primary-text text-background border-primary-text' 
                   : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
               }`}
@@ -465,11 +469,32 @@ export default function QuickNotesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
               </svg>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode(viewMode === 'trash' ? 'normal' : 'trash');
+                setActiveNoteId(null);
+              }}
+              title="Trash"
+              className={`shrink-0 p-2.5 rounded-xl transition-colors border ${
+                viewMode === 'trash'
+                  ? 'bg-primary-text text-background border-primary-text' 
+                  : 'bg-background text-muted-text border-hairline hover:border-muted-text hover:text-primary-text'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-1 md:space-y-2 custom-scrollbar min-h-0">
-          {notesLoading ? (
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 space-y-1 md:space-y-2 custom-scrollbar min-h-0">
+          {viewMode === 'trash' ? (
+            <div className="py-2">
+              <TrashList userId={session?.user?.id} onRestore={fetchNotes} onEmpty={() => {}} />
+            </div>
+          ) : notesLoading ? (
             <div className="flex justify-center p-4">
               <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -512,9 +537,9 @@ export default function QuickNotesPage() {
                     type="button"
                     onClick={(e) => handleArchiveToggle(e, note.id, !!note.isArchived)}
                     className="p-2 text-muted-text hover:text-primary-text hover:bg-background/50 rounded transition-colors"
-                    title={showArchived ? "Unarchive" : "Archive"}
+                    title={viewMode === 'archived' ? "Unarchive" : "Archive"}
                   >
-                    {showArchived ? (
+                    {viewMode === 'archived' ? (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                       </svg>

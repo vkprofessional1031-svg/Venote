@@ -7,9 +7,10 @@ import { supabase } from '@/lib/supabase';
 interface AppMobileHeaderProps {
   onOpenMenu: () => void;
   rightContent?: React.ReactNode;
+  className?: string;
 }
 
-export default function AppMobileHeader({ onOpenMenu, rightContent }: AppMobileHeaderProps) {
+export default function AppMobileHeader({ onOpenMenu, rightContent, className }: AppMobileHeaderProps) {
   const [defaultView, setDefaultView] = useState('/app');
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function AppMobileHeader({ onOpenMenu, rightContent }: AppMobileH
   }, []);
 
   return (
-    <div className="md:hidden flex items-center justify-between p-4 border-b border-hairline bg-background sticky top-0 z-30">
+    <div className={`md:hidden flex items-center justify-between p-4 border-b border-hairline sticky top-0 z-30 ${className || 'bg-background'}`}>
       <Link href={defaultView} className="flex items-center gap-3">
         <button 
           type="button"
