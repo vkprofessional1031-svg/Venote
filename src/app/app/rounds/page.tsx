@@ -10,6 +10,7 @@ import { insertPrepItems, recalculateApplicationStatus } from '@/utils/prep';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import { toLocalYMD } from '@/utils/date';
 
 interface JobApplication {
   id: string;
@@ -173,7 +174,7 @@ export default function RoundsPage() {
   // Manual Form States
   const [manualApp, setManualApp] = useState({ company: '', role: '', source: '', applied_date: '', notes: '', job_url: '' });
   const [manualRound, setManualRound] = useState({ application_id: '', round_name: '', deadline_date: '', deadline_time: '', status: 'upcoming', notes: '' });
-  const [manualPrep, setManualPrep] = useState({ prep_type: '', count_or_duration: '', application_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [manualPrep, setManualPrep] = useState({ prep_type: '', count_or_duration: '', application_id: '', date: toLocalYMD(new Date()), notes: '' });
 
   useEffect(() => {
     setIsMounted(true);
@@ -471,7 +472,7 @@ export default function RoundsPage() {
       const res = await fetch('/api/rounds-structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiInput }),
+        body: JSON.stringify({ text: aiInput, today: toLocalYMD(new Date()) }),
       });
 
       const data = await res.json();
@@ -592,7 +593,7 @@ export default function RoundsPage() {
         notes: manualPrep.notes || null,
       });
       if (error) throw error;
-      setManualPrep({ prep_type: '', count_or_duration: '', application_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setManualPrep({ prep_type: '', count_or_duration: '', application_id: '', date: toLocalYMD(new Date()), notes: '' });
       await fetchData();
     } catch (error) {
       console.error('Error inserting manual prep session:', error);
@@ -684,7 +685,7 @@ export default function RoundsPage() {
   const handleAddNewApplicationRow = async () => {
     if (!session?.user?.id) return;
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalYMD(new Date());
       const { data, error } = await supabase
         .from('job_applications')
         .insert({

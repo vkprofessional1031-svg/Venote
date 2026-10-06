@@ -8,6 +8,7 @@ import { insertWalletItems } from '@/utils/transactions';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 import { getCurrencySymbolFromLocale } from '@/lib/currency';
+import { toLocalYMD, monthBounds } from '@/utils/date';
 
 export interface SplitParticipant {
   name: string;
@@ -149,7 +150,7 @@ export default function ExpensesPage() {
         description: result.merchant || '',
         category: result.category || 'General',
         source: '',
-        date: result.date || new Date().toISOString().split('T')[0],
+        date: result.date || toLocalYMD(new Date()),
         receipt_url: publicUrl
       });
       setShowManualForm(true);
@@ -189,7 +190,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    setManualForm(prev => ({ ...prev, date: new Date().toISOString().split('T')[0] }));
+    setManualForm(prev => ({ ...prev, date: toLocalYMD(new Date()) }));
   }, []);
   
   // UI State
@@ -213,8 +214,7 @@ export default function ExpensesPage() {
     : (isMounted ? getCurrencySymbolFromLocale() : '$');
 
   const now = new Date();
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+  const [currentMonthStart, nextMonthStart] = monthBounds(now);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -305,7 +305,7 @@ export default function ExpensesPage() {
       const response = await fetch('/api/structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiInput, currencySymbol: activeSymbol, domain: 'wallet' })
+        body: JSON.stringify({ text: aiInput, currencySymbol: activeSymbol, domain: 'wallet', today: toLocalYMD(new Date()) })
       });
       
       if (!response.ok) throw new Error('Failed to process text');
@@ -363,7 +363,7 @@ export default function ExpensesPage() {
       await reloadTransactions();
       
       setShowManualForm(false);
-      setManualForm({ amount: '', description: '', category: 'General', source: '', date: new Date().toISOString().split('T')[0], receipt_url: '' });
+      setManualForm({ amount: '', description: '', category: 'General', source: '', date: toLocalYMD(new Date()), receipt_url: '' });
     } catch (err) {
       console.error('Failed to add manual entry', err);
     }
@@ -381,12 +381,16 @@ export default function ExpensesPage() {
   };
 
   // Compute category breakdown
-  const categoryTotals = expenses.reduce((acc, curr) => {
-    acc[curr.category] = (acc[curr.category] || 0) + Number(curr.amount);
-    return acc;
-  }, {} as Record<string, number>);
+  const totalIncomesAllTime = incomes.reduce((acc, curr) => acc + Number(curr.amount), 0);
+  const totalSpentAllTime = expenses.reduce((acc, curr) => acc + Number(curr.amount), 0);
+  const totalBalance = totalIncomesAllTime - totalSpentAllTime;
 
-  const totalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+  const currentMonthSpent = expenses.reduce((acc, curr) => {
+    if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
+      return acc + Number(curr.amount);
+    }
+    return acc;
+  }, 0);
 
   const currentMonthIncome = incomes.reduce((acc, curr) => {
     if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
@@ -394,8 +398,6 @@ export default function ExpensesPage() {
     }
     return acc;
   }, 0);
-
-  const netBalance = currentMonthIncome - totalSpent;
 
   const currentMonthTotals = expenses.reduce((acc, curr) => {
     if (curr.date >= currentMonthStart && curr.date < nextMonthStart) {
@@ -710,29 +712,35 @@ export default function ExpensesPage() {
                 </div>
                 
                 <div className="flex flex-col gap-1">
-                  <div className="text-[11px] font-medium tracking-widest text-white/70 uppercase">Net Balance</div>
-                  <div className={`text-4xl sm:text-5xl font-medium tracking-tight ${netBalance < 0 ? 'text-[#FFD3D3]' : 'text-[#D3FFDF]'}`}>
-                    {netBalance < 0 ? '-' : ''}{activeSymbol}{Math.abs(netBalance).toFixed(2)}
+                  <div className="text-[11px] font-medium tracking-widest text-white/70 uppercase">
+                    Total Balance <span className="normal-case text-white/40 tracking-normal ml-1">(all time)</span>
+                  </div>
+                  <div className={`text-4xl sm:text-5xl font-medium tracking-tight ${totalBalance < 0 ? 'text-[#FFD3D3]' : 'text-[#D3FFDF]'}`}>
+                    {totalBalance < 0 ? '-' : ''}{activeSymbol}{Math.abs(totalBalance).toFixed(2)}
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-end mt-2">
-                  <div className="flex gap-6">
+                <div className="flex justify-between items-end mt-2 gap-4">
+                  <div className="flex gap-4 sm:gap-6 flex-wrap">
                     <div className="flex flex-col gap-1">
-                      <div className="text-[10px] font-medium tracking-widest text-white/60 uppercase">Total Income</div>
+                      <div className="text-[10px] font-medium tracking-widest text-white/60 uppercase">
+                        Income ({isMounted ? new Date().toLocaleString('default', { month: 'short' }) : ''})
+                      </div>
                       <div className="text-sm font-medium tracking-tight text-white/90">
                         {activeSymbol}{currentMonthIncome.toFixed(2)}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <div className="text-[10px] font-medium tracking-widest text-white/60 uppercase">Total Spent</div>
+                      <div className="text-[10px] font-medium tracking-widest text-white/60 uppercase">
+                        Spent ({isMounted ? new Date().toLocaleString('default', { month: 'short' }) : ''})
+                      </div>
                       <div className="text-sm font-medium tracking-tight text-white/90">
-                        {activeSymbol}{totalSpent.toFixed(2)}
+                        {activeSymbol}{currentMonthSpent.toFixed(2)}
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs font-medium text-white/70 uppercase tracking-widest pb-1">
-                    {isMounted ? new Date().toLocaleString('default', { month: 'short' }) : ''} {isMounted ? new Date().getFullYear() : ''}
+                  <div className="text-xs font-medium text-white/70 uppercase tracking-widest pb-1 shrink-0">
+                    {isMounted ? new Date().toLocaleString('default', { month: 'short' }).toUpperCase() : ''} {isMounted ? new Date().getFullYear() : ''}
                   </div>
                 </div>
               </div>
@@ -1240,23 +1248,27 @@ export default function ExpensesPage() {
                   <div className="flex flex-col gap-3">
                     <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider pl-1">Breakdown</h2>
                     <div className="glass-panel-modal rounded-[24px] border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-5 flex flex-col gap-5">
-                      {Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([cat, amount]) => {
-                        const percent = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
-                        return (
-                          <div key={cat} className="flex flex-col gap-1.5">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-primary-text">{cat}</span>
-                              <span className="font-medium text-primary-text">{activeSymbol}{amount.toFixed(2)}</span>
+                      {Object.keys(currentMonthTotals).length === 0 ? (
+                        <div className="text-sm text-muted-text text-center py-4">No spending this month</div>
+                      ) : (
+                        Object.entries(currentMonthTotals).sort((a, b) => b[1] - a[1]).map(([cat, amount]) => {
+                          const percent = currentMonthSpent > 0 ? (amount / currentMonthSpent) * 100 : 0;
+                          return (
+                            <div key={cat} className="flex flex-col gap-1.5">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-primary-text">{cat}</span>
+                                <span className="font-medium text-primary-text">{activeSymbol}{amount.toFixed(2)}</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-primary-accent rounded-full transition-all duration-1000" 
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
                             </div>
-                            <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-primary-accent rounded-full transition-all duration-1000" 
-                                style={{ width: `${percent}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
 

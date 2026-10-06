@@ -65,6 +65,9 @@ export async function POST(request: Request) {
   }
 
   const userText = body.text;
+  const todayBody = body.today;
+  const today = (todayBody && /^\d{4}-\d{2}-\d{2}$/.test(todayBody)) ? todayBody : new Date().toISOString().split('T')[0];
+
   if (!userText || typeof userText !== 'string') {
     return NextResponse.json(
       { error: 'A "text" field is required in the JSON body.' },
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
     const payload = {
       model: "qwen/qwen3.8-27b",
       messages: [
-        { role: "system", content: SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0]) },
+        { role: "system", content: SYSTEM_INSTRUCTION(today) },
         { role: "user", content: userText }
       ],
       response_format: { type: "json_object" },

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import { toLocalYMD } from '@/utils/date';
 import { supabase } from '@/lib/supabase';
 import TaskView from '@/components/TaskView';
 import NoteView from '@/components/NoteView';
@@ -262,7 +263,7 @@ export default function Home() {
         }
 
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalYMD(new Date());
 
         setIsStreamingAsk(true);
         const abortController = new AbortController();
@@ -392,7 +393,7 @@ export default function Home() {
         const response = await fetch('/api/structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToProcess, domain: 'wallet', currencySymbol: '$' }),
+          body: JSON.stringify({ text: textToProcess, domain: 'wallet', currencySymbol: '$', today: toLocalYMD(new Date()) }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to structure text');
@@ -414,7 +415,7 @@ export default function Home() {
         const response = await fetch('/api/rounds-structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToProcess }),
+          body: JSON.stringify({ text: textToProcess, today: toLocalYMD(new Date()) }),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to process input');
@@ -436,7 +437,7 @@ export default function Home() {
         const response = await fetch('/api/structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToProcess, domain: 'organize' }),
+          body: JSON.stringify({ text: textToProcess, domain: 'organize', today: toLocalYMD(new Date()) }),
         });
         const data = await response.json();
         if (!response.ok) {

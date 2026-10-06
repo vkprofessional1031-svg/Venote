@@ -79,6 +79,8 @@ export async function POST(request: Request) {
   const userText = body.text;
   const domain = body.domain || 'organize';
   const currencySymbol = body.currencySymbol || '$';
+  const todayBody = body.today;
+  const today = (todayBody && /^\d{4}-\d{2}-\d{2}$/.test(todayBody)) ? todayBody : new Date().toISOString().split('T')[0];
 
   if (!userText || typeof userText !== 'string') {
     return NextResponse.json(
@@ -90,8 +92,8 @@ export async function POST(request: Request) {
   try {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
     const systemPrompt = domain === 'wallet'
-      ? WALLET_SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0], currencySymbol)
-      : ORGANIZE_SYSTEM_INSTRUCTION(new Date().toISOString().split('T')[0]);
+      ? WALLET_SYSTEM_INSTRUCTION(today, currencySymbol)
+      : ORGANIZE_SYSTEM_INSTRUCTION(today);
 
     const payload = {
       model: "qwen/qwen3.8-27b",

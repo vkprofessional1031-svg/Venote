@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { toLocalYMD, monthBounds } from '@/utils/date';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 
@@ -82,17 +83,16 @@ export default function ThisWeekView() {
         
         const mondayStr = monday.toISOString();
         const sundayStr = sunday.toISOString();
-        const mondayDateStr = mondayStr.split('T')[0];
-        const sundayDateStr = sundayStr.split('T')[0];
-        const todayDateStr = now.toISOString().split('T')[0];
+        const mondayDateStr = toLocalYMD(monday);
+        const sundayDateStr = toLocalYMD(sunday);
+        const todayDateStr = toLocalYMD(now);
         
         // 3 days from now
         const threeDaysFromNow = new Date(now);
         threeDaysFromNow.setDate(now.getDate() + 3);
         const threeDaysStr = threeDaysFromNow.toISOString();
 
-        // Month start for budgets
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const [currentMonthStart] = monthBounds(now);
 
         // Fetch everything in parallel
         const [

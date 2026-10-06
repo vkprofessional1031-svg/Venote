@@ -152,14 +152,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const { messages, today, timezone } = body;
+  const { messages, today: todayBody, timezone } = body;
   if (!messages || !Array.isArray(messages)) {
     return NextResponse.json({ error: 'A "messages" array is required.' }, { status: 400 });
   }
 
+  const today = (todayBody && /^\d{4}-\d{2}-\d{2}$/.test(todayBody)) ? todayBody : new Date().toISOString().split('T')[0];
+
   const systemMsg = {
     role: "system",
-    content: `${SYSTEM_PROMPT}\nToday is ${today || new Date().toISOString().split('T')[0]}.\nTimezone is ${timezone || 'UTC'}.\nCurrency symbol to use: ${currency}`
+    content: `${SYSTEM_PROMPT}\nToday is ${today}.\nTimezone is ${timezone || 'UTC'}.\nCurrency symbol to use: ${currency}`
   };
 
   const groqApiKey = process.env.GROQ_API_KEY;

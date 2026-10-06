@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { toLocalYMD } from '@/utils/date';
 
 export async function insertPrepItems(items: any[], userId: string, supabase: SupabaseClient) {
   const processedItems = [];
@@ -134,7 +135,7 @@ export async function insertPrepItems(items: any[], userId: string, supabase: Su
           user_id: userId,
           prep_type: item.prep_type || 'Prep Session',
           count_or_duration: item.count_or_duration || null,
-          date: new Date().toISOString().split('T')[0],
+          date: toLocalYMD(new Date()),
           application_id: appId
         }).select().single();
         

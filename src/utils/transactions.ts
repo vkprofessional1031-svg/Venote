@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { toLocalYMD } from '@/utils/date';
 
 export async function insertWalletItems(validItems: any[], userId: string, supabase: SupabaseClient) {
   const promises = validItems.map(async (parsedItem: any) => {
@@ -8,7 +9,7 @@ export async function insertWalletItems(validItems: any[], userId: string, supab
         amount: parsedItem.amount || 0,
         description: parsedItem.title || 'Unknown Income',
         source: parsedItem.source || 'General',
-        date: parsedItem.date || new Date().toISOString().split('T')[0]
+        date: parsedItem.date || toLocalYMD(new Date())
       }).select().single();
       
       if (error) throw error;
@@ -19,7 +20,7 @@ export async function insertWalletItems(validItems: any[], userId: string, supab
         amount: parsedItem.amount || 0,
         description: parsedItem.title || 'Unknown Expense',
         category: parsedItem.category || 'General',
-        date: parsedItem.date || new Date().toISOString().split('T')[0],
+        date: parsedItem.date || toLocalYMD(new Date()),
         split_details: parsedItem.split_details || null,
         split_participants: parsedItem.split_participants || null
       }).select().single();
