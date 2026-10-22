@@ -324,8 +324,8 @@ export default function ThisWeekView() {
                   {/* Circular Progress Indicator */}
                   <div className="relative w-64 h-64 flex items-center justify-center shrink-0">
                     <svg className="w-full h-full transform -rotate-90 drop-shadow-2xl" viewBox="0 0 200 200">
-                      <circle cx="100" cy="100" r="90" fill="transparent" stroke="#1A1714" strokeWidth="12" strokeLinecap="round" />
-                      <circle cx="100" cy="100" r="90" fill="transparent" stroke="#FF5C38" strokeWidth="12" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeOffset} className="transition-all duration-1000 ease-out" />
+                      <circle cx="100" cy="100" r="90" fill="transparent" stroke="currentColor" className="text-card-border" strokeWidth="12" strokeLinecap="round" />
+                      <circle cx="100" cy="100" r="90" fill="transparent" stroke="var(--primary-accent)" strokeWidth="12" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeOffset} className="transition-all duration-1000 ease-out" />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-5xl font-serif italic font-bold tracking-tight">{percentage}%</span>
@@ -407,7 +407,7 @@ export default function ThisWeekView() {
                             className="w-10 h-10 rounded-lg flex items-center justify-center border border-white/5 transition-colors"
                             style={{ backgroundColor: `rgba(255, 92, 56, ${opacity})` }}
                           >
-                            <span className={count > 0 ? 'text-white font-medium text-sm' : 'text-muted-text text-sm'}>
+                            <span className={count > 0 ? (opacity > 0.4 ? 'text-white font-medium text-sm' : 'text-primary-text font-medium text-sm') : 'text-muted-text text-sm'}>
                               {count > 0 ? count : ''}
                             </span>
                           </div>

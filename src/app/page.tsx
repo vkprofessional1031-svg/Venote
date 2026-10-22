@@ -83,28 +83,26 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0E0C0B] text-primary-text font-sans selection:bg-primary-accent selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-background text-primary-text font-sans selection:bg-primary-accent selection:text-white relative overflow-hidden">
       {/* Background ambient orbs for refraction */}
       <div 
         aria-hidden="true" 
-        className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full pointer-events-none -z-10" 
+        className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full pointer-events-none -z-10 opacity-70" 
         style={{ 
           background: `
             radial-gradient(circle at 45% 45%, rgba(255,92,56,0.1) 0%, rgba(255,92,56,0.07) 20%, rgba(255,92,56,0.035) 45%, rgba(255,92,56,0.01) 70%, transparent 100%),
             radial-gradient(circle at 55% 55%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%)
-          `,
-          mixBlendMode: 'screen'
+          `
         }}
       />
       <div 
         aria-hidden="true" 
-        className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full pointer-events-none -z-10" 
+        className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full pointer-events-none -z-10 opacity-70" 
         style={{ 
           background: `
             radial-gradient(circle at 40% 50%, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.07) 20%, rgba(139,92,246,0.035) 45%, rgba(139,92,246,0.01) 70%, transparent 100%),
             radial-gradient(circle at 60% 50%, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.05) 20%, rgba(139,92,246,0.02) 45%, rgba(139,92,246,0.005) 70%, transparent 100%)
-          `,
-          mixBlendMode: 'screen'
+          `
         }}
       />
 
@@ -132,7 +130,7 @@ export default function LandingPage() {
         <div>
           <Link 
             href="/login" 
-            className="text-sm font-medium text-primary-text glass-panel-subtle hover:bg-white/10 border border-white/10 px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
+            className="text-sm font-medium text-primary-text glass-panel-subtle hover:bg-surface-brown/50 border border-hairline px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
           >
             Sign In
           </Link>
@@ -152,7 +150,7 @@ export default function LandingPage() {
             What's on your mind?<br />
             <span className="text-primary-accent">We'll organize it.</span>
           </h1>
-          <p className="text-lg md:text-xl text-[#A6988D] max-w-2xl mb-8 leading-relaxed font-normal">
+          <p className="text-lg md:text-xl text-muted-text max-w-2xl mb-8 leading-relaxed font-normal">
             Type, speak, or brain dump anything. Our AI automatically turns your messy thoughts into beautifully structured tasks, notes, tables, and roadmaps.
           </p>
           <ActionButtons />
@@ -160,35 +158,33 @@ export default function LandingPage() {
       </main>
 
       {/* Feature Highlights */}
-      <section className="py-24 px-6 md:px-12 border-y border-white/5 relative overflow-hidden bg-white/[0.01]">
+      <section className="py-24 px-6 md:px-12 border-y border-hairline relative overflow-hidden">
         {/* Ambient background refraction glow */}
         <div 
           aria-hidden="true" 
-          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[450px] h-[350px] rounded-full pointer-events-none" 
+          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[450px] h-[350px] rounded-full pointer-events-none opacity-60" 
           style={{ 
             background: `
               radial-gradient(circle at 45% 45%, rgba(232,184,109,0.08) 0%, rgba(232,184,109,0.05) 20%, rgba(232,184,109,0.02) 45%, rgba(232,184,109,0.005) 70%, transparent 100%),
               radial-gradient(circle at 55% 55%, rgba(232,184,109,0.06) 0%, rgba(232,184,109,0.04) 20%, rgba(232,184,109,0.015) 45%, rgba(232,184,109,0.003) 70%, transparent 100%)
-            `,
-            mixBlendMode: 'screen'
+            `
           }}
         />
         <div 
           aria-hidden="true" 
-          className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] rounded-full pointer-events-none" 
+          className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] rounded-full pointer-events-none opacity-60" 
           style={{ 
             background: `
               radial-gradient(circle at 48% 40%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%),
               radial-gradient(circle at 52% 60%, rgba(255,92,56,0.06) 0%, rgba(255,92,56,0.04) 20%, rgba(255,92,56,0.015) 45%, rgba(255,92,56,0.003) 70%, transparent 100%)
-            `,
-            mixBlendMode: 'screen'
+            `
           }}
         />
 
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-16 md:mb-20">
             <h2 className="font-serif italic font-bold text-4xl md:text-5xl tracking-tight mb-4">Focus on thinking, not sorting.</h2>
-            <p className="text-[#A6988D] max-w-xl mx-auto text-base md:text-lg">Venote handles the tedious part of note-taking by instantly giving structure to your brain dumps.</p>
+            <p className="text-muted-text max-w-xl mx-auto text-base md:text-lg">Venote handles the tedious part of note-taking by instantly giving structure to your brain dumps.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -201,20 +197,20 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">AI-Powered Structuring</h3>
-              <p className="text-[#A6988D] leading-relaxed text-base">
+              <p className="text-muted-text leading-relaxed text-base">
                 Just start typing. Our engine instantly analyzes your input and formats it into actionable checklists, rich contextual notes, or clean data tables.
               </p>
             </div>
 
             {/* Feature 2 */}
             <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="w-12 h-12 rounded-2xl bg-[#1D9E75]/15 border border-[#1D9E75]/30 flex items-center justify-center mb-6 text-[#1D9E75] shadow-inner">
+              <div className="w-12 h-12 rounded-2xl bg-secondary-accent/15 border border-secondary-accent/30 flex items-center justify-center mb-6 text-secondary-accent shadow-inner">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
               <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Dynamic Roadmaps</h3>
-              <p className="text-[#A6988D] leading-relaxed text-base">
+              <p className="text-muted-text leading-relaxed text-base">
                 Need a plan? Ask for a roadmap and watch it generate an interactive, winding SVG journey to help you track milestones toward your final goal.
               </p>
             </div>
@@ -227,7 +223,7 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Smart Wallet</h3>
-              <p className="text-[#A6988D] leading-relaxed text-base">
+              <p className="text-muted-text leading-relaxed text-base">
                 Set category budgets with visual limits, track split bills to see who owes you what, and get AI-generated summaries of your spending patterns.
               </p>
             </div>
@@ -240,20 +236,20 @@ export default function LandingPage() {
                 </svg>
               </div>
               <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Voice Input</h3>
-              <p className="text-[#A6988D] leading-relaxed text-base">
+              <p className="text-muted-text leading-relaxed text-base">
                 Sometimes typing is too slow. Use our built-in speech recognition to instantly transcribe your brainstorms right into the app.
               </p>
             </div>
 
             {/* Feature 5 */}
             <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col md:col-span-2 md:w-[calc(50%-1rem)] md:mx-auto">
-              <div className="w-12 h-12 rounded-2xl bg-[#8B5CF6]/15 border border-[#8B5CF6]/30 flex items-center justify-center mb-6 text-[#8B5CF6] shadow-inner">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center mb-6 text-purple-700 dark:text-[#8B5CF6] shadow-inner">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
               <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Interview Prep</h3>
-              <p className="text-[#A6988D] leading-relaxed text-base">
+              <p className="text-muted-text leading-relaxed text-base">
                 Track job applications through multiple rounds and see upcoming deadlines in a dedicated "Due Soon" view. AI automatically parses your updates.
               </p>
             </div>

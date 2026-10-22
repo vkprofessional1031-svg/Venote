@@ -333,7 +333,7 @@ export default function QuickNotesPage() {
       // Recreate the light/print-friendly HTML template
       const printContainer = document.createElement('div');
       printContainer.innerHTML = `
-        <div style="font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.6; font-size: 14px; padding: 20px;">
+        <div style="font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background-color: #ffffff; color: #1a1a1a; line-height: 1.6; font-size: 14px; padding: 20px;">
           <h1 style="font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 32px; margin-bottom: 24px; border-bottom: 2px solid #e5e5e5; padding-bottom: 8px;">
             ${title}
           </h1>
@@ -357,6 +357,9 @@ export default function QuickNotesPage() {
         .prose blockquote { border-left: 4px solid #e5e5e5; padding-left: 16px; color: #555; margin-left: 0; font-style: italic; }
         .prose p { margin-top: 0; margin-bottom: 1em; }
         .prose mark { background-color: rgba(255, 92, 56, 0.2); padding: 0 2px; border-radius: 2px; }
+        .prose table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+        .prose th, .prose td { border: 1px solid #e5e5e5; padding: 8px; color: #1a1a1a; }
+        .prose th { background: #f6f8fa; font-weight: bold; }
       `;
       printContainer.appendChild(styleBlock);
 
@@ -633,7 +636,7 @@ export default function QuickNotesPage() {
                         <span className="sm:hidden">NOTE</span>
                       </span>
                       {saveState && saveState !== 'idle' && (
-                        <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-500/70' : 'text-[#8A9A5B]'}`}>
+                        <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-500/70' : 'text-secondary-accent'}`}>
                           {saveState === 'saving' ? 'Saving...' : 'Saved'}
                         </span>
                       )}
@@ -641,15 +644,15 @@ export default function QuickNotesPage() {
                     
                     <div className="flex items-center gap-1">
                       {/* Minimal Font Controls - Hidden on mobile */}
-                      <div className="hidden md:flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-lg">
+                      <div className="hidden md:flex items-center gap-1 p-1 bg-card border border-card-border rounded-lg">
                         <select
                           value={activeNote.fontFamily}
                           onChange={(e) => handleUpdate(activeNote.id, { fontFamily: e.target.value })}
                           className="bg-transparent text-[13px] text-primary-text outline-none cursor-pointer border-none pl-1.5 pr-0.5"
                         >
-                          <option value="Plus Jakarta Sans" className="bg-[#1A1714]">Sans</option>
-                          <option value="Fraunces" className="bg-[#1A1714]">Serif</option>
-                          <option value="Space Mono" className="bg-[#1A1714]">Mono</option>
+                          <option value="Plus Jakarta Sans" className="bg-card text-primary-text">Sans</option>
+                          <option value="Fraunces" className="bg-card text-primary-text">Serif</option>
+                          <option value="Space Mono" className="bg-card text-primary-text">Mono</option>
                         </select>
                         <div className="w-px h-3.5 bg-hairline mx-1" />
                         <select
@@ -657,19 +660,19 @@ export default function QuickNotesPage() {
                           onChange={(e) => handleUpdate(activeNote.id, { fontSize: e.target.value })}
                           className="bg-transparent text-[13px] text-primary-text outline-none cursor-pointer border-none pl-1.5 pr-0.5"
                         >
-                          <option value="13px" className="bg-[#1A1714]">S</option>
-                          <option value="15px" className="bg-[#1A1714]">M</option>
-                          <option value="17px" className="bg-[#1A1714]">L</option>
-                          <option value="20px" className="bg-[#1A1714]">XL</option>
+                          <option value="13px" className="bg-card text-primary-text">S</option>
+                          <option value="15px" className="bg-card text-primary-text">M</option>
+                          <option value="17px" className="bg-card text-primary-text">L</option>
+                          <option value="20px" className="bg-card text-primary-text">XL</option>
                         </select>
                       </div>
 
                       {/* Toolbar Actions - Unified Row */}
-                      <div className="flex items-center gap-0.5 bg-white/5 border border-white/10 rounded-lg p-1">
+                      <div className="flex items-center gap-0.5 bg-card border border-card-border rounded-lg p-1">
                         <button
                           type="button"
                           onClick={() => noteEditorRef.current?.insertChecklist()}
-                          className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
+                          className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-surface-brown/50 transition-colors"
                           title="Checklist"
                         >
                           <svg className="w-4 h-4 md:w-3.5 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -684,7 +687,7 @@ export default function QuickNotesPage() {
                           className={`p-1.5 md:p-1 rounded transition-colors ${
                             isTableActive
                               ? 'text-muted-text/30 cursor-not-allowed opacity-50'
-                              : 'text-muted-text hover:text-primary-text hover:bg-white/5'
+                              : 'text-muted-text hover:text-primary-text hover:bg-surface-brown/50'
                           }`}
                           title={isTableActive ? "Cannot nest tables" : "Insert Table"}
                         >
@@ -693,7 +696,7 @@ export default function QuickNotesPage() {
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-white/5 transition-colors"
+                          className="p-1.5 md:p-1 rounded text-muted-text hover:text-primary-text hover:bg-surface-brown/50 transition-colors"
                           title="Add Image"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 md:w-3.5 md:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -703,7 +706,7 @@ export default function QuickNotesPage() {
                         <button
                           type="button"
                           onClick={() => handleCopyNote(activeNote)}
-                          className={`p-1.5 md:p-1 rounded transition-colors ${copiedNoteId === activeNote.id ? 'text-[#8A9A5B] bg-[#8A9A5B]/10' : 'text-muted-text hover:text-primary-text hover:bg-white/5'}`}
+                          className={`p-1.5 md:p-1 rounded transition-colors ${copiedNoteId === activeNote.id ? 'text-secondary-accent bg-secondary-accent/15' : 'text-muted-text hover:text-primary-text hover:bg-surface-brown/50'}`}
                           title={copiedNoteId === activeNote.id ? "Copied!" : "Copy Note to Clipboard"}
                         >
                           {copiedNoteId === activeNote.id ? (

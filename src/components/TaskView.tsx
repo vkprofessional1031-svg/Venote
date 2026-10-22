@@ -127,7 +127,7 @@ export default function TaskView({ title, items, onToggle, onUpdate, headerAddon
           
           <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
             {saveState && saveState !== 'idle' && (
-              <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-500/70' : 'text-[#8A9A5B]'}`}>
+              <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-600/80 dark:text-amber-500/70' : 'text-secondary-accent'}`}>
                 {saveState === 'saving' ? 'Saving...' : 'Saved'}
               </span>
             )}
@@ -176,7 +176,7 @@ export default function TaskView({ title, items, onToggle, onUpdate, headerAddon
         ) : (
           <h2 
             onClick={() => setEditingTitle(true)}
-            className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug cursor-text hover:text-white transition-colors inline-block"
+            className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug cursor-text hover:text-primary-accent transition-colors inline-block"
           >
             {title}
           </h2>
@@ -228,7 +228,7 @@ export default function TaskView({ title, items, onToggle, onUpdate, headerAddon
                         setEditingText(task.text);
                       }}
                       className={`font-sans text-lg leading-relaxed select-none transition-all duration-200 ${
-                        task.done ? 'text-muted-text line-through' : 'text-primary-text group-hover/label:text-white cursor-text'
+                        task.done ? 'text-muted-text line-through' : 'text-primary-text cursor-text'
                       }`}
                     >
                       {task.text}

@@ -50,9 +50,9 @@ export const getBadgeStyle = (type: string) => {
     case 'table':
       return 'bg-secondary-accent/10 text-secondary-accent';
     case 'roadmap':
-      return 'bg-[#1D9E75]/10 text-[#1D9E75]';
+      return 'bg-secondary-accent/15 text-secondary-accent';
     case 'chat':
-      return 'bg-blue-500/10 text-blue-500';
+      return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
     default:
       return 'bg-muted-text/10 text-muted-text';
   }
@@ -146,7 +146,7 @@ export default function EntriesList({
           </button>
           {showFixMenu && (
             <div className="absolute right-0 mt-1 w-48 bg-card border border-hairline rounded-lg shadow-xl z-50 overflow-hidden">
-              <div className="px-3 py-2 text-[10px] font-mono tracking-wider text-muted-text uppercase bg-[#1A1714]">
+              <div className="px-3 py-2 text-[10px] font-mono tracking-wider text-muted-text uppercase bg-surface-brown/50 border-b border-card-border">
                 Reclassify as...
               </div>
               {['organize', 'wallet', 'prep'].filter(d => d !== entry.confirmationDomain).map(domain => (
@@ -297,7 +297,7 @@ export default function EntriesList({
                   className={`w-full shrink-0 text-left p-3 md:p-3.5 rounded-2xl cursor-pointer border ${
                     activeEntryId === entry.id
                       ? 'glass-panel border-primary-accent/50 text-primary-text shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]'
-                      : 'hover:glass-panel-subtle border-transparent text-[#A6988D] hover:border-white/10'
+                      : 'hover:glass-panel-subtle border-transparent text-muted-text hover:border-card-border'
                   }`}
                 >
               <div className="flex items-start justify-between mb-2">

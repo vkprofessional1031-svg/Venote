@@ -95,7 +95,7 @@ export default function Login() {
               <polygon points="8,21 12,23 9,24" fill="white"/>
               <polygon points="12,14 15,16 12,17" fill="white"/>
             </svg>
-            <span className="font-serif italic font-bold text-[40px] tracking-tight leading-none pt-1 text-[#F5EDD9]">Venote</span>
+            <span className="font-serif italic font-bold text-[40px] tracking-tight leading-none pt-1 text-primary-text">Venote</span>
           </div>
           <h1 className="font-serif italic font-bold text-3xl tracking-tight">
             {isSignUp ? 'Create an account' : 'Welcome back'}
@@ -198,7 +198,7 @@ export default function Login() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="mt-6 w-full flex items-center justify-center gap-3 bg-background border border-hairline hover:bg-white/5 text-primary-text font-bold py-3 px-4 rounded-xl transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-6 w-full flex items-center justify-center gap-3 bg-background border border-hairline hover:bg-surface-brown/50 text-primary-text font-bold py-3 px-4 rounded-xl transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M47.532 24.5528C47.532 22.9214 47.3997 21.2811 47.1175 19.6761H24.48V28.9181H37.4434C36.9055 31.8988 35.177 34.5356 32.6461 36.2111V42.2078H40.3801C44.9217 38.0278 47.532 31.8547 47.532 24.5528Z" fill="#4285F4"/>

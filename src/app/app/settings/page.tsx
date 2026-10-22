@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import { useTheme } from '@/components/ThemeProvider';
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -146,7 +148,7 @@ export default function SettingsPage() {
             <section className="w-full">
               <h2 className="text-xl font-serif italic font-bold text-primary-text mb-4 border-b border-white/10 pb-2">Account</h2>
               <div className="flex flex-col gap-4">
-                <div className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col gap-1">
+                <div className="glass-panel p-5 rounded-2xl border border-card-border flex flex-col gap-1">
                   <span className="text-xs font-mono uppercase tracking-widest text-muted-text">Email</span>
                   <span className="text-lg text-primary-text">{session?.user?.email}</span>
                   <span className="text-sm text-primary-accent/80 mt-1">Signed in with {isGoogle ? 'Google' : 'Email'}</span>
@@ -156,14 +158,14 @@ export default function SettingsPage() {
                   {!isGoogle && (
                     <button 
                       onClick={handleResetPassword}
-                      className="px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium"
+                      className="px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-hairline hover:bg-surface-brown/50 transition-colors text-sm font-medium"
                     >
                       Change Password
                     </button>
                   )}
                   <button 
                     onClick={handleSignOut}
-                    className="px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium"
+                    className="px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-hairline hover:bg-surface-brown/50 transition-colors text-sm font-medium"
                   >
                     Sign Out
                   </button>
@@ -173,11 +175,56 @@ export default function SettingsPage() {
 
             {/* Preferences Section */}
             <section className="w-full">
-              <h2 className="text-xl font-serif italic font-bold text-primary-text mb-4 border-b border-white/10 pb-2">Preferences</h2>
+              <h2 className="text-xl font-serif italic font-bold text-primary-text mb-4 border-b border-hairline pb-2">Preferences</h2>
               <div className="flex flex-col gap-6">
                 
+                {/* Theme */}
+                <div className="glass-panel p-5 rounded-2xl border border-card-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <span className="block text-sm font-medium text-primary-text mb-1">Theme</span>
+                    <span className="block text-xs text-muted-text">Choose your visual appearance: System, Light, or Dark.</span>
+                  </div>
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-card border border-card-border self-start md:self-auto">
+                    {(['system', 'light', 'dark'] as const).map((t) => {
+                      const isActive = theme === t;
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => {
+                            setTheme(t);
+                            showToast(`${t.charAt(0).toUpperCase() + t.slice(1)} theme applied`);
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                            isActive
+                              ? 'bg-primary-accent text-white shadow-sm font-semibold'
+                              : 'text-muted-text hover:text-primary-text hover:bg-surface-brown/50 font-medium'
+                          }`}
+                        >
+                          {t === 'system' && (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          )}
+                          {t === 'light' && (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                          )}
+                          {t === 'dark' && (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                          )}
+                          <span className="capitalize">{t}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Default View */}
-                <div className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col gap-3">
+                <div className="glass-panel p-5 rounded-2xl border border-card-border flex flex-col gap-3">
                   <div>
                     <span className="block text-sm font-medium text-primary-text mb-1">Default Landing Page</span>
                     <span className="block text-xs text-muted-text">Choose which page opens when you log in or click the logo.</span>
@@ -186,7 +233,7 @@ export default function SettingsPage() {
                     <select
                       value={defaultView || '/app'}
                       onChange={(e) => handleUpdateDefaultView(e.target.value)}
-                      className="appearance-none bg-black/50 border border-white/10 rounded-xl pl-3 pr-9 py-2 text-sm text-primary-text outline-none focus:border-primary-accent/50 transition-colors w-full"
+                      className="appearance-none bg-card border border-card-border rounded-xl pl-3 pr-9 py-2 text-sm text-primary-text outline-none focus:border-primary-accent/50 transition-colors w-full"
                     >
                       <option value="/app">Organize</option>
                       <option value="/app/this-week">Dashboard</option>
@@ -201,7 +248,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Currency */}
-                <div className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col gap-3">
+                <div className="glass-panel p-5 rounded-2xl border border-card-border flex flex-col gap-3">
                   <div>
                     <span className="block text-sm font-medium text-primary-text mb-1">Wallet Currency</span>
                     <span className="block text-xs text-muted-text">Set your preferred currency symbol for expenses and incomes.</span>
@@ -210,7 +257,7 @@ export default function SettingsPage() {
                     <select
                       value={currency || 'auto'}
                       onChange={(e) => handleUpdateCurrency(e.target.value)}
-                      className="appearance-none bg-black/50 border border-white/10 rounded-xl pl-3 pr-9 py-2 text-sm text-primary-text outline-none focus:border-primary-accent/50 transition-colors w-full"
+                      className="appearance-none bg-card border border-card-border rounded-xl pl-3 pr-9 py-2 text-sm text-primary-text outline-none focus:border-primary-accent/50 transition-colors w-full"
                     >
                       <option value="auto">Auto (Locale Default)</option>
                       <option value="USD">USD ($)</option>
@@ -228,14 +275,14 @@ export default function SettingsPage() {
                 </div>
                 
                 {/* Guided Tour */}
-                <div className="glass-panel p-5 rounded-2xl border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="glass-panel p-5 rounded-2xl border border-card-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-primary-text mb-1">Guided Tour</span>
                     <span className="text-xs text-muted-text">Replay the quick interactive tour of Flowspace features.</span>
                   </div>
                   <button 
                     onClick={() => router.push('/app?tour=true')}
-                    className="shrink-0 px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium"
+                    className="shrink-0 px-4 py-2 rounded-xl glass-panel-subtle text-primary-text border border-card-border hover:bg-surface-brown/50 transition-colors text-sm font-medium"
                   >
                     Take a tour
                   </button>
@@ -271,7 +318,7 @@ export default function SettingsPage() {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="glass-panel-modal max-w-md w-full rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
+          <div className="glass-panel-modal max-w-md w-full rounded-3xl p-6 border border-card-border shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
             <h3 className="text-xl font-serif italic font-bold text-red-500">Confirm Deletion</h3>
             <p className="text-sm text-primary-text">
               This will permanently delete all your data across Flowspace. Your account login will remain active, but all content will be wiped. This action <strong>cannot be undone</strong>.
@@ -284,7 +331,7 @@ export default function SettingsPage() {
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder="DELETE"
-              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-primary-text outline-none focus:border-red-500/50 transition-colors"
+              className="w-full bg-card border border-card-border rounded-xl px-4 py-3 text-sm text-primary-text outline-none focus:border-red-500/50 transition-colors"
             />
             <div className="flex justify-end gap-3 mt-2">
               <button

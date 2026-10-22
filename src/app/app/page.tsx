@@ -875,7 +875,7 @@ export default function Home() {
           <button
             key={query}
             onClick={() => handleStructureIt('ask', query)}
-            className={`glass-panel-subtle text-white/90 hover:text-white border border-white/10 hover:border-white/20 transition-colors text-[13px] px-3.5 py-2 whitespace-nowrap ${
+            className={`glass-panel-subtle text-primary-text hover:text-primary-accent border border-card-border hover:border-primary-accent/40 transition-colors text-[13px] px-3.5 py-2 whitespace-nowrap ${
               isMobile ? "snap-center shrink-0 rounded-full" : "rounded-full"
             }`}
           >
@@ -888,7 +888,7 @@ export default function Home() {
 
   const renderOrganizeForm = (isMobile: boolean) => {
     return (
-      <form data-tour="organize-input" onSubmit={handleStructureSubmit} className={`glass-panel-modal border border-white/10 shadow-2xl relative flex flex-row items-end ring-1 ring-white/5 focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] w-full max-w-3xl mx-auto transition-all duration-300 bg-[#1A1A1A] px-[6px] md:px-[8px] gap-[8px] ${isMobile ? 'rounded-[26px]' : 'rounded-[26px] md:rounded-[28px]'}`}>
+      <form data-tour="organize-input" onSubmit={handleStructureSubmit} className={`glass-panel-modal border border-card-border shadow-2xl relative flex flex-row items-end ring-1 ring-hairline focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] w-full max-w-3xl mx-auto transition-all duration-300 bg-card px-[6px] md:px-[8px] gap-[8px] ${isMobile ? 'rounded-[26px]' : 'rounded-[26px] md:rounded-[28px]'}`}>
         <textarea
           ref={organizeInputRef}
           className="flex-1 bg-transparent outline-none text-primary-text text-[16px] md:text-base leading-[24px] placeholder:text-muted-text placeholder:truncate font-sans pl-3 md:pl-4 min-w-0 resize-none max-h-[148px] md:max-h-[152px] py-[14px] md:py-[16px] self-stretch"
@@ -909,7 +909,7 @@ export default function Home() {
               className={`flex items-center justify-center w-[40px] h-[40px] rounded-full transition-all ${
                 isListening
                   ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
-                  : 'text-muted-text hover:text-primary-text hover:bg-background/50'
+                  : 'text-muted-text hover:text-primary-text hover:bg-surface-brown/50'
               }`}
               title={isListening ? "Stop listening" : "Start voice input"}
             >
@@ -936,13 +936,13 @@ export default function Home() {
                 isMobile
                   ? `w-[40px] h-[40px] ${
                       (!inputText.trim() || loading) 
-                        ? 'bg-white/5 text-muted-text/30 cursor-not-allowed border-transparent' 
-                        : 'bg-primary-accent text-background hover:brightness-110 border-transparent'
+                        ? 'bg-card text-muted-text/30 cursor-not-allowed border-transparent' 
+                        : 'bg-primary-accent text-white hover:brightness-110 border-transparent'
                     }`
                   : `w-[40px] h-[40px] md:w-auto md:px-5 md:py-2 ${
                       (!inputText.trim() || loading) 
-                        ? (turns.length > 0 && !activeEntryId ? 'bg-white/5 text-muted-text/30 cursor-not-allowed border-transparent' : 'opacity-40 cursor-not-allowed bg-[#3A221C] text-primary-accent border-primary-accent/20') 
-                        : (turns.length > 0 && !activeEntryId ? 'bg-primary-accent text-background hover:brightness-110 border-transparent' : 'bg-[#3A221C] hover:bg-primary-accent hover:text-primary-text hover:shadow-[0_0_15px_rgba(255,92,56,0.3)] text-primary-accent border-primary-accent/20')
+                        ? (turns.length > 0 && !activeEntryId ? 'bg-card text-muted-text/30 cursor-not-allowed border-transparent' : 'opacity-40 cursor-not-allowed bg-surface-brown text-primary-accent border-primary-accent/20') 
+                        : (turns.length > 0 && !activeEntryId ? 'bg-primary-accent text-white hover:brightness-110 border-transparent' : 'bg-surface-brown hover:bg-primary-accent hover:text-white hover:shadow-[0_0_15px_rgba(255,92,56,0.3)] text-primary-accent border-primary-accent/20')
                     }`
               }`}
             >
@@ -988,7 +988,7 @@ export default function Home() {
         <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-[#8C7E74]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -996,7 +996,7 @@ export default function Home() {
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 glass-panel-subtle border border-white/10 rounded-2xl text-sm focus:outline-none focus:border-primary-accent/60 transition-all placeholder:text-[#8C7E74] text-primary-text"
+                className="w-full pl-10 pr-4 py-2.5 glass-panel-subtle border border-card-border rounded-2xl text-sm focus:outline-none focus:border-primary-accent/60 transition-all placeholder:text-muted-text text-primary-text"
               />
             </div>
             <button
@@ -1009,7 +1009,7 @@ export default function Home() {
               className={`shrink-0 p-2.5 rounded-2xl transition-all border ${
                 viewMode === 'archived'
                   ? 'glass-panel text-primary-accent border-primary-accent/40 shadow-sm' 
-                  : 'glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:text-primary-text'
+                  : 'glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:text-primary-text'
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1026,7 +1026,7 @@ export default function Home() {
               className={`shrink-0 p-2.5 rounded-2xl transition-all border ${
                 viewMode === 'trash'
                   ? 'glass-panel text-primary-accent border-primary-accent/40 shadow-sm' 
-                  : 'glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:text-primary-text'
+                  : 'glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:text-primary-text'
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1046,7 +1046,7 @@ export default function Home() {
                   className={`shrink-0 snap-start px-2.5 py-1 rounded-xl text-[10px] font-mono tracking-wide transition-all border ${
                     activeTagFilter === tag 
                       ? 'glass-panel text-primary-accent border-primary-accent/40 font-semibold'
-                      : 'glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:text-primary-text'
+                      : 'glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:text-primary-text'
                   }`}
                 >
                   #{tag}
@@ -1064,10 +1064,10 @@ export default function Home() {
                 onChange={(e) => setSortOption(e.target.value as SortOption)}
                 className="bg-transparent text-muted-text hover:text-primary-text text-[11px] font-mono uppercase tracking-wide outline-none cursor-pointer border-none text-right appearance-none"
               >
-                <option value="newest" className="bg-[#1A1714]">Newest first</option>
-                <option value="oldest" className="bg-[#1A1714]">Oldest first</option>
-                <option value="az" className="bg-[#1A1714]">A-Z</option>
-                <option value="edited" className="bg-[#1A1714]">Recently edited</option>
+                <option value="newest" className="bg-card text-primary-text">Newest first</option>
+                <option value="oldest" className="bg-card text-primary-text">Oldest first</option>
+                <option value="az" className="bg-card text-primary-text">A-Z</option>
+                <option value="edited" className="bg-card text-primary-text">Recently edited</option>
               </select>
             </div>
           )}

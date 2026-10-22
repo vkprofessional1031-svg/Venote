@@ -155,7 +155,7 @@ export default function TableView({ title, columns = [], rows = [], onUpdate, ar
         ) : (
           <h2 
             onClick={() => setEditingTitle(true)}
-            className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug cursor-text hover:text-white transition-colors inline-block"
+            className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug cursor-text hover:text-primary-accent transition-colors inline-block"
           >
             {title}
           </h2>

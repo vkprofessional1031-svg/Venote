@@ -212,7 +212,7 @@ export default function NoteView({ title, body, embeddedTasks = [], onToggle, on
           
           <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
             {saveState && saveState !== 'idle' && (
-              <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-500/70' : 'text-[#8A9A5B]'}`}>
+              <span className={`font-mono text-[10px] tracking-wide ${saveState === 'saving' ? 'text-amber-600/80 dark:text-amber-500/70' : 'text-secondary-accent'}`}>
                 {saveState === 'saving' ? 'Saving...' : 'Saved'}
               </span>
             )}
@@ -335,7 +335,7 @@ export default function NoteView({ title, body, embeddedTasks = [], onToggle, on
                           setEditingText(task.text);
                         }}
                         className={`flex-1 font-sans text-lg leading-relaxed select-none transition-all duration-200 pt-0.5 pr-8 ${
-                          task.done ? 'text-muted-text line-through' : 'text-primary-text group-hover/label:text-white cursor-text'
+                          task.done ? 'text-muted-text line-through' : 'text-primary-text cursor-text'
                         }`}
                       >
                         {task.text}
@@ -381,7 +381,7 @@ export default function NoteView({ title, body, embeddedTasks = [], onToggle, on
             <div className="px-4 md:px-6 lg:px-8 pb-4 md:pb-6 lg:pb-8 pt-0">
               <div className="flex flex-wrap gap-3 mt-2">
                 {imageUrls.map((url, i) => (
-                  <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-hairline bg-black/20 shrink-0">
+                  <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-card-border bg-surface-brown/30 shrink-0">
                     <img 
                       src={url} 
                       alt="Attachment" 
@@ -398,7 +398,7 @@ export default function NoteView({ title, body, embeddedTasks = [], onToggle, on
                   </div>
                 ))}
                 {isUploading && (
-                  <div className="w-20 h-20 rounded-lg border border-hairline border-dashed bg-black/10 flex items-center justify-center animate-pulse shrink-0">
+                  <div className="w-20 h-20 rounded-lg border border-card-border border-dashed bg-surface-brown/20 flex items-center justify-center animate-pulse shrink-0">
                     <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>

@@ -53,7 +53,7 @@ export default function AppMobileHeader({ onOpenMenu, rightContent, className }:
             <polygon points="8,21 12,23 9,24" fill="white"/>
             <polygon points="12,14 15,16 12,17" fill="white"/>
           </svg>
-          <span className="font-serif italic font-bold text-2xl tracking-tight leading-none text-[#F5EDD9] pt-1">Venote</span>
+          <span className="font-serif italic font-bold text-2xl tracking-tight leading-none text-primary-text pt-1">Venote</span>
         </div>
       </Link>
       {rightContent && rightContent}

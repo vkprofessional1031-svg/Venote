@@ -1049,12 +1049,12 @@ export default function SchedulePage() {
 
                                 {/* Source Badge */}
                                 {block.linked_round_id && (
-                                  <span className="shrink-0 text-[9px] px-1.5 py-0.2 rounded bg-[#8B5CF6]/30 text-[#8B5CF6] border border-[#8B5CF6]/40 font-semibold uppercase">
+                                  <span className="shrink-0 text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-700 dark:text-[#8B5CF6] border border-purple-500/30 font-semibold uppercase">
                                     Prep
                                   </span>
                                 )}
                                 {block.linked_task_id && (
-                                  <span className="shrink-0 text-[9px] px-1.5 py-0.2 rounded bg-[#10B981]/30 text-[#10B981] border border-[#10B981]/40 font-semibold uppercase">
+                                  <span className="shrink-0 text-[9px] px-1.5 py-0.2 rounded bg-secondary-accent/20 text-secondary-accent border border-secondary-accent/30 font-semibold uppercase">
                                     Task
                                   </span>
                                 )}
@@ -1217,12 +1217,12 @@ export default function SchedulePage() {
                             {/* Badges */}
                             <div className="shrink-0 flex items-center gap-1">
                               {block.linked_round_id && (
-                                <span className="text-[8.5px] px-1.5 py-0.2 rounded font-bold uppercase bg-[#8B5CF6]/30 text-[#8B5CF6] border border-[#8B5CF6]/40">
+                                <span className="text-[8.5px] px-1.5 py-0.2 rounded font-bold uppercase bg-purple-500/20 text-purple-700 dark:text-[#8B5CF6] border border-purple-500/30">
                                   Prep
                                 </span>
                               )}
                               {block.linked_task_id && (
-                                <span className="text-[8.5px] px-1.5 py-0.2 rounded font-bold uppercase bg-[#10B981]/30 text-[#10B981] border border-[#10B981]/40">
+                                <span className="text-[8.5px] px-1.5 py-0.2 rounded font-bold uppercase bg-secondary-accent/20 text-secondary-accent border border-secondary-accent/30">
                                   Task
                                 </span>
                               )}
@@ -1304,8 +1304,8 @@ export default function SchedulePage() {
                             <span
                               className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
                                 item.type === 'round'
-                                  ? 'bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30'
-                                  : 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
+                                  ? 'bg-purple-500/20 text-purple-700 dark:text-[#8B5CF6] border border-purple-500/30'
+                                  : 'bg-secondary-accent/20 text-secondary-accent border border-secondary-accent/30'
                               }`}
                             >
                               {item.type === 'round' ? 'Prep' : 'Task'}
@@ -1431,8 +1431,8 @@ export default function SchedulePage() {
                               <span
                                 className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
                                   item.type === 'round'
-                                    ? 'bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30'
-                                    : 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
+                                    ? 'bg-purple-500/20 text-purple-700 dark:text-[#8B5CF6] border border-purple-500/30'
+                                    : 'bg-secondary-accent/20 text-secondary-accent border border-secondary-accent/30'
                                 }`}
                               >
                                 {item.type === 'round' ? 'Prep' : 'Task'}
@@ -1527,7 +1527,7 @@ export default function SchedulePage() {
                   value={editingBlock.title || ''}
                   onChange={(e) => setEditingBlock(prev => ({ ...prev!, title: e.target.value }))}
                   placeholder="e.g. Deep Work, LeetCode Practice, Meeting..."
-                  className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent"
+                  className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-card border border-card-border rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent"
                   autoFocus
                 />
               </div>
@@ -1551,7 +1551,7 @@ export default function SchedulePage() {
                         end_time: new Date(`${newDate}T${localEnd}`).toISOString()
                       }));
                     }}
-                    className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent block appearance-none"
+                    className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-card border border-card-border rounded-xl text-primary-text focus:outline-none focus:border-primary-accent block appearance-none"
                   />
                 </div>
                 
@@ -1568,7 +1568,7 @@ export default function SchedulePage() {
                         const localDate = editingBlock.start_time ? new Date(new Date(editingBlock.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                         setEditingBlock(prev => ({ ...prev!, start_time: new Date(`${localDate}T${newTime}`).toISOString() }));
                       }}
-                      className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[14px] md:text-[13px] appearance-none"
+                      className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-card border border-card-border rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[14px] md:text-[13px] appearance-none"
                     />
                   </div>
                   <div>
@@ -1582,7 +1582,7 @@ export default function SchedulePage() {
                         const localDate = editingBlock.end_time ? new Date(new Date(editingBlock.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                         setEditingBlock(prev => ({ ...prev!, end_time: new Date(`${localDate}T${newTime}`).toISOString() }));
                       }}
-                      className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-background border border-hairline rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[14px] md:text-[13px] appearance-none"
+                      className="w-full px-4 py-3 md:px-3.5 md:py-2.5 bg-card border border-card-border rounded-xl text-primary-text focus:outline-none focus:border-primary-accent font-mono text-[14px] md:text-[13px] appearance-none"
                     />
                   </div>
                 </div>
@@ -1599,7 +1599,7 @@ export default function SchedulePage() {
                       onClick={() => setEditingBlock(prev => ({ ...prev!, color: p.value }))}
                       style={{ backgroundColor: p.value }}
                       className={`w-10 h-10 md:w-7 md:h-7 rounded-full transition-transform cursor-pointer ${
-                        editingBlock.color === p.value ? 'scale-110 md:scale-125 ring-2 ring-white shadow-md' : 'hover:scale-105 md:hover:scale-110 opacity-70'
+                        editingBlock.color === p.value ? 'scale-110 md:scale-125 ring-2 ring-primary-text shadow-md' : 'hover:scale-105 md:hover:scale-110 opacity-70'
                       }`}
                       title={p.label}
                     />
@@ -1615,7 +1615,7 @@ export default function SchedulePage() {
                   value={editingBlock.notes || ''}
                   onChange={(e) => setEditingBlock(prev => ({ ...prev!, notes: e.target.value }))}
                   placeholder="Add details, links, or objectives..."
-                  className="w-full px-4 py-3 md:px-3.5 md:py-2 bg-background border border-hairline rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent resize-none"
+                  className="w-full px-4 py-3 md:px-3.5 md:py-2 bg-card border border-card-border rounded-xl text-primary-text placeholder:text-muted-text/40 focus:outline-none focus:border-primary-accent resize-none"
                 />
               </div>
             </div>

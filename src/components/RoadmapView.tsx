@@ -91,7 +91,8 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Could not get canvas context');
       
-      ctx.fillStyle = '#1E1A17';
+      const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+      ctx.fillStyle = isLight ? '#FAF6EE' : '#1E1A17';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       const img = new Image();
@@ -175,8 +176,8 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
 
   // --- Markers ---
   const StackedMarker = ({ x, y, num, isGoal }: { x: number, y: number, num?: number, isGoal?: boolean }) => {
-    const primaryColor = isGoal ? '#FF5C38' : '#1E1A17';
-    const textColor = '#F5EDD9';
+    const primaryColor = isGoal ? '#FF5C38' : 'var(--card)';
+    const textColor = isGoal ? '#FFFFFF' : 'var(--primary-text)';
     const radiusX = isGoal ? 36 : 28;
     const radiusY = isGoal ? 22 : 16;
     const offsets = [14, 9, 4];
@@ -187,11 +188,11 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
           <ellipse 
             key={i} 
             cx="0" cy={offset} rx={radiusX} ry={radiusY} 
-            fill={isGoal ? '#8a2b16' : '#0a0908'} 
+            fill={isGoal ? '#8a2b16' : 'var(--surface-brown)'} 
             opacity={0.5 + i * 0.15}
           />
         ))}
-        <ellipse cx="0" cy="0" rx={radiusX} ry={radiusY} fill={primaryColor} stroke="#F5EDD9" strokeWidth="1" strokeOpacity="0.2"/>
+        <ellipse cx="0" cy="0" rx={radiusX} ry={radiusY} fill={primaryColor} stroke="var(--card-border)" strokeWidth="1.5" />
         <text 
           x="0" y="5" 
           textAnchor="middle" 
@@ -210,7 +211,7 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
     <div className="w-full bg-card rounded-[24px] border border-hairline overflow-hidden shadow-2xl">
       <div className="p-6 md:p-8 lg:p-10 pb-0">
         <div className="flex items-center justify-between mb-6 md:mb-8 relative">
-          <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-1 rounded bg-[#1D9E75]/10 text-[#1D9E75] flex items-center gap-1.5 font-bold">
+          <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-1 rounded bg-secondary-accent/15 text-secondary-accent flex items-center gap-1.5 font-bold">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7l6-2.25 5.447 2.724A1 1 0 0121 8.382v10.764a1 1 0 01-1.447.894L15 17l-6 2.25z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7v13M15 4v13" />
@@ -278,7 +279,7 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
         ) : (
           <h2 
             onClick={() => setEditingTitle(true)}
-            className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug cursor-text hover:text-white transition-colors inline-block"
+            className="font-serif italic font-bold text-2xl md:text-4xl text-primary-text mb-6 md:mb-8 tracking-tight leading-snug cursor-text hover:text-primary-accent transition-colors inline-block"
           >
             {title}
           </h2>
@@ -304,17 +305,17 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
             
             {/* Dashed Center Line */}
             {segments.map((seg, i) => (
-              <path key={`dash-${i}`} d={seg.d} fill="none" stroke="#F5EDD9" strokeOpacity="0.85" strokeWidth={seg.dashWidth} strokeDasharray={`${seg.dashWidth * 2} ${seg.dashWidth * 3}`} strokeLinecap="round" />
+              <path key={`dash-${i}`} d={seg.d} fill="none" stroke="#FFFFFF" strokeOpacity="0.85" strokeWidth={seg.dashWidth} strokeDasharray={`${seg.dashWidth * 2} ${seg.dashWidth * 3}`} strokeLinecap="round" />
             ))}
             
             {/* Checkered pattern at the end */}
             <g transform={`translate(${points[points.length-1].x - 24}, ${points[points.length-1].y - 40})`}>
-              <rect x="0" y="0" width="16" height="16" fill="#1E1A17" />
-              <rect x="16" y="0" width="16" height="16" fill="#F5EDD9" />
-              <rect x="32" y="0" width="16" height="16" fill="#1E1A17" />
-              <rect x="0" y="16" width="16" height="16" fill="#F5EDD9" />
-              <rect x="16" y="16" width="16" height="16" fill="#1E1A17" />
-              <rect x="32" y="16" width="16" height="16" fill="#F5EDD9" />
+              <rect x="0" y="0" width="16" height="16" fill="var(--card)" />
+              <rect x="16" y="0" width="16" height="16" fill="var(--primary-text)" />
+              <rect x="32" y="0" width="16" height="16" fill="var(--card)" />
+              <rect x="0" y="16" width="16" height="16" fill="var(--primary-text)" />
+              <rect x="16" y="16" width="16" height="16" fill="var(--card)" />
+              <rect x="32" y="16" width="16" height="16" fill="var(--primary-text)" />
             </g>
 
             {/* Pennant at start */}
@@ -334,16 +335,16 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
                 if (pt.isGoal) {
                   return (
                     <g key={`svg-goal-${i}`} transform={`translate(${pt.x}, ${pt.y - 60})`}>
-                      <rect x="-140" y="-20" width="280" height="40" rx="20" fill="#1E1A17" stroke="#F5EDD9" strokeWidth="1" strokeOpacity="0.2"/>
-                      <text x="0" y="7" textAnchor="middle" fill="#F5EDD9" fontFamily="serif" fontStyle="italic" fontWeight="bold" fontSize="24">{goal}</text>
+                      <rect x="-140" y="-20" width="280" height="40" rx="20" fill="var(--card)" stroke="var(--card-border)" strokeWidth="1.5" strokeOpacity="0.8"/>
+                      <text x="0" y="7" textAnchor="middle" fill="var(--primary-text)" fontFamily="serif" fontStyle="italic" fontWeight="bold" fontSize="24">{goal}</text>
                     </g>
                   );
                 }
                 const milestone = milestones[i];
                 return (
                   <g key={`svg-label-${i}`} transform={`translate(${pt.x}, ${pt.y + 50})`}>
-                    <rect x="-100" y="-16" width="200" height="32" rx="16" fill="#1E1A17" stroke="#F5EDD9" strokeWidth="1" strokeOpacity="0.2"/>
-                    <text x="0" y="5" textAnchor="middle" fill="#F5EDD9" fontFamily="sans-serif" fontSize="14" fontWeight="500">{milestone.label}</text>
+                    <rect x="-100" y="-16" width="200" height="32" rx="16" fill="var(--card)" stroke="var(--card-border)" strokeWidth="1.5" strokeOpacity="0.8"/>
+                    <text x="0" y="5" textAnchor="middle" fill="var(--primary-text)" fontFamily="sans-serif" fontSize="14" fontWeight="500">{milestone.label}</text>
                   </g>
                 );
               })}
@@ -392,7 +393,7 @@ export default function RoadmapView({ title, goal, milestones, onUpdate }: Roadm
                 <button
                   type="button" 
                   onClick={() => setExpandedIndex(isExpanded ? null : i)}
-                  className="bg-[#1E1A17] border border-hairline rounded-[20px] px-3 py-2 sm:px-4 sm:py-1.5 shadow-xl hover:border-primary-accent/50 transition-colors z-20 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 group w-full"
+                  className="bg-card border border-card-border rounded-[20px] px-3 py-2 sm:px-4 sm:py-1.5 shadow-xl hover:border-primary-accent/50 transition-colors z-20 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 group w-full"
                 >
                   <span className="font-sans text-xs sm:text-sm font-medium text-primary-text text-center break-words leading-tight">
                     {milestone.label}

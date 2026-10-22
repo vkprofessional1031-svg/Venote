@@ -859,16 +859,16 @@ export default function RoundsPage() {
               <div className="relative z-10 flex flex-col gap-4">
                 
                 {/* Input Mode Toggle */}
-                <div className="flex bg-[#1A1714] rounded-lg p-1 w-fit border border-hairline self-start">
+                <div className="flex bg-surface-brown/40 rounded-lg p-1 w-fit border border-card-border self-start">
                   <button 
                     onClick={() => setInputMode('quick')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${inputMode === 'quick' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${inputMode === 'quick' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                   >
                     Quick Add
                   </button>
                   <button 
                     onClick={() => setInputMode('manual')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode === 'manual' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode === 'manual' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -892,13 +892,13 @@ export default function RoundsPage() {
                           onChange={(e) => setAiInput(e.target.value)}
                           disabled={isProcessing}
                           placeholder="Got an OA from Amazon due Friday... or Solved 3 LeetCode mediums today..."
-                          className="w-full bg-[#1A1714] text-primary-text border border-hairline rounded-xl pl-10 pr-4 py-3.5 text-[15px] focus:outline-none focus:border-primary-accent/50 focus:ring-1 focus:ring-primary-accent/30 transition-all placeholder:text-muted-text/60 shadow-inner"
+                          className="w-full bg-card text-primary-text border border-card-border rounded-xl pl-10 pr-4 py-3.5 text-[15px] focus:outline-none focus:border-primary-accent/50 focus:ring-1 focus:ring-primary-accent/30 transition-all placeholder:text-muted-text/60 shadow-inner"
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={isProcessing || !aiInput.trim()}
-                        className="bg-primary-text text-background font-semibold px-6 py-3.5 rounded-xl hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0 flex items-center gap-2"
+                        className="bg-primary-text text-background font-semibold px-6 py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0 flex items-center gap-2"
                       >
                         {isProcessing ? (
                           <>
@@ -919,7 +919,7 @@ export default function RoundsPage() {
                   </>
                 ) : (
                   <div className="flex flex-col gap-5 pt-2">
-                    <div className="flex gap-4 border-b border-hairline">
+                    <div className="flex gap-4 border-b border-card-border">
                       <button onClick={() => setManualType('application')} className={`text-sm font-medium pb-2.5 px-1 -mb-[1px] border-b-2 transition-all ${manualType === 'application' ? 'border-primary-accent text-primary-text' : 'border-transparent text-muted-text hover:text-primary-text'}`}>Application</button>
                       <button onClick={() => setManualType('round')} className={`text-sm font-medium pb-2.5 px-1 -mb-[1px] border-b-2 transition-all ${manualType === 'round' ? 'border-primary-accent text-primary-text' : 'border-transparent text-muted-text hover:text-primary-text'}`}>Round</button>
                       <button onClick={() => setManualType('prep')} className={`text-sm font-medium pb-2.5 px-1 -mb-[1px] border-b-2 transition-all ${manualType === 'prep' ? 'border-primary-accent text-primary-text' : 'border-transparent text-muted-text hover:text-primary-text'}`}>Prep Session</button>
@@ -928,57 +928,57 @@ export default function RoundsPage() {
                     {manualType === 'application' && (
                       <form onSubmit={handleManualAppSubmit} className="flex flex-col gap-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input type="text" required placeholder="Company" value={manualApp.company} onChange={e => setManualApp({...manualApp, company: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <input type="text" required placeholder="Role" value={manualApp.role} onChange={e => setManualApp({...manualApp, role: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <input type="text" placeholder="Source (e.g. Referral, Career Fair)" value={manualApp.source} onChange={e => setManualApp({...manualApp, source: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <input type="date" placeholder="Applied Date" value={manualApp.applied_date} onChange={e => setManualApp({...manualApp, applied_date: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 [color-scheme:dark]" />
-                          <input type="url" placeholder="Job Listing URL (optional)" value={manualApp.job_url} onChange={e => setManualApp({...manualApp, job_url: e.target.value})} className="md:col-span-2 bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <textarea placeholder="Notes (optional)" value={manualApp.notes} onChange={e => setManualApp({...manualApp, notes: e.target.value})} rows={2} className="md:col-span-2 bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
+                          <input type="text" required placeholder="Company" value={manualApp.company} onChange={e => setManualApp({...manualApp, company: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="text" required placeholder="Role" value={manualApp.role} onChange={e => setManualApp({...manualApp, role: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="text" placeholder="Source (e.g. Referral, Career Fair)" value={manualApp.source} onChange={e => setManualApp({...manualApp, source: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="date" placeholder="Applied Date" value={manualApp.applied_date} onChange={e => setManualApp({...manualApp, applied_date: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="url" placeholder="Job Listing URL (optional)" value={manualApp.job_url} onChange={e => setManualApp({...manualApp, job_url: e.target.value})} className="md:col-span-2 bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <textarea placeholder="Notes (optional)" value={manualApp.notes} onChange={e => setManualApp({...manualApp, notes: e.target.value})} rows={2} className="md:col-span-2 bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
                         </div>
-                        <button type="submit" disabled={!manualApp.company || !manualApp.role} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:bg-white transition-all disabled:opacity-50 text-sm">Save Application</button>
+                        <button type="submit" disabled={!manualApp.company || !manualApp.role} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-all disabled:opacity-50 text-sm">Save Application</button>
                       </form>
                     )}
 
                     {manualType === 'round' && (
                       <form onSubmit={handleManualRoundSubmit} className="flex flex-col gap-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <select required value={manualRound.application_id} onChange={e => setManualRound({...manualRound, application_id: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 appearance-none cursor-pointer">
+                          <select required value={manualRound.application_id} onChange={e => setManualRound({...manualRound, application_id: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 appearance-none cursor-pointer">
                             <option value="" disabled>Select Application</option>
                             {applications.length === 0 && <option value="" disabled>No applications exist yet</option>}
                             {applications.map(app => (
                               <option key={app.id} value={app.id}>{app.company} - {app.role}</option>
                             ))}
                           </select>
-                          <input type="text" required placeholder="Round Name (e.g. OA, Phone Screen)" value={manualRound.round_name} onChange={e => setManualRound({...manualRound, round_name: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <input type="date" value={manualRound.deadline_date} onChange={e => setManualRound({...manualRound, deadline_date: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 [color-scheme:dark]" />
-                          <input type="time" value={manualRound.deadline_time} onChange={e => setManualRound({...manualRound, deadline_time: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 [color-scheme:dark]" />
-                          <select required value={manualRound.status} onChange={e => setManualRound({...manualRound, status: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 appearance-none cursor-pointer">
+                          <input type="text" required placeholder="Round Name (e.g. OA, Phone Screen)" value={manualRound.round_name} onChange={e => setManualRound({...manualRound, round_name: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="date" value={manualRound.deadline_date} onChange={e => setManualRound({...manualRound, deadline_date: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="time" value={manualRound.deadline_time} onChange={e => setManualRound({...manualRound, deadline_time: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <select required value={manualRound.status} onChange={e => setManualRound({...manualRound, status: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 appearance-none cursor-pointer">
                             <option value="upcoming">Upcoming</option>
                             <option value="completed">Completed</option>
                             <option value="passed">Passed</option>
                             <option value="rejected">Rejected</option>
                           </select>
-                          <textarea placeholder="Notes (optional)" value={manualRound.notes} onChange={e => setManualRound({...manualRound, notes: e.target.value})} rows={1} className="md:col-span-2 bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
+                          <textarea placeholder="Notes (optional)" value={manualRound.notes} onChange={e => setManualRound({...manualRound, notes: e.target.value})} rows={1} className="md:col-span-2 bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
                         </div>
-                        <button type="submit" disabled={!manualRound.application_id || !manualRound.round_name} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:bg-white transition-all disabled:opacity-50 text-sm">Save Round</button>
+                        <button type="submit" disabled={!manualRound.application_id || !manualRound.round_name} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-all disabled:opacity-50 text-sm">Save Round</button>
                       </form>
                     )}
 
                     {manualType === 'prep' && (
                       <form onSubmit={handleManualPrepSubmit} className="flex flex-col gap-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input type="text" required placeholder="Prep Type (e.g. LeetCode, Mock Interview)" value={manualPrep.prep_type} onChange={e => setManualPrep({...manualPrep, prep_type: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <input type="text" placeholder="Duration / Count (e.g. 45 mins, 3 problems)" value={manualPrep.count_or_duration} onChange={e => setManualPrep({...manualPrep, count_or_duration: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
-                          <select value={manualPrep.application_id} onChange={e => setManualPrep({...manualPrep, application_id: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 appearance-none cursor-pointer">
+                          <input type="text" required placeholder="Prep Type (e.g. LeetCode, Mock Interview)" value={manualPrep.prep_type} onChange={e => setManualPrep({...manualPrep, prep_type: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <input type="text" placeholder="Duration / Count (e.g. 45 mins, 3 problems)" value={manualPrep.count_or_duration} onChange={e => setManualPrep({...manualPrep, count_or_duration: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <select value={manualPrep.application_id} onChange={e => setManualPrep({...manualPrep, application_id: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 appearance-none cursor-pointer">
                             <option value="">No linked application (General Prep)</option>
                             {applications.map(app => (
                               <option key={app.id} value={app.id}>{app.company} - {app.role}</option>
                             ))}
                           </select>
-                          <input type="date" required value={manualPrep.date} onChange={e => setManualPrep({...manualPrep, date: e.target.value})} className="bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 [color-scheme:dark]" />
-                          <textarea placeholder="Notes (optional)" value={manualPrep.notes} onChange={e => setManualPrep({...manualPrep, notes: e.target.value})} rows={2} className="md:col-span-2 bg-[#1A1714] text-primary-text border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
+                          <input type="date" required value={manualPrep.date} onChange={e => setManualPrep({...manualPrep, date: e.target.value})} className="bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50" />
+                          <textarea placeholder="Notes (optional)" value={manualPrep.notes} onChange={e => setManualPrep({...manualPrep, notes: e.target.value})} rows={2} className="md:col-span-2 bg-card text-primary-text border border-card-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-accent/50 resize-none" />
                         </div>
-                        <button type="submit" disabled={!manualPrep.prep_type || !manualPrep.date} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:bg-white transition-all disabled:opacity-50 text-sm">Save Prep Session</button>
+                        <button type="submit" disabled={!manualPrep.prep_type || !manualPrep.date} className="self-end bg-primary-text text-background font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-all disabled:opacity-50 text-sm">Save Prep Session</button>
                       </form>
                     )}
                   </div>
@@ -1132,10 +1132,10 @@ export default function RoundsPage() {
                                               handleOpenStatusDropdown(e as any, activeApp.id);
                                             }}
                                             className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md border flex items-center gap-1.5 transition-colors ${
-                                              activeApp.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                              activeApp.status === 'accepted' ? 'bg-secondary-accent text-white border-transparent hover:brightness-110' :
                                               activeApp.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
-                                              activeApp.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
-                                              'bg-white/10 text-primary-text border-transparent hover:bg-white/20'
+                                              activeApp.status === 'in_progress' ? 'bg-amber-500 text-neutral-900 border-transparent hover:brightness-110' :
+                                              'bg-surface-brown/50 text-primary-text border-card-border hover:bg-surface-brown'
                                             }`}
                                           >
                                             {activeApp.status === 'in_progress' ? 'In Progress' : activeApp.status}
@@ -1324,7 +1324,7 @@ export default function RoundsPage() {
                       </div>
                       <div className="glass-panel-modal rounded-[24px] border border-white/10 p-5 flex flex-col gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-[#8A9A5B]" />
+                          <div className="w-2 h-2 rounded-full bg-secondary-accent" />
                           <span className="text-[10px] font-bold text-muted-text uppercase tracking-wider">Offers</span>
                         </div>
                         <span className="text-3xl font-bold text-primary-text">{statusCounts.offers}</span>
@@ -1348,7 +1348,7 @@ export default function RoundsPage() {
                     <h2 className="text-xs font-medium text-muted-text uppercase tracking-wider">Job Tracker</h2>
                     <button
                       onClick={handleAddNewApplicationRow}
-                      className="text-xs font-medium text-primary-accent hover:text-white bg-primary-accent/10 hover:bg-primary-accent/20 border border-primary-accent/30 rounded-lg px-2.5 py-1 flex items-center gap-1.5 transition-all shadow-sm"
+                      className="text-xs font-medium text-primary-accent hover:text-white bg-primary-accent/10 hover:bg-primary-accent border border-primary-accent/30 rounded-lg px-2.5 py-1 flex items-center gap-1.5 transition-all shadow-sm"
                       title="Add Application"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -1411,7 +1411,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'company', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'company')}
-                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      className="bg-card text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
                                       autoFocus
                                       placeholder="Add company..."
                                     />
@@ -1439,7 +1439,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'role', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'role')}
-                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      className="bg-card text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
                                       autoFocus
                                       placeholder="Add role..."
                                     />
@@ -1463,9 +1463,9 @@ export default function RoundsPage() {
                                   <button
                                     onClick={(e) => handleOpenStatusDropdown(e, app.id)}
                                     className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border flex items-center gap-1 transition-colors ${
-                                      app.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                      app.status === 'accepted' ? 'bg-secondary-accent text-white border-transparent hover:brightness-110' :
                                       app.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
-                                      app.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
+                                      app.status === 'in_progress' ? 'bg-amber-500 text-neutral-900 border-transparent hover:brightness-110' :
                                       'bg-muted-text text-white border-transparent hover:brightness-110'
                                     }`}
                                   >
@@ -1488,7 +1488,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'job_url', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'job_url')}
-                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      className="bg-card text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
                                       autoFocus
                                       placeholder="https://..."
                                     />
@@ -1542,7 +1542,7 @@ export default function RoundsPage() {
                                           onChange={(e) => setEditingValue(e.target.value)}
                                           onBlur={() => handleSaveInlineEdit(app.id, 'resume_version', editingValue)}
                                           onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'resume_version')}
-                                          className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                          className="bg-card text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
                                           autoFocus
                                           placeholder="v1, tailored..."
                                         />
@@ -1607,7 +1607,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'notes', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'notes')}
-                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
+                                      className="bg-card text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs w-full focus:outline-none"
                                       autoFocus
                                       placeholder="Add notes..."
                                     />
@@ -1635,7 +1635,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'applied_date', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'applied_date')}
-                                      className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs focus:outline-none [color-scheme:dark]"
+                                      className="bg-card text-primary-text border border-primary-accent/50 rounded px-2 py-1 text-xs focus:outline-none"
                                       autoFocus
                                     />
                                   ) : (
@@ -1708,7 +1708,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'company', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'company')}
-                                      className="bg-[#1A1714] text-primary-text font-bold text-base border border-primary-accent/50 rounded px-2.5 py-1 w-full focus:outline-none"
+                                      className="bg-card text-primary-text font-bold text-base border border-primary-accent/50 rounded px-2.5 py-1 w-full focus:outline-none"
                                       autoFocus
                                       placeholder="Add company..."
                                     />
@@ -1734,7 +1734,7 @@ export default function RoundsPage() {
                                       onChange={(e) => setEditingValue(e.target.value)}
                                       onBlur={() => handleSaveInlineEdit(app.id, 'role', editingValue)}
                                       onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'role')}
-                                      className="bg-[#1A1714] text-muted-text text-sm border border-primary-accent/50 rounded px-2.5 py-1 w-full focus:outline-none mt-1"
+                                      className="bg-card text-muted-text text-sm border border-primary-accent/50 rounded px-2.5 py-1 w-full focus:outline-none mt-1"
                                       autoFocus
                                       placeholder="Add role..."
                                     />
@@ -1778,9 +1778,9 @@ export default function RoundsPage() {
                                     <button
                                       onClick={(e) => handleOpenStatusDropdown(e, app.id)}
                                       className={`px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded border flex items-center gap-1.5 transition-colors ${
-                                        app.status === 'accepted' ? 'bg-[#8A9A5B] text-white border-transparent hover:brightness-110' :
+                                        app.status === 'accepted' ? 'bg-secondary-accent text-white border-transparent hover:brightness-110' :
                                         app.status === 'rejected' ? 'bg-red-500 text-white border-transparent hover:brightness-110' :
-                                        app.status === 'in_progress' ? 'bg-amber-500 text-[#1A1714] border-transparent hover:brightness-110' :
+                                        app.status === 'in_progress' ? 'bg-amber-500 text-neutral-900 border-transparent hover:brightness-110' :
                                         'bg-muted-text text-white border-transparent hover:brightness-110'
                                       }`}
                                     >
@@ -1806,7 +1806,7 @@ export default function RoundsPage() {
                                         onChange={(e) => setEditingValue(e.target.value)}
                                         onBlur={() => handleSaveInlineEdit(app.id, 'job_url', editingValue)}
                                         onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'job_url')}
-                                        className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
+                                        className="bg-card text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
                                         autoFocus
                                         placeholder="https://..."
                                       />
@@ -1862,7 +1862,7 @@ export default function RoundsPage() {
                                           onChange={(e) => setEditingValue(e.target.value)}
                                           onBlur={() => handleSaveInlineEdit(app.id, 'resume_version', editingValue)}
                                           onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'resume_version')}
-                                          className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
+                                          className="bg-card text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
                                           autoFocus
                                           placeholder="v1, tailored..."
                                         />
@@ -1929,7 +1929,7 @@ export default function RoundsPage() {
                                         onChange={(e) => setEditingValue(e.target.value)}
                                         onBlur={() => handleSaveInlineEdit(app.id, 'notes', editingValue)}
                                         onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'notes')}
-                                        className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
+                                        className="bg-card text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs w-full focus:outline-none"
                                         autoFocus
                                         placeholder="Add notes..."
                                       />
@@ -1960,7 +1960,7 @@ export default function RoundsPage() {
                                         onChange={(e) => setEditingValue(e.target.value)}
                                         onBlur={() => handleSaveInlineEdit(app.id, 'applied_date', editingValue)}
                                         onKeyDown={(e) => handleInlineKeyDown(e, app.id, 'applied_date')}
-                                        className="bg-[#1A1714] text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs focus:outline-none [color-scheme:dark]"
+                                        className="bg-card text-primary-text border border-primary-accent/50 rounded px-2.5 py-1 text-xs focus:outline-none"
                                         autoFocus
                                       />
                                     ) : (
@@ -2011,14 +2011,14 @@ export default function RoundsPage() {
           if (!app) return null;
 
           return (
-            <div className="fixed inset-0 z-[100] flex flex-col justify-end md:justify-center md:items-center bg-background/40 md:bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="fixed inset-0 z-[100] flex flex-col justify-end md:justify-center md:items-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
               <div 
                 className="absolute inset-0"
                 onClick={() => setActiveChat(null)}
               />
-              <div className="relative w-full h-full md:w-[90vw] md:h-[90vh] md:max-w-5xl flex flex-col glass-panel-modal border-t md:border border-white/10 rounded-t-[32px] md:rounded-[24px] shadow-2xl animate-in slide-in-from-bottom md:zoom-in-95 overflow-hidden">
+              <div className="relative w-full h-full md:w-[90vw] md:h-[90vh] md:max-w-5xl flex flex-col glass-panel-modal border-t md:border border-card-border rounded-t-[32px] md:rounded-[24px] shadow-2xl animate-in slide-in-from-bottom md:zoom-in-95 overflow-hidden">
                 {/* Header */}
-                <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-white/[0.02]">
+                <div className="p-4 border-b border-card-border flex flex-col gap-3 bg-surface-brown/10">
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-primary-text">{app.company}</h3>
@@ -2026,7 +2026,7 @@ export default function RoundsPage() {
                     </div>
                     <button 
                       onClick={() => setActiveChat(null)}
-                      className="p-1.5 text-muted-text hover:text-primary-text hover:bg-white/5 rounded-full transition-colors"
+                      className="p-1.5 text-muted-text hover:text-primary-text hover:bg-surface-brown/40 rounded-full transition-colors"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2035,16 +2035,16 @@ export default function RoundsPage() {
                   </div>
                   
                   {/* Mode Toggle */}
-                  <div className="flex bg-black/20 p-1 rounded-xl">
+                  <div className="flex bg-surface-brown/40 border border-card-border/50 p-1 rounded-xl">
                     <button
                       onClick={() => setActiveChat({ appId: activeChat.appId, mode: 'research' })}
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeChat.mode === 'research' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeChat.mode === 'research' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                     >
                       Research & Prep
                     </button>
                     <button
                       onClick={() => setActiveChat({ appId: activeChat.appId, mode: 'mock' })}
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeChat.mode === 'mock' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeChat.mode === 'mock' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                     >
                       Mock Interview
                     </button>
@@ -2075,7 +2075,7 @@ export default function RoundsPage() {
                           <div className="absolute -left-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
                             <button 
                               onClick={() => navigator.clipboard.writeText(msg.content)}
-                              className="p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                              className="p-1.5 text-muted-text hover:text-primary-text bg-card border border-card-border rounded-lg shadow-sm hidden md:block"
                               title="Copy to clipboard"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2085,7 +2085,7 @@ export default function RoundsPage() {
                             {chatMessages.indexOf(msg) === chatMessages.length - 1 && !isStreaming && (
                               <button 
                                 onClick={() => handleRegenerate(chatMessages.indexOf(msg))}
-                                className="p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                                className="p-1.5 text-muted-text hover:text-primary-text bg-card border border-card-border rounded-lg shadow-sm hidden md:block"
                                 title="Regenerate response"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2112,14 +2112,14 @@ export default function RoundsPage() {
                               li: ({children}) => <li className="leading-relaxed">{children}</li>,
                               strong: ({children}) => <strong className="font-bold text-primary-text">{children}</strong>,
                               em: ({children}) => <em className="italic">{children}</em>,
-                              hr: () => <hr className="border-white/10 my-3" />,
-                              code: ({children}) => <code className="bg-black/30 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
-                              pre: ({children}) => <pre className="bg-black/30 p-3 rounded-lg overflow-x-auto text-xs font-mono my-2">{children}</pre>,
+                              hr: () => <hr className="border-card-border my-3" />,
+                              code: ({children}) => <code className="bg-surface-brown/70 text-primary-text border border-card-border/50 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
+                              pre: ({children}) => <pre className="bg-surface-brown/40 border border-card-border/50 p-3 rounded-lg overflow-x-auto text-xs font-mono my-2">{children}</pre>,
                               a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary-accent underline">{children}</a>,
-                              table: ({children}) => <div className="overflow-x-auto my-3 rounded-lg border border-white/10"><table className="w-full text-xs border-collapse">{children}</table></div>,
-                              thead: ({children}) => <thead className="bg-white/5">{children}</thead>,
+                              table: ({children}) => <div className="overflow-x-auto my-3 rounded-lg border border-card-border"><table className="w-full text-xs border-collapse">{children}</table></div>,
+                              thead: ({children}) => <thead className="bg-surface-brown/30">{children}</thead>,
                               tbody: ({children}) => <tbody>{children}</tbody>,
-                              tr: ({children}) => <tr className="border-b border-white/5 last:border-0">{children}</tr>,
+                              tr: ({children}) => <tr className="border-b border-card-border/50 last:border-0">{children}</tr>,
                               th: ({children}) => <th className="text-left px-3 py-2 font-semibold text-primary-text">{children}</th>,
                               td: ({children}) => <td className="px-3 py-2 text-muted-text align-top">{children}</td>,
                             }}
@@ -2137,7 +2137,7 @@ export default function RoundsPage() {
                   )}
                   {chatLoading && chatMessages.length > 0 && (
                     <div className="mr-auto">
-                      <div className="px-4 py-2 bg-white/5 rounded-2xl rounded-bl-sm border border-white/5 flex gap-1">
+                      <div className="px-4 py-2 bg-surface-brown/30 rounded-2xl rounded-bl-sm border border-card-border/40 flex gap-1">
                         <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce"></span>
                         <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-75"></span>
                         <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-150"></span>
@@ -2148,7 +2148,7 @@ export default function RoundsPage() {
                 </div>
 
                 {/* Input Area */}
-                <form onSubmit={handleSendMessage} className="p-3 border-t border-white/5 bg-white/[0.02] flex gap-2">
+                <form onSubmit={handleSendMessage} className="p-3 border-t border-card-border bg-surface-brown/10 flex gap-2">
                   <textarea
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
@@ -2160,7 +2160,7 @@ export default function RoundsPage() {
                     }}
                     placeholder={activeChat.mode === 'mock' ? 'Answer...' : 'Ask something...'}
                     rows={1}
-                    className="flex-1 bg-[#1A1714] text-sm text-primary-text border border-hairline rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary-accent/50 resize-none max-h-32 overflow-y-auto"
+                    className="flex-1 bg-card text-sm text-primary-text border border-card-border rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary-accent/50 resize-none max-h-32 overflow-y-auto"
                     style={{ height: 'auto' }}
                     onInput={(e) => {
                       const el = e.currentTarget;
@@ -2251,34 +2251,34 @@ export default function RoundsPage() {
                 onClick={() => setStatusDropdownState(null)} 
               />
               <div 
-                className="fixed z-50 w-40 bg-[#1A1714] border border-white/10 rounded-xl shadow-2xl overflow-hidden text-xs divide-y divide-white/5 animate-in fade-in zoom-in-95 duration-100"
+                className="fixed z-50 w-40 bg-card border border-card-border rounded-xl shadow-2xl overflow-hidden text-xs divide-y divide-card-border animate-in fade-in zoom-in-95 duration-100"
                 style={{ top: `${statusDropdownState.top}px`, left: `${statusDropdownState.left}px` }}
               >
                 <div className="p-1">
                   <button 
                     onClick={() => handleManualStatusOverride(app.id, 'applied')} 
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'applied' ? 'bg-white/10 text-primary-text font-medium' : 'text-muted-text hover:text-primary-text hover:bg-white/5'}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'applied' ? 'bg-surface-brown text-primary-text font-medium' : 'text-muted-text hover:text-primary-text hover:bg-surface-brown/50'}`}
                   >
                     <span className="w-2 h-2 rounded-full bg-muted-text/50" />
                     Applied
                   </button>
                   <button 
                     onClick={() => handleManualStatusOverride(app.id, 'in_progress')} 
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500 font-medium' : 'text-amber-500/70 hover:text-amber-500 hover:bg-white/5'}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'in_progress' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-500 font-medium' : 'text-amber-600/80 dark:text-amber-500/70 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-surface-brown/50'}`}
                   >
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
                     In Progress
                   </button>
                   <button 
                     onClick={() => handleManualStatusOverride(app.id, 'accepted')} 
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'accepted' ? 'bg-[#8A9A5B]/10 text-[#8A9A5B] font-medium' : 'text-[#8A9A5B]/70 hover:text-[#8A9A5B] hover:bg-white/5'}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'accepted' ? 'bg-secondary-accent/15 text-secondary-accent font-medium' : 'text-secondary-accent/80 hover:text-secondary-accent hover:bg-surface-brown/50'}`}
                   >
-                    <span className="w-2 h-2 rounded-full bg-[#8A9A5B]" />
+                    <span className="w-2 h-2 rounded-full bg-secondary-accent" />
                     Accepted
                   </button>
                   <button 
                     onClick={() => handleManualStatusOverride(app.id, 'rejected')} 
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'rejected' ? 'bg-red-500/10 text-red-400 font-medium' : 'text-red-400/70 hover:text-red-400 hover:bg-white/5'}`}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${app.status === 'rejected' ? 'bg-red-500/15 text-red-600 dark:text-red-400 font-medium' : 'text-red-600/80 dark:text-red-400/70 hover:text-red-600 dark:hover:text-red-400 hover:bg-surface-brown/50'}`}
                   >
                     <span className="w-2 h-2 rounded-full bg-red-400" />
                     Rejected
@@ -2288,7 +2288,7 @@ export default function RoundsPage() {
                   <button 
                     onClick={() => handleResetToAuto(app.id)} 
                     disabled={!app.status_manually_set}
-                    className="w-full text-left px-3 py-1.5 text-[11px] text-muted-text hover:text-primary-text hover:bg-white/5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex justify-between items-center"
+                    className="w-full text-left px-3 py-1.5 text-[11px] text-muted-text hover:text-primary-text hover:bg-surface-brown/50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex justify-between items-center"
                   >
                     <span>Reset to auto</span>
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>

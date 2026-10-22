@@ -32,6 +32,15 @@ export const viewport = {
   interactiveWidget: 'resizes-content',
 };
 
+const themeScript = `(function() {
+  try {
+    var stored = localStorage.getItem('theme');
+    var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    var theme = stored === 'light' ? 'light' : (stored === 'dark' ? 'dark' : (darkQuery.matches ? 'dark' : 'light'));
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -40,8 +49,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      suppressHydrationWarning
+      className={`${fraunces.variable} ${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <Providers>
           {children}

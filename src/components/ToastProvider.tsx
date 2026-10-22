@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className={`
               pointer-events-auto flex items-center px-4 py-2.5 rounded-full shadow-lg text-sm font-medium gap-3
               toast-enter
-              ${toast.type === 'success' ? 'bg-[#1E1A17] text-secondary-accent border border-secondary-accent/20' : 'bg-[#1E1A17] text-primary-accent border border-primary-accent/20'}
+              ${toast.type === 'success' ? 'bg-card text-secondary-accent border border-secondary-accent/30 shadow-xl' : 'bg-card text-primary-accent border border-primary-accent/30 shadow-xl'}
             `}
           >
             <span>{toast.message}</span>

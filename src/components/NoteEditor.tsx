@@ -159,7 +159,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
       Underline,
       Highlight.configure({
         HTMLAttributes: {
-          class: 'bg-[#FF5C38]/30 text-[#F5EDD9] rounded-sm px-1',
+          class: 'bg-primary-accent/25 text-primary-text rounded-sm px-1 font-medium',
         },
       }),
       ResizableImage,
@@ -293,33 +293,33 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
             if (editor.isActive('image')) return false;
             return true;
           }}
-          className="flex items-center gap-1 p-1 md:p-1.5 bg-[#1C1816]/95 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.4)]"
+          className="flex items-center gap-1 p-1 md:p-1.5 glass-panel-modal border border-card-border rounded-full shadow-2xl"
         >
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('bold') ? 'bg-[#FF5C38]/20 text-[#FF5C38]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('bold') ? 'bg-primary-accent/20 text-primary-accent' : 'text-primary-text/70 hover:text-primary-text hover:bg-surface-brown/50'}`}
             title="Bold"
           >
             <svg className="w-4 h-4 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
           </button>
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('italic') ? 'bg-[#FF5C38]/20 text-[#FF5C38]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('italic') ? 'bg-primary-accent/20 text-primary-accent' : 'text-primary-text/70 hover:text-primary-text hover:bg-surface-brown/50'}`}
             title="Italic"
           >
             <svg className="w-4 h-4 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
           </button>
           <button
             onClick={() => editor.chain().focus().toggleUnderline().run()}
-            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('underline') ? 'bg-[#FF5C38]/20 text-[#FF5C38]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('underline') ? 'bg-primary-accent/20 text-primary-accent' : 'text-primary-text/70 hover:text-primary-text hover:bg-surface-brown/50'}`}
             title="Underline"
           >
             <svg className="w-4 h-4 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path><line x1="4" y1="21" x2="20" y2="21"></line></svg>
           </button>
-          <div className="w-px h-5 md:h-4 bg-white/10 mx-1" />
+          <div className="w-px h-5 md:h-4 bg-hairline mx-1" />
           <button
             onClick={() => editor.chain().focus().toggleHighlight().run()}
-            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('highlight') ? 'bg-[#FF5C38]/20 text-[#FF5C38]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            className={`p-2.5 md:p-1.5 rounded-full transition-colors ${editor.isActive('highlight') ? 'bg-primary-accent/20 text-primary-accent' : 'text-primary-text/70 hover:text-primary-text hover:bg-surface-brown/50'}`}
             title="Highlight"
           >
              <svg className="w-4 h-4 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
@@ -341,7 +341,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
             }} 
           />
           <div 
-            className="fixed z-[9999] w-64 flex flex-col gap-2 p-1.5 bg-[#1C1816]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all"
+            className="fixed z-[9999] w-64 flex flex-col gap-2 p-1.5 glass-panel-modal border border-card-border rounded-2xl shadow-2xl transition-all"
             style={{ top: tableMenuState.y, left: tableMenuState.x }}
           >
             <div className="flex flex-col gap-3 w-full px-3 pt-2">
@@ -359,7 +359,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
                       editor.chain().focus().setCellAttribute('colwidth', [Math.max(50, currentWidth - 20)]).run();
                       closeTableMenu();
                     }}
-                    className="w-8 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 font-mono text-sm transition-colors"
+                    className="w-8 h-7 flex items-center justify-center rounded-md bg-surface-brown/60 text-primary-text hover:bg-surface-brown font-mono text-sm transition-colors"
                   >
                     −
                   </button>
@@ -373,7 +373,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
                       editor.chain().focus().setCellAttribute('colwidth', [currentWidth + 20]).run();
                       closeTableMenu();
                     }}
-                    className="w-8 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 font-mono text-sm transition-colors"
+                    className="w-8 h-7 flex items-center justify-center rounded-md bg-surface-brown/60 text-primary-text hover:bg-surface-brown font-mono text-sm transition-colors"
                   >
                     +
                   </button>
@@ -386,13 +386,13 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => { editor.chain().focus().addRowAfter().run(); closeTableMenu(); }}
-                    className="px-2 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 text-xs transition-colors"
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-surface-brown/60 text-primary-text hover:bg-surface-brown text-xs transition-colors"
                   >
                     + Add
                   </button>
                   <button
                     onClick={() => { editor.chain().focus().deleteRow().run(); closeTableMenu(); }}
-                    className="px-2 h-7 flex items-center justify-center rounded-md bg-red-400/10 text-red-400/80 hover:text-red-300 hover:bg-red-400/20 text-xs transition-colors"
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-red-400/10 text-red-500 hover:text-red-400 hover:bg-red-400/20 text-xs transition-colors"
                   >
                     − Remove
                   </button>
@@ -405,13 +405,13 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => { editor.chain().focus().addColumnAfter().run(); closeTableMenu(); }}
-                    className="px-2 h-7 flex items-center justify-center rounded-md bg-white/5 text-white/80 hover:text-white hover:bg-white/10 text-xs transition-colors"
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-surface-brown/60 text-primary-text hover:bg-surface-brown text-xs transition-colors"
                   >
                     + Add
                   </button>
                   <button
                     onClick={() => { editor.chain().focus().deleteColumn().run(); closeTableMenu(); }}
-                    className="px-2 h-7 flex items-center justify-center rounded-md bg-red-400/10 text-red-400/80 hover:text-red-300 hover:bg-red-400/20 text-xs transition-colors"
+                    className="px-2 h-7 flex items-center justify-center rounded-md bg-red-400/10 text-red-500 hover:text-red-400 hover:bg-red-400/20 text-xs transition-colors"
                   >
                     − Remove
                   </button>
@@ -419,7 +419,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
               </div>
             </div>
 
-            <div className="w-full h-px bg-white/10 my-2" />
+            <div className="w-full h-px bg-hairline my-2" />
 
             {/* Delete Table */}
             <div className="w-full px-3 pb-2">
@@ -445,7 +445,8 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         .tiptap p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
-          color: rgba(255, 255, 255, 0.4);
+          color: var(--muted-text);
+          opacity: 0.5;
           pointer-events: none;
           height: 0;
         }
@@ -481,7 +482,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
           height: 24px;
           border-radius: 6px;
           background: transparent;
-          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          border: 1.5px solid var(--hairline);
           cursor: pointer;
           position: relative;
           display: flex;
@@ -492,8 +493,8 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         }
 
         .tiptap-task-item input[type="checkbox"]:hover {
-          border-color: rgba(255, 92, 56, 0.7);
-          background: rgba(255, 92, 56, 0.05);
+          border-color: var(--primary-accent);
+          background: rgba(255, 92, 56, 0.08);
         }
 
         .tiptap-task-item input[type="checkbox"]:checked {
@@ -517,7 +518,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         .tiptap-task-item[data-checked="true"] > div {
           text-decoration: line-through;
           opacity: 0.5;
-          color: rgba(255, 255, 255, 0.5);
+          color: var(--muted-text);
         }
 
         .tiptap-task-item > div {
@@ -545,7 +546,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         .tiptap table td,
         .tiptap table th {
           min-width: 1em;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid var(--card-border);
           padding: 6px 8px;
           vertical-align: top;
           box-sizing: border-box;
@@ -555,24 +556,26 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
         .tiptap table th {
           font-weight: bold;
           text-align: left;
-          background-color: rgba(255, 255, 255, 0.05);
+          background-color: var(--surface-brown);
+          color: var(--primary-text);
         }
 
         .tiptap table .column-resize-handle {
-          background-color: rgba(255, 92, 56, 0.5);
+          background-color: var(--primary-accent);
+          opacity: 0.6;
           bottom: -2px;
           position: absolute;
           right: -2px;
           pointer-events: none;
           top: 0;
           width: 4px;
-          transition: background-color 0.2s ease;
+          transition: opacity 0.2s ease;
         }
 
         .tiptap table .column-resize-handle:hover,
         .tiptap table th:hover .column-resize-handle,
         .tiptap table td:hover .column-resize-handle {
-          background-color: rgba(255, 92, 56, 0.9);
+          opacity: 1;
           cursor: col-resize;
         }
       `}} />

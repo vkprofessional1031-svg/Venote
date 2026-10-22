@@ -33,16 +33,16 @@ export const SlashCommandList = forwardRef((props: any, ref) => {
   }));
 
   return (
-    <div className="bg-[#1C1816]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col p-1.5 min-w-[180px]">
+    <div className="glass-panel-modal border border-card-border rounded-xl shadow-2xl overflow-hidden flex flex-col p-1.5 min-w-[180px]">
       {props.items.length ? props.items.map((item: any, index: number) => (
         <button
           className={`flex items-center gap-3 px-4 py-3 md:py-2 text-[15px] md:text-sm text-left rounded-lg transition-colors ${
-            index === selectedIndex ? 'bg-[#FF5C38]/20 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+            index === selectedIndex ? 'bg-primary-accent/15 text-primary-accent font-semibold' : 'text-primary-text/80 hover:bg-surface-brown/50 hover:text-primary-text'
           }`}
           key={index}
           onClick={() => selectItem(index)}
         >
-          <span className="text-[#FF5C38] opacity-80 flex items-center justify-center w-4 h-4">{item.icon}</span>
+          <span className="text-primary-accent opacity-90 flex items-center justify-center w-4 h-4">{item.icon}</span>
           {item.title}
         </button>
       )) : (

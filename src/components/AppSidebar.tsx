@@ -100,7 +100,7 @@ export default function AppSidebar({
           type="button"
           onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)}
           title={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="hidden md:flex absolute -right-3 top-6 z-10 w-6 h-6 items-center justify-center rounded-full bg-[#1A1714] border border-white/10 text-[#A6988D] hover:text-primary-text hover:border-white/20 transition-colors shadow-md"
+          className="hidden md:flex absolute -right-3 top-6 z-10 w-6 h-6 items-center justify-center rounded-full bg-card border border-hairline text-muted-text hover:text-primary-text hover:border-primary-accent/40 transition-colors shadow-md"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {isDesktopCollapsed ? (
@@ -130,7 +130,7 @@ export default function AppSidebar({
               <polygon points="8,21 12,23 9,24" fill="white"/>
               <polygon points="12,14 15,16 12,17" fill="white"/>
             </svg>
-            <span className={`font-serif italic font-bold text-[32px] tracking-tight leading-none pt-1 text-[#F5EDD9] ${isDesktopCollapsed ? 'md:hidden' : ''}`}>Venote</span>
+            <span className={`font-serif italic font-bold text-[32px] tracking-tight leading-none pt-1 text-primary-text ${isDesktopCollapsed ? 'md:hidden' : ''}`}>Venote</span>
           </Link>
 
           {/* Organize & New Note buttons based on activePath */}
@@ -180,13 +180,13 @@ export default function AppSidebar({
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/quick-notes"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
-                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
+                  : "glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:bg-surface-brown/50 hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-card-border rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
                 Quick Notes
               </div>
             </Link>
@@ -197,13 +197,13 @@ export default function AppSidebar({
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/schedule"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
-                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
+                  : "glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:bg-surface-brown/50 hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-card-border rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
                 Schedule
               </div>
             </Link>
@@ -213,14 +213,14 @@ export default function AppSidebar({
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center py-3 rounded-2xl transition-all border group relative ${
                 activePath === "/app/this-week"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
-                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
+                  : "glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:bg-surface-brown/50 hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
               </svg>
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-white/15 rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 glass-panel-modal border border-card-border rounded-xl text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">
                 Dashboard
               </div>
             </Link>
@@ -235,7 +235,7 @@ export default function AppSidebar({
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-2xl transition-all border group relative ${
                 activePath === "/app/expenses"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
-                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
+                  : "glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:bg-surface-brown/50 hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -251,7 +251,7 @@ export default function AppSidebar({
               className={`flex-1 ${isDesktopCollapsed ? 'md:flex-none md:w-full' : ''} flex justify-center items-center gap-1.5 px-2 py-3 font-medium rounded-2xl transition-all border group relative ${
                 activePath === "/app/rounds"
                   ? "glass-panel text-primary-accent border-primary-accent/40 shadow-[0_4px_16px_0_rgba(255,92,56,0.15)]"
-                  : "glass-panel-subtle text-[#A6988D] border-white/5 hover:border-white/15 hover:bg-white/[0.06] hover:text-primary-text"
+                  : "glass-panel-subtle text-muted-text border-card-border hover:border-hairline hover:bg-surface-brown/50 hover:text-primary-text"
               }`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -267,18 +267,18 @@ export default function AppSidebar({
         <div className={`flex-1 flex flex-col min-h-0 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>{children}</div>
 
         {!hideProfile && (
-          <div className="mt-auto p-3 md:p-4 border-t border-white/10 glass-panel-subtle shrink-0 relative z-10" ref={profileMenuRef}>
+          <div className="mt-auto p-3 md:p-4 border-t border-hairline glass-panel-subtle shrink-0 relative z-10" ref={profileMenuRef}>
 
             {/* Profile Popup Menu */}
             {isProfileMenuOpen && (
-              <div className={`absolute bottom-[calc(100%+8px)] left-3 right-3 ${isDesktopCollapsed ? 'md:left-2 md:right-auto md:w-60' : ''} glass-panel-modal border border-white/10 rounded-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.4)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200`}>
+              <div className={`absolute bottom-[calc(100%+8px)] left-3 right-3 ${isDesktopCollapsed ? 'md:left-2 md:right-auto md:w-60' : ''} glass-panel-modal border border-card-border rounded-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.4)] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200`}>
                 <div className="flex flex-col p-1.5">
                   <Link
                     href="/app/settings"
                     onClick={() => setIsProfileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-primary-text hover:bg-white/10 rounded-xl transition-colors"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-primary-text hover:bg-surface-brown/50 rounded-xl transition-colors"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#A6988D]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -302,7 +302,7 @@ export default function AppSidebar({
 
             <div
               data-tour="nav-settings"
-              className={`flex items-center gap-3 px-1 cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-colors ${isDesktopCollapsed ? 'md:justify-center' : ''}`}
+              className={`flex items-center gap-3 px-1 cursor-pointer hover:bg-surface-brown/50 p-2 -mx-2 rounded-xl transition-colors ${isDesktopCollapsed ? 'md:justify-center' : ''}`}
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               title={isDesktopCollapsed ? displayName : undefined}
             >
@@ -311,9 +311,9 @@ export default function AppSidebar({
               </div>
               <div className={`flex flex-col overflow-hidden leading-tight flex-1 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
                 <div className="text-sm font-medium text-primary-text truncate">{displayName}</div>
-                <div className="text-[11px] text-[#A6988D] truncate">{session?.user?.email}</div>
+                <div className="text-[11px] text-muted-text truncate">{session?.user?.email}</div>
               </div>
-              <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-[#A6988D] transition-transform shrink-0 ${isProfileMenuOpen ? 'rotate-180' : ''} ${isDesktopCollapsed ? 'md:hidden' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-muted-text transition-transform shrink-0 ${isProfileMenuOpen ? 'rotate-180' : ''} ${isDesktopCollapsed ? 'md:hidden' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
               </svg>
             </div>

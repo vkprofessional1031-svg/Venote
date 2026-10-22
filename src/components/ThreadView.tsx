@@ -80,7 +80,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
 
             <div className="flex flex-col mr-auto items-start w-full relative">
               {turn.status === 'pending' && (
-                <div className="px-4 py-2 bg-white/5 rounded-2xl rounded-bl-sm border border-white/5 flex gap-2 items-center text-sm text-muted-text w-max">
+                <div className="px-4 py-2 bg-card/70 rounded-2xl rounded-bl-sm border border-card-border flex gap-2 items-center text-sm text-muted-text w-max">
                   {turn.statusText ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-primary-text/30 border-t-primary-text rounded-full animate-spin"></div>
@@ -111,9 +111,9 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
               )}
 
               {turn.status === 'done' && turn.kind === 'organize' && turn.organizePreview && (
-                <div className="w-full max-w-sm glass-panel-modal border border-white/10 rounded-2xl p-4 shadow-xl">
+                <div className="w-full max-w-sm glass-panel-modal border border-card-border rounded-2xl p-4 shadow-xl">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-mono tracking-widest uppercase bg-white/10 px-1.5 py-0.5 rounded text-muted-text">
+                    <span className="text-[10px] font-mono tracking-widest uppercase bg-surface-brown/50 px-1.5 py-0.5 rounded text-muted-text">
                       {turn.organizePreview.type}
                     </span>
                     <h3 className="font-serif italic font-bold text-primary-text truncate">
@@ -125,7 +125,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                   </p>
                   <button 
                     onClick={() => turn.entryId && onOpenEntry(turn.entryId)}
-                    className="w-full py-2 bg-white/5 hover:bg-white/10 text-primary-text text-sm rounded-lg transition-colors border border-white/5 font-medium"
+                    className="w-full py-2 bg-surface-brown/40 hover:bg-surface-brown/70 text-primary-text text-sm rounded-lg transition-colors border border-card-border font-medium"
                   >
                     Open {turn.organizePreview.type}
                   </button>
@@ -148,7 +148,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                     <div className="absolute -left-2 md:-left-12 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
                       <button 
                         onClick={() => navigator.clipboard.writeText(turn.answer || '')}
-                        className="p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                        className="p-1.5 text-muted-text hover:text-primary-text bg-card border border-hairline rounded-lg shadow-sm hidden md:block"
                         title="Copy answer"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,7 +158,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                       {idx === turns.length - 1 && !turn.isStreaming && onRegenerateAsk && (
                         <button 
                           onClick={() => onRegenerateAsk(turn)}
-                          className="p-1.5 text-muted-text hover:text-primary-text bg-[#1A1714] border border-white/10 rounded-lg shadow-sm hidden md:block"
+                          className="p-1.5 text-muted-text hover:text-primary-text bg-card border border-hairline rounded-lg shadow-sm hidden md:block"
                           title="Regenerate response"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -211,7 +211,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                         <div className="mt-1 pl-4 border-l-2 border-white/10 space-y-1.5">
                           {turn.sources.map((src, i) => (
                             <div key={i} className="text-xs font-mono text-muted-text/80 flex items-center gap-1.5 leading-relaxed">
-                              <span className="text-white/20">■</span>
+                              <span className="text-muted-text/30">■</span>
                               {src.summary}
                             </div>
                           ))}
@@ -221,14 +221,14 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                   )}
 
                   {idx === 0 && (
-                    <div className="mt-6 pt-4 border-t border-white/5 flex flex-col md:flex-row md:items-center gap-3">
+                    <div className="mt-6 pt-4 border-t border-hairline flex flex-col md:flex-row md:items-center gap-3">
                       <span className="text-sm text-muted-text/70 mb-1 md:mb-0">Not a question? Save it as:</span>
                       <div className="flex flex-wrap items-center gap-2">
                         {['organize', 'wallet', 'prep'].map(d => (
                           <button
                             key={d}
                             onClick={() => onSaveAs(turn, d)}
-                            className="text-sm font-medium text-primary-text bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all rounded-full px-4 min-h-[36px] flex items-center justify-center"
+                            className="text-sm font-medium text-primary-text bg-surface-brown/40 border border-card-border hover:bg-surface-brown/70 transition-all rounded-full px-4 min-h-[36px] flex items-center justify-center"
                           >
                             {d === 'organize' ? 'Note' : d === 'wallet' ? 'Wallet' : 'Job'}
                           </button>
@@ -255,15 +255,15 @@ function TurnFixMenu({ turn, onFixIt }: { turn: Turn, onFixIt: (turn: Turn, newD
         Not right? Fix it
       </button>
       {showMenu && (
-        <div className="absolute right-0 mt-1 w-48 bg-[#1A1714] border border-hairline rounded-lg shadow-xl z-50 overflow-hidden">
-          <div className="px-3 py-2 text-[10px] font-mono tracking-wider text-muted-text uppercase bg-black/20">
+        <div className="absolute right-0 mt-1 w-48 bg-card border border-card-border rounded-lg shadow-xl z-50 overflow-hidden">
+          <div className="px-3 py-2 text-[10px] font-mono tracking-wider text-muted-text uppercase bg-surface-brown/40">
             Reclassify as...
           </div>
           {['organize', 'wallet', 'prep'].filter(d => d !== turn.kind).map(domain => (
             <button
               key={domain}
               onClick={() => { setShowMenu(false); onFixIt(turn, domain); }}
-              className="block w-full text-left px-3 py-2 text-sm text-primary-text hover:bg-white/5 transition-colors"
+              className="block w-full text-left px-3 py-2 text-sm text-primary-text hover:bg-surface-brown/50 transition-colors"
             >
               {domain === 'organize' ? 'Organize (Task/Note)' : domain === 'wallet' ? 'Wallet (Expense/Income)' : 'Prep (Round/Session)'}
             </button>

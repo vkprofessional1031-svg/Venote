@@ -690,7 +690,7 @@ export default function ExpensesPage() {
             </header>
 
             {/* Hero Card */}
-            <div className="glass-panel-modal rounded-[24px] p-6 sm:p-8 text-white shadow-[0_8px_32px_rgba(255,92,56,0.15)] border border-primary-accent/20 relative overflow-hidden mt-2">
+            <div className="bg-[#1C1816] rounded-[24px] p-6 sm:p-8 text-white shadow-[0_8px_32px_rgba(255,92,56,0.15)] border border-primary-accent/30 relative overflow-hidden mt-2">
               {/* Background texture (dot grid) */}
               <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
               
@@ -756,7 +756,7 @@ export default function ExpensesPage() {
               </button>
               <button 
                 onClick={() => setShowManualForm(true)} 
-                className="flex-1 py-3 px-4 rounded-xl bg-primary-accent text-[#1A1714] font-medium hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)] transition-all text-sm"
+                className="flex-1 py-3 px-4 rounded-xl bg-primary-accent text-white font-medium hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)] transition-all text-sm"
               >
                 Add Transaction
               </button>
@@ -902,18 +902,18 @@ export default function ExpensesPage() {
               {/* Manual Form */}
               {showManualForm && (
                 <div className="mt-4 pt-4 border-t border-hairline relative z-10">
-                  <div className="flex bg-background border border-hairline rounded-xl p-1 mb-4">
+                  <div className="flex bg-surface-brown/40 border border-card-border rounded-xl p-1 mb-4">
                     <button
                       type="button"
                       onClick={() => setManualEntryType('expense')}
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${manualEntryType === 'expense' ? 'bg-white/10 text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${manualEntryType === 'expense' ? 'bg-card text-primary-text shadow-sm' : 'text-muted-text hover:text-primary-text'}`}
                     >
                       Expense
                     </button>
                     <button
                       type="button"
                       onClick={() => setManualEntryType('income')}
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${manualEntryType === 'income' ? 'bg-[#D3FFDF]/10 text-[#D3FFDF] shadow-sm' : 'text-muted-text hover:text-[#D3FFDF]'}`}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${manualEntryType === 'income' ? 'bg-secondary-accent/15 text-secondary-accent shadow-sm' : 'text-muted-text hover:text-secondary-accent'}`}
                     >
                       Income
                     </button>
@@ -1283,7 +1283,7 @@ export default function ExpensesPage() {
       {/* Budget Modal */}
       {isBudgetModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1A1714] border border-hairline rounded-2xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] flex flex-col">
+          <div className="bg-card border border-card-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] flex flex-col">
             <h2 className="text-xl font-serif italic font-bold text-primary-text mb-4">Set Monthly Budgets</h2>
             <div className="overflow-y-auto flex-1 pr-2 space-y-4 custom-scrollbar">
               {allKnownCategories.map(cat => (
@@ -1296,7 +1296,7 @@ export default function ExpensesPage() {
                       placeholder="No limit"
                       value={budgetForm[cat] || ''}
                       onChange={(e) => setBudgetForm(prev => ({...prev, [cat]: e.target.value}))}
-                      className="w-full bg-background border border-hairline rounded-xl pl-7 pr-3 py-2 text-sm text-primary-text focus:outline-none focus:border-primary-accent"
+                      className="w-full bg-surface-brown/30 border border-card-border rounded-xl pl-7 pr-3 py-2 text-sm text-primary-text focus:outline-none focus:border-primary-accent"
                     />
                   </div>
                 </div>
@@ -1304,7 +1304,7 @@ export default function ExpensesPage() {
             </div>
             <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-hairline">
               <button onClick={() => setIsBudgetModalOpen(false)} className="px-4 py-2 text-sm text-muted-text hover:text-primary-text transition-colors">Cancel</button>
-              <button onClick={handleSaveBudgets} className="px-4 py-2 text-sm bg-primary-accent text-primary-text rounded-xl font-medium hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]">Save Budgets</button>
+              <button onClick={handleSaveBudgets} className="px-4 py-2 text-sm bg-primary-accent text-white rounded-xl font-medium hover:brightness-110 shadow-[0_4px_14px_0_rgba(255,92,56,0.39)]">Save Budgets</button>
             </div>
           </div>
         </div>
