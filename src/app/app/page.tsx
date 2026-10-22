@@ -887,8 +887,15 @@ export default function Home() {
   };
 
   const renderOrganizeForm = (isMobile: boolean) => {
+    const isThread = turns.length > 0 && !activeEntryId;
     return (
-      <form data-tour="organize-input" onSubmit={handleStructureSubmit} className={`glass-panel-modal border border-card-border shadow-2xl relative flex flex-row items-end ring-1 ring-hairline focus-within:border-primary-accent/40 focus-within:ring-primary-accent/20 focus-within:shadow-[0_0_24px_rgba(255,92,56,0.15)] w-full max-w-3xl mx-auto transition-all duration-300 bg-card px-[6px] md:px-[8px] gap-[8px] ${isMobile ? 'rounded-[26px]' : 'rounded-[26px] md:rounded-[28px]'}`}>
+      <form
+        data-tour="organize-input"
+        onSubmit={handleStructureSubmit}
+        className={`glass-capsule border border-[var(--glass-border)] relative flex flex-row items-end w-full max-w-3xl mx-auto px-[6px] md:px-[8px] gap-[8px] ${
+          isMobile ? 'rounded-[26px]' : 'rounded-[26px] md:rounded-[28px]'
+        }`}
+      >
         <textarea
           ref={organizeInputRef}
           className="flex-1 bg-transparent outline-none text-primary-text text-[16px] md:text-base leading-[24px] placeholder:text-muted-text placeholder:truncate font-sans pl-3 md:pl-4 min-w-0 resize-none max-h-[148px] md:max-h-[152px] py-[14px] md:py-[16px] self-stretch"
@@ -908,8 +915,8 @@ export default function Home() {
               disabled={loading}
               className={`flex items-center justify-center w-[40px] h-[40px] rounded-full transition-all ${
                 isListening
-                  ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.2)] animate-pulse'
-                  : 'text-muted-text hover:text-primary-text hover:bg-surface-brown/50'
+                  ? 'bg-primary-accent/20 text-primary-accent shadow-[0_0_15px_rgba(255,92,56,0.35)] ring-1 ring-primary-accent/50 animate-pulse'
+                  : 'text-muted-text hover:text-primary-accent hover:bg-surface-brown/50'
               }`}
               title={isListening ? "Stop listening" : "Start voice input"}
             >
@@ -931,28 +938,28 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading || !inputText.trim()}
-              title={turns.length > 0 && !activeEntryId ? "Send" : undefined}
+              title={isThread ? "Send" : undefined}
               className={`flex items-center justify-center rounded-full transition-all gap-2 border font-medium shrink-0 ${
                 isMobile
                   ? `w-[40px] h-[40px] ${
                       (!inputText.trim() || loading) 
-                        ? 'bg-card text-muted-text/30 cursor-not-allowed border-transparent' 
-                        : 'bg-primary-accent text-white hover:brightness-110 border-transparent'
+                        ? 'bg-transparent text-muted-text/30 cursor-not-allowed border-transparent' 
+                        : 'bg-primary-accent text-white hover:brightness-110 border-transparent shadow-[0_0_16px_rgba(255,92,56,0.35)]'
                     }`
                   : `w-[40px] h-[40px] md:w-auto md:px-5 md:py-2 ${
                       (!inputText.trim() || loading) 
-                        ? (turns.length > 0 && !activeEntryId ? 'bg-card text-muted-text/30 cursor-not-allowed border-transparent' : 'opacity-40 cursor-not-allowed bg-surface-brown text-primary-accent border-primary-accent/20') 
-                        : (turns.length > 0 && !activeEntryId ? 'bg-primary-accent text-white hover:brightness-110 border-transparent' : 'bg-surface-brown hover:bg-primary-accent hover:text-white hover:shadow-[0_0_15px_rgba(255,92,56,0.3)] text-primary-accent border-primary-accent/20')
+                        ? (isThread ? 'bg-transparent text-muted-text/30 cursor-not-allowed border-transparent' : 'opacity-40 cursor-not-allowed bg-surface-brown text-muted-text/50 border-hairline') 
+                        : (isThread ? 'bg-primary-accent text-white hover:brightness-110 border-transparent shadow-[0_0_16px_rgba(255,92,56,0.35)]' : 'bg-primary-accent text-white hover:brightness-110 shadow-[0_0_16px_rgba(255,92,56,0.35)] border-transparent')
                     }`
               }`}
             >
-              {loading && turns.length > 0 && !activeEntryId ? (
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              {loading && isThread ? (
+                <svg className="animate-spin h-5 w-5 text-primary-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-              ) : (turns.length > 0 && !activeEntryId) || isMobile ? (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[20px] h-[20px]">
+              ) : isThread || isMobile ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-[20px] h-[20px] ${inputText.trim() ? 'text-white' : 'text-muted-text/30'}`}>
                   <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
                 </svg>
               ) : loading ? (
@@ -1337,9 +1344,8 @@ export default function Home() {
 
       {/* Unified Thread Mode Input Box (Desktop & Mobile) */}
       {!activeEntry && turns.length > 0 && (
-        <div className="shrink-0 w-full relative pb-[max(env(safe-area-inset-bottom),12px)] px-[12px] md:px-0 bg-background md:bg-transparent z-20">
-          <div className="absolute bottom-[100%] left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
-          <div className="max-w-3xl mx-auto w-full pt-3 md:pt-4 pb-3 relative z-20">
+        <div className="shrink-0 w-full relative pb-[max(env(safe-area-inset-bottom),12px)] px-[12px] md:px-0 bg-transparent z-20">
+          <div className="max-w-3xl mx-auto w-full pt-2 md:pt-3 pb-3 relative z-20">
             {renderOrganizeForm(isMobilePlaceholder)}
           </div>
         </div>
