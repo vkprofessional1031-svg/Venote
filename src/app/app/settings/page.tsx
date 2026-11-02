@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { isDesktopApp } from '@/lib/isDesktopApp';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
 import { useTheme } from '@/components/ThemeProvider';
@@ -93,7 +94,7 @@ export default function SettingsPage() {
       }));
 
       await supabase.auth.signOut();
-      router.push('/');
+      router.push(isDesktopApp() ? '/login' : '/');
     } catch (err) {
       console.error(err);
       showToast('Error deleting data');

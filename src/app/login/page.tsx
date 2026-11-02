@@ -23,6 +23,7 @@ import {
   useSpring,
 } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { isDesktopApp, isMacDesktopApp } from '@/lib/isDesktopApp';
 
 // Deterministic seeded PRNG (no Math.random during render, zero hydration mismatch)
 function createSeededRandom(seed: number) {
@@ -253,9 +254,13 @@ export default function Login() {
   const [authSuccess, setAuthSuccess] = useState(false);
   const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | null>(null);
 
-  // Mobile/touch detection
+  // Mobile/touch detection & desktop wrapper detection
   const [isMobileOrTouch, setIsMobileOrTouch] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => isDesktopApp());
+  const [isMacDesktop, setIsMacDesktop] = useState(() => isMacDesktopApp());
   useEffect(() => {
+    setIsDesktop(isDesktopApp());
+    setIsMacDesktop(isMacDesktopApp());
     const mq = window.matchMedia('(max-width: 1023px), (hover: none), (pointer: coarse)');
     const update = () => setIsMobileOrTouch(mq.matches);
     update();
@@ -275,6 +280,20 @@ export default function Login() {
   const router = useRouter();
   const reducedMotion = Boolean(useReducedMotion());
   const { resolvedTheme, setTheme } = useTheme();
+
+  // Redirect already signed-in users directly to their workspace
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const { data: settings } = await supabase
+          .from('user_settings')
+          .select('default_view')
+          .eq('user_id', session.user.id)
+          .single();
+        router.replace(settings?.default_view || '/app');
+      }
+    });
+  }, [router]);
 
   // Strictly boolean/format signals (never reads, logs, stores, or transmits password content)
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -498,7 +517,9 @@ export default function Login() {
   return (
     <div
       style={{
-        paddingTop: 'max(16px, env(safe-area-inset-top))',
+        paddingTop: isMacDesktop
+          ? 'calc(max(16px, env(safe-area-inset-top)) + 8px)'
+          : 'max(16px, env(safe-area-inset-top))',
         paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
         paddingLeft: 'max(16px, env(safe-area-inset-left))',
         paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -507,33 +528,35 @@ export default function Login() {
     >
       <AuroraBackground />
 
-      {/* Top Bar: Glass "Back" Chip (Top-Left) + Glass Theme Toggle (Top-Right) */}
+      {/* Top Bar: Glass "Back" Chip (Top-Left, Web Only) + Glass Theme Toggle (Top-Right) */}
       <header className="w-full max-w-6xl mx-auto flex items-center justify-between gap-3 relative z-20">
-        <Link
-          href="/"
-          className="min-h-[44px] px-4 py-2 rounded-full landing-nav-pill inline-flex items-center gap-2 text-sm font-medium text-primary-text/90 hover:text-primary-text transition-all active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-accent"
-        >
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {!isDesktop && (
+          <Link
+            href="/"
+            className="min-h-[44px] px-4 py-2 rounded-full landing-nav-pill inline-flex items-center gap-2 text-sm font-medium text-primary-text/90 hover:text-primary-text transition-all active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-accent"
           >
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          <span>Back</span>
-        </Link>
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            <span>Back</span>
+          </Link>
+        )}
 
         <button
           type="button"
           onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
           aria-label={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           title={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-          className="min-h-[44px] min-w-[44px] px-3 rounded-full landing-nav-pill inline-flex items-center justify-center text-primary-text/85 hover:text-primary-text transition-all active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-accent cursor-pointer"
+          className="ml-auto min-h-[44px] min-w-[44px] px-3 rounded-full landing-nav-pill inline-flex items-center justify-center text-primary-text/85 hover:text-primary-text transition-all active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-accent cursor-pointer"
         >
           {resolvedTheme === 'dark' ? (
             <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -755,7 +778,17 @@ export default function Login() {
                 className="flex flex-col items-center lg:items-start text-center lg:text-left mb-6"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <BrandLogo className="h-9" />
+                  {isDesktop ? (
+                    <BrandLogo className="h-9" />
+                  ) : (
+                    <Link
+                      href="/"
+                      aria-label="Venote home"
+                      className="rounded-lg focus-visible:outline-2 focus-visible:outline-primary-accent"
+                    >
+                      <BrandLogo className="h-9" />
+                    </Link>
+                  )}
                 </div>
 
                 <AnimatePresence mode="wait" initial={false}>

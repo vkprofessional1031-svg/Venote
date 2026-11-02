@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { isDesktopApp } from '@/lib/isDesktopApp';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -19,6 +20,11 @@ export default function LandingPage() {
   const [detectedOS, setDetectedOS] = useState<'mac' | 'windows' | 'other'>('other');
 
   useEffect(() => {
+    if (isDesktopApp()) {
+      router.replace('/login');
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         router.replace('/app');
@@ -86,7 +92,7 @@ export default function LandingPage() {
     </div>
   );
 
-  if (loading) {
+  if (loading || isDesktopApp()) {
     return <div className="min-h-screen bg-background flex items-center justify-center text-primary-text"></div>;
   }
 
