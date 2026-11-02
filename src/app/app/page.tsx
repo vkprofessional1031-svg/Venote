@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import MobileNav from '@/components/MobileNav';
+import { usePageIntent } from '@/hooks/usePageIntent';
 import { toLocalYMD } from '@/utils/date';
 import { supabase } from '@/lib/supabase';
 import TaskView from '@/components/TaskView';
@@ -22,9 +24,16 @@ import EntriesList, { Entry, SortOption } from '@/components/EntriesList';
 import { insertWalletItems } from '@/utils/transactions';
 import { insertPrepItems } from '@/utils/prep';
 import ThreadView, { Turn } from '@/components/ThreadView';
+import { useFlyToTarget } from '@/components/useFlyToTarget';
+import { PipelineChips } from '@/components/PipelineChips';
+import { PIPELINES, usePipelineProgress } from '@/hooks/usePipelineProgress';
 import { readNdjson } from '@/lib/readStream';
 
 export default function Home() {
+  const { fly, overlay: flyOverlay } = useFlyToTarget();
+  const pipeline = usePipelineProgress();
+  const [pipelineTurnId, setPipelineTurnId] = useState<string | null>(null);
+  const retryPipelineRef = useRef<() => void>(() => {});
   const [entries, setEntries] = useState<Entry[]>([]);
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -38,7 +47,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -53,6 +61,7 @@ export default function Home() {
   const router = useRouter();
   const { showToast } = useToast();
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { intent, consume } = usePageIntent('/app');
   const organizeInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [speechSupported, setSpeechSupported] = useState(false);
@@ -198,13 +207,12 @@ export default function Home() {
 
   const handleStructureIt = async (overrideDomain?: string, overrideText?: string, existingTurnId?: string) => {
     const textToProcess = overrideText || inputText;
-    if (!textToProcess.trim()) return;
+    if (loading || !textToProcess.trim()) return;
+    pipeline.begin(overrideDomain ? ['Ready', 'Structuring', 'Saving'] : PIPELINES.default, overrideDomain ? 1 : 0);
     
     setLoading(true);
     setError(null);
     setActiveEntryId(null);
-    setInputText('');
-    setSearchQuery('');
     if (organizeInputRef.current) {
       organizeInputRef.current.style.height = 'auto';
     }
@@ -213,12 +221,14 @@ export default function Home() {
     }, 0);
 
     const turnId = existingTurnId || `turn-${Date.now()}`;
+    setPipelineTurnId(turnId);
     if (!existingTurnId) {
       setTurns(prev => [...prev, { id: turnId, userText: textToProcess, status: 'pending' }]);
     } else {
       setTurns(prev => prev.map(t => t.id === turnId ? { ...t, status: 'pending' } : t));
     }
 
+    retryPipelineRef.current = () => { void handleStructureIt(overrideDomain, textToProcess, turnId); };
     try {
       let domain = overrideDomain;
       if (!domain) {
@@ -234,6 +244,9 @@ export default function Home() {
       }
 
       if (domain === 'ask') {
+        setTurns(prev => prev.map(t => t.id === turnId ? { ...t, kind: 'ask' } : t));
+        pipeline.labels(PIPELINES.ask);
+        pipeline.pause(1);
         const { data: { session: authSession } } = await supabase.auth.getSession();
         const token = authSession?.access_token;
         
@@ -285,6 +298,7 @@ export default function Home() {
           }
         }, 50);
 
+        let streamError: string | null = null;
         let finalAnswer = "";
         let finalSources: any[] = [];
         let isStopped = false;
@@ -307,6 +321,7 @@ export default function Home() {
 
           await readNdjson(response, {
             onDelta: (text) => {
+              pipeline.stage(2);
               if (pendingAskUpdateRef.current) {
                 pendingAskUpdateRef.current.answer += text;
                 finalAnswer = pendingAskUpdateRef.current.answer;
@@ -319,18 +334,21 @@ export default function Home() {
               }
             },
             onStatus: (text) => {
+              pipeline.stage(1);
               if (pendingAskUpdateRef.current) {
                 pendingAskUpdateRef.current.statusText = text;
               }
             },
             onSources: (sources) => {
+              pipeline.stage(2);
               if (pendingAskUpdateRef.current) {
                 pendingAskUpdateRef.current.sources = sources;
                 finalSources = sources;
               }
             },
-            onError: (msg) => { throw new Error(msg); }
+            onError: (msg) => { streamError = msg; }
           }, abortController.signal);
+          if (streamError) throw new Error(streamError);
           
         } catch (err: any) {
           if (err.name === 'AbortError' || abortController.signal.aborted) {
@@ -390,6 +408,7 @@ export default function Home() {
            }
         }
       } else if (domain === 'wallet') {
+        pipeline.stage(1);
         const response = await fetch('/api/structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -401,7 +420,9 @@ export default function Home() {
         const validItems = (data.results || []).filter((r: any) => r.type === 'expense' || r.type === 'income');
         if (validItems.length === 0) throw new Error("Could not detect any expenses or incomes.");
         
+        pipeline.stage(2);
         const processedItems = await insertWalletItems(validItems, session!.user.id, supabase);
+        pipeline.complete(() => fly(processedItems.filter(item => item.id).map(item => ({ target: 'wallet', type: item.isIncome ? 'income' : 'expense', label: `$${item.amount} · ${item.category || item.source || 'Wallet'}` }))));
         
         setTurns(prev => prev.map(t => t.id === turnId ? {
           ...t, 
@@ -412,6 +433,8 @@ export default function Home() {
         } : t));
         
       } else if (domain === 'prep') {
+        pipeline.labels(PIPELINES.prep);
+        pipeline.stage(1);
         const response = await fetch('/api/rounds-structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -423,7 +446,9 @@ export default function Home() {
           throw new Error("Could not understand that.");
         }
         
+        pipeline.stage(2);
         const processedItems = await insertPrepItems(data.results, session!.user.id, supabase);
+        pipeline.complete(() => fly(processedItems.filter(item => item.id).map(item => ({ target: 'job', type: item.itemType, label: [item.companyName, item.round_name || item.prep_type || 'Application'].filter(Boolean).join(' · ') }))));
         
         setTurns(prev => prev.map(t => t.id === turnId ? {
           ...t, 
@@ -434,6 +459,7 @@ export default function Home() {
         } : t));
       } else {
         // organize
+        pipeline.stage(1);
         const response = await fetch('/api/structure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -448,6 +474,7 @@ export default function Home() {
         const structuredResults = data.results || [data];
         structuredResults[0].originalInput = textToProcess;
         
+        pipeline.stage(2);
         const { data: insertedData, error: insertError } = await supabase
           .from('entries')
           .insert({
@@ -467,6 +494,7 @@ export default function Home() {
           tags: []
         };
         setEntries(prev => [newEntry, ...prev]);
+        if (insertedData?.id) pipeline.complete(() => fly(structuredResults.filter((item: any) => ['task', 'tasks', 'note', 'table', 'roadmap'].includes(item.type)).map((item: any) => ({ target: 'organize', entryId: insertedData.id, type: item.type, label: item.title || (item.type === 'tasks' ? 'Task' : item.type) }))));
 
         const res = structuredResults[0];
         let snippet = '';
@@ -487,12 +515,15 @@ export default function Home() {
           }
         } : t));
       }
+      if (domain === 'ask') pipeline.complete();
+      setInputText(current => current === textToProcess ? '' : current);
     } catch (err: any) {
       console.error('Structuring error:', err);
       const errMsg = err.message === 'RATE_LIMIT'
         ? "You've hit the AI service's usage limit — please wait a minute and try again"
         : (err.message || "Something went wrong — try rephrasing or try again.");
       
+      pipeline.fail(errMsg);
       setTurns(prev => prev.map(t => t.id === turnId ? { ...t, status: 'error', errorMessage: errMsg } : t));
     } finally {
       setLoading(false);
@@ -532,7 +563,7 @@ export default function Home() {
     void handleStructureIt();
   };
 
-  const handleNewNote = () => {
+  const handleNewNote = useCallback(() => {
     setIsMobileMenuOpen(false);
     setActiveEntryId(null);
     setCurrentChatEntryId(null);
@@ -544,7 +575,60 @@ export default function Home() {
     setTimeout(() => {
       organizeInputRef.current?.focus();
     }, 0);
-  };
+  }, []);
+
+  const openOrganizeEntry = useCallback((id: string | null) => {
+    if (id) {
+      const entry = entries.find(e => e.id === id);
+      if (entry && entry.results[0]?.type === 'chat') {
+        setActiveEntryId(null);
+        setCurrentChatEntryId(id);
+        const msgs = entry.results[0].messages || [];
+        const loadedTurns: Turn[] = [];
+        for (let i = 0; i < msgs.length; i++) {
+           if (msgs[i].role === 'user') {
+              const userMsg = msgs[i].content;
+              let assistantMsg = '';
+              if (i + 1 < msgs.length && msgs[i+1].role === 'assistant') {
+                 assistantMsg = msgs[i+1].content;
+                 i++;
+              }
+              loadedTurns.push({
+                 id: `turn-${id}-${i}`,
+                 userText: userMsg,
+                 status: 'done',
+                 kind: 'ask',
+                 answer: assistantMsg
+              });
+           }
+        }
+        setTurns(loadedTurns);
+        if (window.innerWidth < 768) setIsMobileMenuOpen(false);
+        return;
+      }
+    }
+    setActiveEntryId(id);
+  }, [entries]);
+
+  useEffect(() => {
+    if (!intent || authLoading || entriesLoading || !session) return;
+    const entryId = intent.searchParams.get('entry');
+    const view = intent.searchParams.get('view');
+    const draft = intent.searchParams.get('draft');
+    const fresh = intent.searchParams.get('action') === 'new-entry';
+    if (!entryId && !view && draft === null && !fresh) return;
+    if (!consume(['entry', 'view', 'draft', 'action'])) return;
+    if (fresh || draft !== null) {
+      handleNewNote();
+      setViewMode('normal');
+      if (draft !== null) setInputText(draft.slice(0, 4000));
+    } else if (entryId) {
+      const entry = entries.find(item => item.id === entryId);
+      if (entry) { setViewMode(entry.isArchived ? 'archived' : 'normal'); openOrganizeEntry(entryId); }
+    } else if (view === 'archived' || view === 'trash') {
+      setViewMode(view); setActiveEntryId(null); setIsMobileMenuOpen(false);
+    }
+  }, [intent, consume, authLoading, entriesLoading, session, entries, openOrganizeEntry, handleNewNote]);
 
   const handleUpdateResult = (resultIndex: number, newResultData: any) => {
     if (!activeEntryId) return;
@@ -868,7 +952,7 @@ export default function Home() {
     ];
     return (
       <div className={isMobile 
-        ? "flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-[8px] pl-[16px] pr-12 pb-3 w-full"
+        ? "flex flex-wrap justify-center gap-2 pb-3 w-full"
         : "hidden md:flex flex-wrap justify-center gap-2 mt-4 pb-2 w-full max-w-3xl mx-auto"
       }>
         {chips.map(({ label, query }) => (
@@ -889,7 +973,9 @@ export default function Home() {
   const renderOrganizeForm = (isMobile: boolean) => {
     const isThread = turns.length > 0 && !activeEntryId;
     return (
+      <div className="venote-organize-composer flex w-full flex-col">
       <form
+        data-fly-source
         data-tour="organize-input"
         onSubmit={handleStructureSubmit}
         className={`glass-capsule border border-[var(--glass-border)] relative flex flex-row items-end w-full max-w-3xl mx-auto px-[6px] md:px-[8px] gap-[8px] ${
@@ -903,7 +989,6 @@ export default function Home() {
           value={inputText}
           onChange={handleInputResize}
           onKeyDown={handleKeyDown}
-          disabled={loading}
           rows={1}
         />
         
@@ -937,6 +1022,7 @@ export default function Home() {
           ) : (
             <button
               type="submit"
+              aria-busy={loading}
               disabled={loading || !inputText.trim()}
               title={isThread ? "Send" : undefined}
               className={`flex items-center justify-center rounded-full transition-all gap-2 border font-medium shrink-0 ${
@@ -979,33 +1065,22 @@ export default function Home() {
           )}
         </div>
       </form>
+      <div className="venote-home-progress w-full max-w-3xl mx-auto px-2"><PipelineChips pipeline={{ progress: turns.find(t => t.id === pipelineTurnId)?.kind === 'ask' ? null : pipeline.progress }} onRetry={() => retryPipelineRef.current()} /></div>
+      </div>
     );
   };
 
   return (
-    <div className="overflow-hidden bg-background text-primary-text flex font-sans relative" style={{ height: viewportHeight }}>
+    <div className="venote-page overflow-hidden bg-background text-primary-text flex font-sans relative" style={{ height: viewportHeight }}>
+      {flyOverlay}
       <OnboardingTour userId={session?.user?.id} setIsMobileMenuOpen={setIsMobileMenuOpen} />
       <AppSidebar 
         activePath="/app" 
         isMobileMenuOpen={isMobileMenuOpen} 
         onCloseMenu={() => setIsMobileMenuOpen(false)} 
         session={session} 
-        onNewNote={handleNewNote} 
-      >
-        <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 glass-panel-subtle border border-card-border rounded-2xl text-sm focus:outline-none focus:border-primary-accent/60 transition-all placeholder:text-muted-text text-primary-text"
-              />
-            </div>
+        searchContext={{ scope: 'entries', view: viewMode, tag: activeTagFilter || undefined }}
+        searchTools={<>
             <button
               type="button"
               onClick={() => {
@@ -1040,11 +1115,13 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
-          </div>
-
+        </>}
+        onNewNote={handleNewNote}
+      >
+        <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
           {/* Tags Filter Row */}
           {allUniqueTags.length > 0 && (
-            <div className="flex overflow-x-auto gap-2 pb-2 -mx-4 px-4 md:-mx-6 md:px-6 scrollbar-hide snap-x">
+            <div className="flex flex-wrap gap-2 pb-2">
               {allUniqueTags.map(tag => (
                 <button
                   key={tag}
@@ -1064,7 +1141,7 @@ export default function Home() {
 
           {/* Sort Dropdown */}
           {viewMode !== 'trash' && (
-            <div className="flex items-center justify-between pb-3 pt-1">
+            <div className="flex items-center justify-between pb-3">
               <span className="text-[10px] font-mono tracking-wide text-muted-text/50 uppercase">Sort by</span>
               <select
                 value={sortOption}
@@ -1089,44 +1166,12 @@ export default function Home() {
             <EntriesList
               entries={entries}
               activeTagFilter={activeTagFilter}
-              searchQuery={searchQuery}
               sortOption={sortOption}
               entriesLoading={entriesLoading}
               activeEntryId={activeEntryId}
               editingEntryId={editingEntryId}
               editingTitle={editingTitle}
-              setActiveEntryId={(id) => {
-                if (id) {
-                  const entry = entries.find(e => e.id === id);
-                  if (entry && entry.results[0]?.type === 'chat') {
-                    setActiveEntryId(null);
-                    setCurrentChatEntryId(id);
-                    const msgs = entry.results[0].messages || [];
-                    const loadedTurns: Turn[] = [];
-                    for (let i = 0; i < msgs.length; i++) {
-                       if (msgs[i].role === 'user') {
-                          const userMsg = msgs[i].content;
-                          let assistantMsg = '';
-                          if (i + 1 < msgs.length && msgs[i+1].role === 'assistant') {
-                             assistantMsg = msgs[i+1].content;
-                             i++;
-                          }
-                          loadedTurns.push({
-                             id: `turn-${id}-${i}`,
-                             userText: userMsg,
-                             status: 'done',
-                             kind: 'ask',
-                             answer: assistantMsg
-                          });
-                       }
-                    }
-                    setTurns(loadedTurns);
-                    if (window.innerWidth < 768) setIsMobileMenuOpen(false);
-                    return;
-                  }
-                }
-                setActiveEntryId(id);
-              }}
+              setActiveEntryId={openOrganizeEntry}
               setIsMobileMenuOpen={setIsMobileMenuOpen}
               setEditingTitle={setEditingTitle}
               handleRenameKeyDown={handleRenameKeyDown}
@@ -1144,8 +1189,8 @@ export default function Home() {
       </AppSidebar>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 h-[100dvh]">
-      <main className="flex-1 overflow-y-auto flex flex-col w-full min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full min-h-0">
+      <main className="flex-1 min-h-0 overflow-y-auto flex flex-col w-full min-w-0">
         
         {/* Mobile Header */}
         <AppMobileHeader 
@@ -1160,7 +1205,7 @@ export default function Home() {
           }
         />
 
-        <div className="flex-1 flex flex-col items-center">
+        <div className="flex-1 min-h-0 flex flex-col items-center">
           {!activeEntry ? (
             turns.length === 0 ? (
               <div className="flex-1 flex flex-col w-full relative">
@@ -1205,10 +1250,12 @@ export default function Home() {
                 )}
               </div>
             ) : (
-              <div className="flex-1 flex flex-col w-full max-w-[1000px] mx-auto min-h-0 pb-6">
+              <div className="flex-1 flex flex-col w-full max-w-[1000px] mx-auto min-h-0 pb-0 md:pb-6">
                 <ThreadView 
                    turns={turns} 
-                   isProcessing={loading} 
+                   isProcessing={loading}
+                   askPipeline={pipeline}
+                   pipelineTurnId={pipelineTurnId}
                    onRetry={(turn) => handleStructureIt(turn.kind, turn.userText, turn.id)}
                    onOpenEntry={(id) => setActiveEntryId(id)}
                    onFixIt={handleTurnFixIt}
@@ -1332,11 +1379,10 @@ export default function Home() {
 
       {/* Mobile Empty State Input Box */}
       {!activeEntry && turns.length === 0 && isMobilePlaceholder && (
-        <div className="shrink-0 bg-background z-20 w-full pb-[max(env(safe-area-inset-bottom),12px)] flex flex-col relative">
+        <div className="venote-input-dock shrink-0 bg-background z-20 w-full flex flex-col relative">
           <div className="absolute bottom-full left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
-          <div className="absolute right-0 top-0 w-12 h-[64px] bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
           {renderSuggestionChips(true)}
-          <div className="px-3">
+          <div>
             {renderOrganizeForm(true)}
           </div>
         </div>
@@ -1344,12 +1390,13 @@ export default function Home() {
 
       {/* Unified Thread Mode Input Box (Desktop & Mobile) */}
       {!activeEntry && turns.length > 0 && (
-        <div className="shrink-0 w-full relative pb-[max(env(safe-area-inset-bottom),12px)] px-[12px] md:px-0 bg-transparent z-20">
-          <div className="max-w-3xl mx-auto w-full pt-2 md:pt-3 pb-3 relative z-20">
+        <div className="venote-input-dock shrink-0 w-full relative md:pb-[max(env(safe-area-inset-bottom),12px)] px-[12px] md:px-0 bg-transparent z-20">
+          <div className="max-w-3xl mx-auto w-full pt-2 md:pt-3 md:pb-3 relative z-20">
             {renderOrganizeForm(isMobilePlaceholder)}
           </div>
         </div>
       )}
+      <MobileNav activePath="/app" />
       </div>
     </div>
   );

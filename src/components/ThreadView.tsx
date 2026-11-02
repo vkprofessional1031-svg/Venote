@@ -1,3 +1,5 @@
+import { AskAssistantBubble } from './AskAssistantBubble';
+import type { usePipelineProgress } from '@/hooks/usePipelineProgress';
 import { useEffect, useRef, useState } from 'react';
 import ChatMarkdown from './ChatMarkdown';
 
@@ -33,10 +35,12 @@ interface ThreadViewProps {
   onFixIt: (turn: Turn, newDomain: string) => void;
   onSaveAs: (turn: Turn, domain: string) => void;
   isProcessing: boolean;
+  askPipeline?: Pick<ReturnType<typeof usePipelineProgress>, 'progress'>;
+  pipelineTurnId?: string | null;
   onRegenerateAsk?: (turn: Turn) => void;
 }
 
-export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSaveAs, isProcessing, onRegenerateAsk }: ThreadViewProps) {
+export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSaveAs, isProcessing, onRegenerateAsk, askPipeline, pipelineTurnId }: ThreadViewProps) {
   const endRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
 
@@ -85,22 +89,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
             </div>
 
             <div className="flex flex-col mr-auto items-start w-full relative">
-              {turn.status === 'pending' && (
-                <div className="glass px-4 py-2.5 rounded-2xl rounded-bl-sm flex gap-2 items-center text-sm text-muted-text w-max">
-                  {turn.statusText ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-primary-text/30 border-t-primary-text rounded-full animate-spin"></div>
-                      <span>{turn.statusText}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce"></span>
-                      <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-75"></span>
-                      <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-150"></span>
-                    </>
-                  )}
-                </div>
-              )}
+
 
               {turn.status === 'error' && (
                 <div className="glass px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30 rounded-2xl rounded-bl-sm text-sm">
@@ -117,7 +106,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
               )}
 
               {turn.status === 'done' && turn.kind === 'organize' && turn.organizePreview && (
-                <div className="w-full max-w-sm glass border border-[var(--glass-border)] rounded-[24px] p-5 shadow-xl">
+                <div data-fly-entry={turn.entryId} className="w-full max-w-sm glass border border-[var(--glass-border)] rounded-[24px] p-5 shadow-xl">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-[10px] font-mono tracking-widest uppercase bg-surface-brown/50 px-1.5 py-0.5 rounded text-muted-text">
                       {turn.organizePreview.type}
@@ -148,10 +137,8 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                 </div>
               )}
 
-              {turn.status === 'done' && turn.kind === 'ask' && (turn.answer || turn.sources) && (
-                <div className="w-full max-w-3xl glass rounded-[24px] p-5 md:p-6 relative overflow-hidden group">
-                  {turn.isStreaming && <div className="glass-shimmer" />}
-                  
+              {turn.kind === 'ask' && turn.status !== 'error' && (
+                <AskAssistantBubble hasAnswer={(Boolean(turn.answer) || (turn.status === 'done' && !turn.isStreaming)) && turn.status !== 'pending'} pipeline={turn.id === pipelineTurnId ? askPipeline : undefined}>
                   <div className="relative">
                     <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 z-10">
                       <button 
@@ -176,7 +163,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                       )}
                     </div>
 
-                    {turn.answer && <ChatMarkdown content={turn.answer} />}
+                    <div>{turn.answer && <ChatMarkdown content={turn.answer} />}</div>
                     
                     <div className="md:hidden mt-2 flex items-center gap-2 h-[36px]">
                       <button 
@@ -203,7 +190,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
 
                     {turn.isStreaming && (
                       <div className="mt-2 flex items-center gap-2 text-muted-text/50">
-                        <span className="w-2 h-2 bg-primary-accent rounded-full animate-pulse"></span>
+                        <span className="w-2 h-2 bg-primary-accent rounded-full motion-safe:animate-pulse"></span>
                       </div>
                     )}
                   </div>
@@ -245,7 +232,7 @@ export default function ThreadView({ turns, onRetry, onOpenEntry, onFixIt, onSav
                       </div>
                     </div>
                   )}
-                </div>
+                </AskAssistantBubble>
               )}
             </div>
           </div>

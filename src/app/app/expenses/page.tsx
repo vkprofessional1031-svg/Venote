@@ -1,12 +1,17 @@
 'use client';
 
+import { PipelineChips } from '@/components/PipelineChips';
+import { PIPELINES, usePipelineProgress } from '@/hooks/usePipelineProgress';
+import { GlassSkeletonCard, DelayedSkeleton } from '@/components/Skeleton';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { insertWalletItems } from '@/utils/transactions';
 import AppSidebar from '@/components/AppSidebar';
+import { useCommands } from '@/components/CommandPaletteProvider';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import MobileNav from '@/components/MobileNav';
 import { getCurrencySymbolFromLocale } from '@/lib/currency';
 import { toLocalYMD, monthBounds } from '@/utils/date';
 
@@ -60,6 +65,7 @@ const getCurrencySymbol = (code: string) => {
 
 export default function ExpensesPage() {
   const router = useRouter();
+  const { amountsHidden } = useCommands();
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -97,6 +103,9 @@ export default function ExpensesPage() {
   
   // AI Quick Add state
   const [aiInput, setAiInput] = useState('');
+  const pipeline = usePipelineProgress();
+  const receiptPipeline = usePipelineProgress();
+  const retryReceiptRef = useRef<() => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
 
@@ -115,6 +124,9 @@ export default function ExpensesPage() {
     const file = e.target.files?.[0];
     if (!file || !session?.user?.id) return;
     
+    retryReceiptRef.current = () => { void handleReceiptUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>); };
+    pipeline.cancel();
+    receiptPipeline.begin(['Uploading receipt', 'Structuring', 'Saving']);
     setIsUploadingReceipt(true);
     setAiError('');
 
@@ -130,6 +142,7 @@ export default function ExpensesPage() {
       const { data: { publicUrl } } = supabase.storage.from('receipt-images').getPublicUrl(filePath);
 
       // 2. Pass public URL to Vision API
+      receiptPipeline.labels(PIPELINES.receipt);
       const response = await fetch('/api/receipt-structure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,6 +151,7 @@ export default function ExpensesPage() {
       
       if (!response.ok) throw new Error('Failed to analyze receipt.');
       
+      receiptPipeline.stage(1);
       const data = await response.json();
       const result = data.result;
       
@@ -154,10 +168,12 @@ export default function ExpensesPage() {
         receipt_url: publicUrl
       });
       setShowManualForm(true);
+      receiptPipeline.pause(2);
       
     } catch (err: any) {
       console.error(err);
       setAiError(err.message || 'Error processing receipt.');
+      receiptPipeline.fail(err.message || 'Could not read receipt');
     } finally {
       setIsUploadingReceipt(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -212,6 +228,7 @@ export default function ExpensesPage() {
   const activeSymbol = userCurrency 
     ? getCurrencySymbol(userCurrency) 
     : (isMounted ? getCurrencySymbolFromLocale() : '$');
+  const money = (amount: number) => amountsHidden ? '••••' : `${amount < 0 ? '-' : ''}${activeSymbol}${Math.abs(amount).toFixed(2)}`;
 
   const now = new Date();
   const [currentMonthStart, nextMonthStart] = monthBounds(now);
@@ -296,8 +313,10 @@ export default function ExpensesPage() {
 
   const handleAIQuickAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aiInput.trim() || !session) return;
+    if (isProcessing || !aiInput.trim() || !session) return;
     
+    receiptPipeline.cancel();
+    pipeline.begin(['Ready', 'Structuring', 'Saving'], 1);
     setIsProcessing(true);
     setAiError('');
     
@@ -317,18 +336,22 @@ export default function ExpensesPage() {
       
       if (validItems.length === 0) {
         setAiError("Could not detect any expenses or incomes. Try being more specific (e.g. 'Spent $15 on lunch') or use the manual form.");
+        pipeline.fail("No transaction detected");
         setIsProcessing(false);
         return;
       }
       
+      pipeline.stage(2);
       await insertWalletItems(validItems, session.user.id, supabase);
       
       await reloadTransactions();
       
-      setAiInput('');
+      pipeline.complete();
+      setAiInput(current => current === aiInput ? '' : current);
     } catch (err: any) {
       console.error(err);
       setAiError(err.message || 'An error occurred.');
+      pipeline.fail(err.message || 'Could not save transaction');
     } finally {
       setIsProcessing(false);
     }
@@ -338,6 +361,8 @@ export default function ExpensesPage() {
     e.preventDefault();
     if (!manualForm.amount || !manualForm.description || !session) return;
     
+    const isReceipt = Boolean(manualForm.receipt_url);
+    if (isReceipt) receiptPipeline.stage(2);
     try {
       if (manualEntryType === 'income') {
         const { error } = await supabase.from('income').insert({
@@ -360,12 +385,14 @@ export default function ExpensesPage() {
         if (error) throw error;
       }
       
+      if (isReceipt) receiptPipeline.complete();
       await reloadTransactions();
       
       setShowManualForm(false);
       setManualForm({ amount: '', description: '', category: 'General', source: '', date: toLocalYMD(new Date()), receipt_url: '' });
     } catch (err) {
       console.error('Failed to add manual entry', err);
+      if (isReceipt) receiptPipeline.fail('Could not save receipt');
     }
   };
 
@@ -667,7 +694,7 @@ export default function ExpensesPage() {
 
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden relative selection:bg-primary-accent/20">
+    <div className="venote-page flex h-screen bg-background overflow-hidden relative selection:bg-primary-accent/20">
       
       <AppSidebar 
         activePath="/app/expenses" 
@@ -679,8 +706,8 @@ export default function ExpensesPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full bg-background relative min-w-0">
         <AppMobileHeader onOpenMenu={() => setIsMobileMenuOpen(true)} />
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-          <div className="max-w-4xl mx-auto flex flex-col gap-8 min-h-full pb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+          <div className="max-w-4xl mx-auto flex flex-col gap-8 min-h-full pb-0 md:pb-8">
             
             <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
@@ -699,7 +726,8 @@ export default function ExpensesPage() {
               <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
               
-              <div className="relative z-10 flex flex-col gap-8 sm:gap-10">
+              {loading && <DelayedSkeleton label="Loading wallet summary" className="absolute inset-0 p-6 sm:p-8"><GlassSkeletonCard rows={4} className="h-full" /></DelayedSkeleton>}
+              <div className={`relative z-10 flex flex-col gap-8 sm:gap-10 ${loading ? 'invisible' : 'venote-content-enter'}`}>
                 <div className="flex justify-between items-center">
                   <div className="w-11 h-7 rounded-md bg-gradient-to-br from-[#d4af7a] to-[#8a6d3f] border border-[#f0cfa0]/30 shadow-sm flex items-center justify-center overflow-hidden relative">
                     <div className="absolute w-full h-[1px] bg-black/20 top-[35%]"></div>
@@ -716,7 +744,7 @@ export default function ExpensesPage() {
                     Total Balance <span className="normal-case text-white/40 tracking-normal ml-1">(all time)</span>
                   </div>
                   <div className={`text-4xl sm:text-5xl font-medium tracking-tight ${totalBalance < 0 ? 'text-[#FFD3D3]' : 'text-[#D3FFDF]'}`}>
-                    {totalBalance < 0 ? '-' : ''}{activeSymbol}{Math.abs(totalBalance).toFixed(2)}
+                    {money(totalBalance)}
                   </div>
                 </div>
                 
@@ -727,7 +755,7 @@ export default function ExpensesPage() {
                         Income ({isMounted ? new Date().toLocaleString('default', { month: 'short' }) : ''})
                       </div>
                       <div className="text-sm font-medium tracking-tight text-white/90">
-                        {activeSymbol}{currentMonthIncome.toFixed(2)}
+                        {money(currentMonthIncome)}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
@@ -735,7 +763,7 @@ export default function ExpensesPage() {
                         Spent ({isMounted ? new Date().toLocaleString('default', { month: 'short' }) : ''})
                       </div>
                       <div className="text-sm font-medium tracking-tight text-white/90">
-                        {activeSymbol}{currentMonthSpent.toFixed(2)}
+                        {money(currentMonthSpent)}
                       </div>
                     </div>
                   </div>
@@ -765,7 +793,7 @@ export default function ExpensesPage() {
             {/* AI Add Bar */}
             <div className="glass-panel-modal rounded-[24px] p-4 border border-white/10 shadow-sm relative group">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-accent/5 via-transparent to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <form onSubmit={handleAIQuickAdd} className="relative z-10 flex flex-col gap-3">
+              <form id="wallet-ai-form" onSubmit={handleAIQuickAdd} className="relative z-10 flex flex-col gap-3">
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary-accent/10 flex items-center justify-center flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -778,10 +806,10 @@ export default function ExpensesPage() {
                     className="flex-1 min-w-0 bg-transparent text-primary-text placeholder:text-muted-text focus:outline-none text-[15px]"
                     value={aiInput}
                     onChange={(e) => setAiInput(e.target.value)}
-                    disabled={isProcessing}
                   />
                   <button
                     type="submit"
+                    aria-busy={isProcessing}
                     disabled={!aiInput.trim() || isProcessing}
                     className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-accent text-primary-text font-medium rounded-xl hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100 transition-all shadow-sm flex-shrink-0 whitespace-nowrap"
                   >
@@ -795,6 +823,12 @@ export default function ExpensesPage() {
                     <span className="hidden sm:inline">Add</span>
                   </button>
                 </div>
+                <PipelineChips pipeline={receiptPipeline.progress ? receiptPipeline : pipeline} onRetry={() => {
+                  if (!receiptPipeline.progress) (document.getElementById('wallet-ai-form') as HTMLFormElement)?.requestSubmit();
+                  else if (receiptPipeline.progress.stage === 2) (document.getElementById('wallet-manual-form') as HTMLFormElement)?.requestSubmit();
+                  else retryReceiptRef.current();
+                }} />
+                {receiptPipeline.progress?.waiting && <p className="text-xs text-muted-text">Review the receipt below, then save.</p>}
                 {aiError && (
                   <div className="text-red-400 text-xs px-11">{aiError}</div>
                 )}
@@ -918,7 +952,7 @@ export default function ExpensesPage() {
                       Income
                     </button>
                   </div>
-                  <form onSubmit={handleManualSubmit} className="flex flex-col gap-4">
+                  <form id="wallet-manual-form" onSubmit={handleManualSubmit} className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="flex-1">
                         <label className="block text-xs font-medium text-muted-text mb-1 uppercase tracking-wider">Amount</label>
@@ -1002,9 +1036,7 @@ export default function ExpensesPage() {
 
             {/* Dashboard Content */}
             {loading ? (
-              <div className="flex items-center justify-center p-12">
-                <div className="w-8 h-8 border-4 border-primary-accent border-t-transparent rounded-full animate-spin"></div>
-              </div>
+              <DelayedSkeleton label="Loading cards"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[480px]">{[0, 1].map(n => <GlassSkeletonCard key={n} rows={6} className="min-h-[360px]" />)}</div></DelayedSkeleton>
             ) : allTransactions.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-muted-text mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1014,7 +1046,7 @@ export default function ExpensesPage() {
                 <p className="text-muted-text text-sm max-w-sm">Use the input above to quickly add expenses using AI, or add them manually.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[480px] venote-content-enter">
                 
                 {/* Left Col: Primary Layout (Recent + Settle Up) */}
                 <div className="flex flex-col gap-6">
@@ -1066,7 +1098,7 @@ export default function ExpensesPage() {
                               </div>
                               <div className="flex items-center gap-3 flex-shrink-0 ml-2 mt-0.5">
                                 <div className={`text-right font-medium tracking-tight text-lg ${tx.isIncome ? 'text-green-400' : 'text-primary-text'}`}>
-                                  {tx.isIncome ? '+' : '-'}{activeSymbol}{Number(tx.amount).toFixed(2)}
+                                  {amountsHidden ? '••••' : `${tx.isIncome ? '+' : '-'}${activeSymbol}${Number(tx.amount).toFixed(2)}`}
                                 </div>
                                 <button 
                                   onClick={() => handleDelete(tx.id, tx.isIncome)}
@@ -1109,7 +1141,7 @@ export default function ExpensesPage() {
                             >
                               <div>
                                 <span className="font-medium text-primary-text group-hover:text-primary-accent transition-colors">{name}</span>
-                                <span className="text-sm text-muted-text ml-2">owes you {activeSymbol}{data.totalOwed.toFixed(2)} ({data.items.length} {data.items.length === 1 ? 'expense' : 'expenses'})</span>
+                                <span className="text-sm text-muted-text ml-2">owes you {money(data.totalOwed)} ({data.items.length} {data.items.length === 1 ? 'expense' : 'expenses'})</span>
                               </div>
                               <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-muted-text transition-transform duration-300 ${expandedPerson === name ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1122,7 +1154,7 @@ export default function ExpensesPage() {
                                   <div key={item.expenseId} className="flex flex-col gap-1">
                                     <div className="flex justify-between text-sm">
                                       <span className="text-primary-text">{item.description} <span className="text-muted-text text-xs ml-1">{new Date(item.date).toLocaleDateString()}</span></span>
-                                      <span className="font-medium text-primary-text">{activeSymbol}{item.amount.toFixed(2)}</span>
+                                      <span className="font-medium text-primary-text">{money(item.amount)}</span>
                                     </div>
                                     <button 
                                       onClick={() => handleMarkAsSettled(item.expenseId, name)}
@@ -1185,6 +1217,8 @@ export default function ExpensesPage() {
                               <div className="w-4 h-4 border-2 border-primary-accent border-t-transparent rounded-full animate-spin"></div>
                               <span className="text-sm">Analyzing this month's spending...</span>
                             </div>
+                          ) : amountsHidden ? (
+                            <p className="text-sm text-muted-text">Amounts hidden</p>
                           ) : monthlySummary ? (
                             <ul className="text-[13px] text-primary-text leading-relaxed space-y-2 list-disc list-inside">
                               {(() => {
@@ -1228,7 +1262,7 @@ export default function ExpensesPage() {
                               <div className="flex justify-between text-sm">
                                 <span className="text-primary-text">{cat}</span>
                                 <span className="text-[11px] text-muted-text uppercase tracking-wider self-end mb-[2px]">
-                                  {activeSymbol}{spent.toFixed(2)} / {activeSymbol}{budget.monthly_limit.toFixed(2)}
+                                  {money(spent)} / {money(budget.monthly_limit)}
                                 </span>
                               </div>
                               <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
@@ -1257,7 +1291,7 @@ export default function ExpensesPage() {
                             <div key={cat} className="flex flex-col gap-1.5">
                               <div className="flex justify-between text-sm">
                                 <span className="text-primary-text">{cat}</span>
-                                <span className="font-medium text-primary-text">{activeSymbol}{amount.toFixed(2)}</span>
+                                <span className="font-medium text-primary-text">{money(amount)}</span>
                               </div>
                               <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
                                 <div 
@@ -1278,6 +1312,7 @@ export default function ExpensesPage() {
             
           </div>
         </div>
+        <MobileNav activePath="/app/expenses" />
       </main>
 
       {/* Budget Modal */}

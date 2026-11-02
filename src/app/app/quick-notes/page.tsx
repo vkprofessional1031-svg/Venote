@@ -1,10 +1,12 @@
 'use client';
 
+import { GlassSkeletonCard, DelayedSkeleton } from '@/components/Skeleton';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import AppSidebar from '@/components/AppSidebar';
+import { usePageIntent } from '@/hooks/usePageIntent';
 import AppMobileHeader from '@/components/AppMobileHeader';
 import { NoteEditor, NoteEditorRef } from '@/components/NoteEditor';
 import { useToast } from '@/components/ToastProvider';
@@ -40,6 +42,7 @@ function getPreviewText(body: string): string {
 
 export default function QuickNotesPage() {
   const router = useRouter();
+  const { intent, consume } = usePageIntent('/app/quick-notes');
   
   // Auth State
   const [session, setSession] = useState<any>(null);
@@ -51,7 +54,6 @@ export default function QuickNotesPage() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   
   // UI State
-  const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'normal' | 'archived' | 'trash'>('normal');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
@@ -131,7 +133,7 @@ export default function QuickNotesPage() {
   }, [fetchNotes]);
 
   // Handle New Note
-  const handleNewNote = async () => {
+  const handleNewNote = useCallback(async () => {
     setIsMobileMenuOpen(false);
     if (!session) return;
     
@@ -167,7 +169,23 @@ export default function QuickNotesPage() {
     } catch (err) {
       console.error('Failed to create new quick note:', err);
     }
-  };
+  }, [session]);
+
+  useEffect(() => {
+    if (!intent || authLoading || notesLoading || !session) return;
+    const noteId = intent.searchParams.get('note');
+    const view = intent.searchParams.get('view');
+    const fresh = intent.searchParams.get('action') === 'new-quick-note';
+    if (!noteId && !view && !fresh) return;
+    if (!consume(['note', 'view', 'action'])) return;
+    if (fresh) { setViewMode('normal'); void handleNewNote(); }
+    else if (noteId) {
+      const note = notes.find(item => item.id === noteId);
+      if (note) { setViewMode(note.isArchived ? 'archived' : 'normal'); setActiveNoteId(note.id); setIsMobileMenuOpen(false); }
+    } else if (view === 'archived' || view === 'trash') {
+      setViewMode(view); setActiveNoteId(null); setIsMobileMenuOpen(false);
+    }
+  }, [intent, consume, authLoading, notesLoading, session, notes, handleNewNote]);
 
   const handleArchiveToggle = async (e: React.MouseEvent, id: string, currentArchived: boolean) => {
     e.stopPropagation();
@@ -418,8 +436,7 @@ export default function QuickNotesPage() {
     } else if (viewMode === 'normal') {
       if (n.isArchived) return false;
     }
-    return n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           n.body.toLowerCase().includes(searchQuery.toLowerCase());
+    return true;
   });
 
   if (authLoading) {
@@ -431,30 +448,15 @@ export default function QuickNotesPage() {
   }
 
   return (
-    <div className="flex h-[100dvh] md:h-screen bg-background overflow-hidden font-sans text-primary-text selection:bg-primary-accent/30 selection:text-primary-text">
+    <div className="venote-page flex h-[100dvh] md:h-screen bg-background overflow-hidden font-sans text-primary-text selection:bg-primary-accent/30 selection:text-primary-text">
       
       <AppSidebar 
         activePath="/app/quick-notes" 
         isMobileMenuOpen={isMobileMenuOpen} 
         onCloseMenu={() => setIsMobileMenuOpen(false)} 
         session={session} 
-        onNewNote={handleNewNote}
-        hideProfile={isStyleSheetOpen}
-      >
-        <div className="px-4 md:px-5 pb-3 space-y-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3.5 top-3 text-muted-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-background border border-hairline rounded-xl text-sm focus:outline-none focus:border-muted-text transition-all placeholder:text-muted-text text-primary-text"
-              />
-            </div>
+        searchContext={{ scope: 'quick-notes', view: viewMode }}
+        searchTools={<>
             <button
               type="button"
               onClick={() => {
@@ -489,21 +491,18 @@ export default function QuickNotesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
-          </div>
-        </div>
+        </>}
+        onNewNote={handleNewNote}
+        hideProfile={isStyleSheetOpen}
+      >
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 space-y-1 md:space-y-2 custom-scrollbar min-h-0">
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 space-y-1 md:space-y-2 custom-scrollbar min-h-0 ${!notesLoading ? 'venote-content-enter' : ''}`}>
           {viewMode === 'trash' ? (
             <div className="py-2">
               <TrashList userId={session?.user?.id} onRestore={fetchNotes} onEmpty={() => {}} />
             </div>
           ) : notesLoading ? (
-            <div className="flex justify-center p-4">
-              <svg className="animate-spin h-5 w-5 text-muted-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
+            <DelayedSkeleton label="Loading quick notes"><div className="space-y-2">{[0, 1, 2].map(n => <GlassSkeletonCard key={n} rows={1} className="!p-4 min-h-20" />)}</div></DelayedSkeleton>
           ) : notes.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-text glass-panel rounded-xl border border-white/10 border-dashed">
               No quick notes yet.

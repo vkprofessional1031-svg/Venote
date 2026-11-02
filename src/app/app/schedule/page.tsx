@@ -1,5 +1,6 @@
 'use client';
 
+import { GlassSkeletonCard, DelayedSkeleton } from '@/components/Skeleton';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -680,7 +681,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="flex h-screen bg-background text-primary-text font-sans overflow-hidden">
+    <div className="venote-page flex h-screen bg-background text-primary-text font-sans overflow-hidden">
       {/* App Main Sidebar */}
       <AppSidebar 
         activePath="/app/schedule"
@@ -901,7 +902,8 @@ export default function SchedulePage() {
         )}
 
         {/* Main Workspace Body */}
-        <div className="flex-1 flex min-h-0 relative overflow-hidden">
+        <div className={`flex-1 flex min-h-0 relative overflow-hidden ${!loading ? 'venote-content-enter' : ''}`}>
+          {loading && <DelayedSkeleton label="Loading schedule" className="absolute inset-0 z-20 pointer-events-none bg-background p-4"><div className="grid grid-cols-1 md:grid-cols-7 gap-2 h-full">{Array.from({ length: 7 }, (_, n) => <GlassSkeletonCard key={n} rows={8} className="h-full !p-2" />)}</div></DelayedSkeleton>}
           {/* DESKTOP WEEK-VIEW GRID (Visible only on md screens and up) */}
           <div className="hidden md:flex flex-1 flex-col min-w-0 h-full overflow-hidden bg-background">
             {/* Days Header Row */}

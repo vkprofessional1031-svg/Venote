@@ -293,7 +293,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ value, o
             if (editor.isActive('image')) return false;
             return true;
           }}
-          className="flex items-center gap-1 p-1 md:p-1.5 glass-panel-modal border border-card-border rounded-full shadow-2xl"
+          className="venote-editor-tools flex items-center gap-1 p-1 md:p-1.5 glass-panel-modal border border-card-border rounded-full shadow-2xl"
         >
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}

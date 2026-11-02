@@ -611,3 +611,139 @@ li .glass-md-list {
     background: linear-gradient(rgba(255, 92, 56, 0.16), rgba(255, 92, 56, 0.16)), var(--glass-bg-solid);
   }
 }
+
+/* Shared delayed loading surfaces; color follows the active theme. */
+.venote-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary-text) 8%, transparent);
+}
+.venote-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary-text) 9%, transparent), transparent);
+  animation: venote-sweep 1.6s ease-in-out infinite;
+}
+.venote-content-enter { animation: venote-content-enter 180ms ease-out; }
+@keyframes venote-sweep { to { transform: translateX(100%); } }
+@keyframes venote-content-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .venote-skeleton::after { animation: none; display: none; }
+  .venote-content-enter { animation: none; }
+}
+
+/* Ask placeholders keep the answer shell and use a slightly clearer theme tint. */
+.ask-skeleton .venote-skeleton {
+  background: color-mix(in srgb, var(--primary-text) 12%, transparent);
+}
+.ask-skeleton .venote-skeleton::after {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary-text) 12%, transparent), transparent);
+}
+
+.venote-page { height: var(--venote-vh, 100dvh) !important; min-height: 0; max-width: 100%; }
+.venote-sidebar { height: var(--venote-vh, 100dvh) !important; }
+.venote-command-overlay {
+  top: var(--venote-vtop, 0px); left: var(--venote-vleft, 0px);
+  width: var(--venote-vw, 100%); height: var(--venote-vh, 100dvh);
+  align-items: flex-start;
+  padding: max(6vh, env(safe-area-inset-top), 12px) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.venote-command-dialog { max-height: 100%; color: var(--primary-text); }
+@media (max-width: 767px) {
+  html, body { max-width: 100%; overflow-x: clip; }
+  [data-venote-app] { overflow-wrap: anywhere; }
+  [data-venote-app] :is(button, a, [role="button"], summary, select) {
+    min-height: 44px; min-width: 44px; touch-action: manipulation;
+  }
+  [data-venote-app] :is(input, textarea, select, [contenteditable="true"]) { font-size: max(16px, 1em) !important; scroll-margin-block: 20px; }
+  [data-venote-app] :is(main, form, article, section) { min-width: 0; max-width: 100%; }
+  [data-venote-app] :is(img, video, canvas, iframe) { max-width: 100%; }
+  [data-venote-app] :is(pre, table) { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+  [data-venote-app] table { table-layout: fixed; min-width: 0 !important; }
+  [data-venote-app] :is(td, th) { overflow-wrap: anywhere; }
+  .venote-mobile-header {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
+  }
+  .venote-mobile-header .venote-brand { gap: 8px; }
+  .venote-mobile-header .venote-brand-wordmark { font-size: 26px; }
+  .venote-sidebar {
+    width: min(304px, calc(100vw - 24px)); max-width: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .venote-sidebar nav > div { height: 56px; }
+  [data-sidebar-action] {
+    position: relative; width: 44px; height: 44px; margin-right: -6px;
+    background: transparent; border-color: transparent;
+  }
+  [data-sidebar-action]::before {
+    content: ''; position: absolute; inset: 6px; border-radius: 10px;
+    background: color-mix(in srgb, var(--primary-accent) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary-accent) 30%, transparent);
+  }
+  [data-sidebar-action]:hover { background: transparent; border-color: transparent; }
+  [data-sidebar-action]:hover::before {
+    background: color-mix(in srgb, var(--primary-accent) 25%, transparent);
+    border-color: color-mix(in srgb, var(--primary-accent) 50%, transparent);
+  }
+  .venote-bottom-nav {
+    padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right));
+  }
+  [data-tour="organize-input"] {
+    padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right));
+  }
+  .venote-input-dock { padding-bottom: 12px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .venote-progress { height: auto; overflow: visible; }
+  .venote-progress .glass-chip { min-height: 44px; min-width: 44px; }
+  .venote-progress > div { width: 100%; flex-wrap: wrap; }
+  .venote-command-overlay { padding-top: max(8px, env(safe-area-inset-top)); padding-inline: max(8px, env(safe-area-inset-left), env(safe-area-inset-right)); }
+  .tippy-box, .tippy-content { max-width: calc(100vw - 16px) !important; }
+  .tippy-content > .flex { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-venote-app] *, [data-venote-app] *::before, [data-venote-app] *::after {
+    scroll-behavior: auto !important; animation-duration: 0s !important; transition-duration: 0s !important;
+  }
+}
+
+.venote-sidebar-top { max-height: calc(var(--venote-vh, 100dvh) - 144px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+@media (max-width: 767px) {
+  .venote-sidebar nav > div { height: 50px; }
+  .venote-sidebar-search-row { padding-bottom: 12px; }
+}
+
+@media (max-width: 767px) {
+  [data-venote-keyboard="open"] .venote-bottom-nav { display: none; }
+  .venote-page > main, .venote-page > div:last-child {
+    min-width: 0; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+  }
+  [data-venote-app] .overflow-x-auto { overflow-x: clip; }
+  [data-venote-app] .w-max:has(table) { width: 100%; min-width: 0; }
+  .venote-editor-tools { flex-wrap: wrap; max-width: calc(100vw - 24px); border-radius: 16px; }
+  .venote-command-dialog [role="option"] { flex-shrink: 0; }
+}
+
+/* The drawer replaces the mobile header while open, so only one Search is visible. */
+@media (max-width: 767px) {
+  .venote-page:has(.venote-sidebar[data-mobile-menu-open="true"]) .venote-mobile-header { visibility: hidden; }
+}
+@media (max-width: 767px), (hover: none) {
+  .venote-sidebar-search-hint { display: none; }
+}
+
+:root {
+  --venote-bottom-nav-height: 56px;
+}
+
+/* In-flow navigation reserves its own height and safe area; content never sits behind it. */
+.venote-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -6px 24px color-mix(in srgb, var(--primary-text) 6%, transparent);
+}
+@media (max-width: 767px) {
+  .venote-organize-composer { gap: 8px; }
+  .venote-home-progress { order: -1; }
+  .venote-home-progress:not(:has(.venote-progress > div)) { display: none; }
+  [data-venote-keyboard="open"] .venote-input-dock { padding-bottom: 0; }
+}

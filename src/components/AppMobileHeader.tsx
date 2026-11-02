@@ -1,5 +1,7 @@
 "use client";
 
+import BrandLogo from '@/components/BrandLogo';
+import { useCommands } from '@/components/CommandPaletteProvider';
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { supabase } from '@/lib/supabase';
@@ -11,6 +13,7 @@ interface AppMobileHeaderProps {
 }
 
 export default function AppMobileHeader({ onOpenMenu, rightContent, className }: AppMobileHeaderProps) {
+  const { openPalette } = useCommands();
   const [defaultView, setDefaultView] = useState('/app');
 
   useEffect(() => {
@@ -25,38 +28,19 @@ export default function AppMobileHeader({ onOpenMenu, rightContent, className }:
   }, []);
 
   return (
-    <div className={`md:hidden flex items-center justify-between p-4 border-b border-hairline sticky top-0 z-30 ${className || 'bg-background'}`}>
-      <Link href={defaultView} className="flex items-center gap-3">
-        <button 
-          type="button"
-          onClick={(e) => { e.preventDefault(); onOpenMenu(); }}
-          className="p-2 -ml-2 text-primary-text rounded-lg hover:bg-card transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+    <div className={`venote-mobile-header md:hidden flex shrink-0 items-center justify-between gap-2 border-b border-hairline sticky top-0 z-30 ${className || 'bg-background'}`}>
+      <div className="flex min-w-0 items-center gap-1">
+        <button type="button" onClick={onOpenMenu} aria-label="Open navigation" title="Open navigation" className="flex h-11 w-11 shrink-0 items-center justify-center text-primary-text rounded-xl hover:bg-surface-brown/40">
+          <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <div className="flex items-center gap-2">
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="8" fill="url(#logo-grad-mobile)"/>
-            <defs>
-              <linearGradient id="logo-grad-mobile" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#FF6B3D"/>
-                <stop offset="1" stopColor="#FF3B1D"/>
-              </linearGradient>
-            </defs>
-            <path d="M14.5 22.5L9 11.5H13L16 18L21 9H25L17.5 22.5H14.5Z" fill="white"/>
-            <circle cx="8" cy="14" r="1.5" fill="white"/>
-            <circle cx="10" cy="20" r="1" fill="white"/>
-            <circle cx="7" cy="18" r="1" fill="white"/>
-            <polygon points="10,8 13,10 9,11" fill="white"/>
-            <polygon points="8,21 12,23 9,24" fill="white"/>
-            <polygon points="12,14 15,16 12,17" fill="white"/>
-          </svg>
-          <span className="font-serif italic font-bold text-2xl tracking-tight leading-none text-primary-text pt-1">Venote</span>
-        </div>
-      </Link>
-      {rightContent && rightContent}
+        <Link href={defaultView} aria-label="Venote home" className="flex min-h-11 min-w-0 items-center"><BrandLogo className="h-9" /></Link>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {rightContent && <div className="max-w-14 truncate">{rightContent}</div>}
+        <button type="button" onClick={() => openPalette()} aria-label="Search Venote" title="Search Venote" className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-text hover:bg-surface-brown/40 hover:text-primary-text">
+          <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+        </button>
+      </div>
     </div>
   );
 }

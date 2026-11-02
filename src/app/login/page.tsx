@@ -1,5 +1,6 @@
 'use client';
 
+import BrandLogo from '@/components/BrandLogo';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -79,23 +80,7 @@ export default function Login() {
       <div className="w-full max-w-md bg-card border border-hairline rounded-2xl p-8 shadow-2xl relative">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <svg width="40" height="40" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="32" height="32" rx="8" fill="url(#logo-grad)"/>
-              <defs>
-                <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#FF6B3D"/>
-                  <stop offset="1" stopColor="#FF3B1D"/>
-                </linearGradient>
-              </defs>
-              <path d="M14.5 22.5L9 11.5H13L16 18L21 9H25L17.5 22.5H14.5Z" fill="white"/>
-              <circle cx="8" cy="14" r="1.5" fill="white"/>
-              <circle cx="10" cy="20" r="1" fill="white"/>
-              <circle cx="7" cy="18" r="1" fill="white"/>
-              <polygon points="10,8 13,10 9,11" fill="white"/>
-              <polygon points="8,21 12,23 9,24" fill="white"/>
-              <polygon points="12,14 15,16 12,17" fill="white"/>
-            </svg>
-            <span className="font-serif italic font-bold text-[40px] tracking-tight leading-none pt-1 text-primary-text">Venote</span>
+            <BrandLogo className="h-10" />
           </div>
           <h1 className="font-serif italic font-bold text-3xl tracking-tight">
             {isSignUp ? 'Create an account' : 'Welcome back'}

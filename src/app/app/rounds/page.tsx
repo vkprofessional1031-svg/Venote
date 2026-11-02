@@ -1,5 +1,8 @@
 'use client';
 
+import { PipelineChips } from '@/components/PipelineChips';
+import { PIPELINES, usePipelineProgress } from '@/hooks/usePipelineProgress';
+import { GlassSkeletonCard, DelayedSkeleton } from '@/components/Skeleton';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useState, useEffect, useRef } from 'react';
@@ -10,6 +13,7 @@ import { insertPrepItems, recalculateApplicationStatus } from '@/utils/prep';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppSidebar from '@/components/AppSidebar';
 import AppMobileHeader from '@/components/AppMobileHeader';
+import MobileNav from '@/components/MobileNav';
 import { toLocalYMD } from '@/utils/date';
 
 interface JobApplication {
@@ -74,6 +78,9 @@ export default function RoundsPage() {
 
   // AI Quick Add state
   const [aiInput, setAiInput] = useState('');
+  const pipeline = usePipelineProgress();
+  const prepPipeline = usePipelineProgress();
+  const retryPrepRef = useRef<() => void>(() => {});
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
 
@@ -165,6 +172,7 @@ export default function RoundsPage() {
   const [isChatPickerOpen, setIsChatPickerOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{id?: string, role: 'user'|'assistant', content: string, isSynthetic?: boolean}[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [prepSaving, setPrepSaving] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -298,6 +306,9 @@ export default function RoundsPage() {
       });
     }
 
+    prepPipeline.begin(['Ready', 'Preparing', 'Saving'], 1);
+    retryPrepRef.current = () => { void triggerChatAPI(userContent, previousMessages, true); };
+    let prepError: string | null = null;
     const newMessages = [...previousMessages, { role: 'user' as const, content: userContent, isSynthetic }];
     setChatMessages(newMessages);
     setChatLoading(true);
@@ -349,6 +360,7 @@ export default function RoundsPage() {
           fullAssistantContent += text;
           pendingUpdateRef.current = fullAssistantContent;
         },
+        onError: (message) => { prepError = message; },
         onDone: (reason) => {
           if (reason === 'length') {
              fullAssistantContent += '\n\n*(Response cut off — ask me to continue)*';
@@ -356,6 +368,7 @@ export default function RoundsPage() {
           }
         }
       }, ac.signal);
+      if (prepError) throw new Error(prepError);
 
     } catch (err: any) {
       if (err.name === 'AbortError' || ac.signal.aborted) {
@@ -363,6 +376,8 @@ export default function RoundsPage() {
         fullAssistantContent += '\n\n*(Stopped)*';
         pendingUpdateRef.current = fullAssistantContent;
       } else {
+        prepError = err.message || 'Could not prepare answer';
+        prepPipeline.fail(prepError!);
         console.error('Error sending message:', err);
       }
     } finally {
@@ -383,7 +398,9 @@ export default function RoundsPage() {
       abortControllerRef.current = null;
       
       if (fullAssistantContent.trim()) {
-        const { data } = await supabase.from('interview_prep_chats').insert({
+        setPrepSaving(true);
+        if (!prepError) prepPipeline.stage(2);
+        const { data, error: prepSaveError } = await supabase.from('interview_prep_chats').insert({
           user_id: session.user.id,
           job_application_id: activeChat.appId,
           mode: activeChat.mode,
@@ -391,6 +408,12 @@ export default function RoundsPage() {
           content: fullAssistantContent
         }).select().single();
         
+        setPrepSaving(false);
+        if (prepSaveError) { prepError = prepSaveError.message; prepPipeline.fail(prepSaveError.message); }
+        else if (!prepError) {
+          prepPipeline.complete();
+          setChatInput(current => current.trim() === userContent ? '' : current);
+        }
         if (data) {
            setChatMessages(prev => {
               const updated = [...prev];
@@ -401,6 +424,9 @@ export default function RoundsPage() {
               return updated;
            });
         }
+      } else if (!prepError) {
+        if (stopped) prepPipeline.labels(['Ready', 'Stopped', 'No answer to save']);
+        prepPipeline.complete();
       }
     }
   };
@@ -431,14 +457,14 @@ export default function RoundsPage() {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!chatInput.trim() || chatLoading || !activeChat) return;
+    if (!chatInput.trim() || chatLoading || isStreaming || prepSaving || !activeChat) return;
 
     const content = chatInput.trim();
-    setChatInput('');
     await triggerChatAPI(content, chatMessages);
   };
 
   useEffect(() => {
+    prepPipeline.cancel();
     if (activeChat) {
       loadChatHistory();
     } else {
@@ -465,6 +491,7 @@ export default function RoundsPage() {
     e.preventDefault();
     if (!aiInput.trim() || isProcessing) return;
 
+    pipeline.begin(['Ready', 'Preparing', 'Saving'], 1);
     setIsProcessing(true);
     setAiError('');
 
@@ -480,6 +507,7 @@ export default function RoundsPage() {
       if (!res.ok) {
         if (res.status === 429) {
           setAiError("You've hit the AI rate limit. Please wait a minute.");
+          pipeline.fail("Rate limit reached. Please wait a minute.");
           return;
         }
         throw new Error(data.error || 'Failed to process input');
@@ -487,11 +515,13 @@ export default function RoundsPage() {
 
       if (!data.results || !Array.isArray(data.results) || data.results.length === 0) {
         setAiError("Could not understand that. Try being more specific about the company, round, or prep session.");
+        pipeline.fail("Could not understand that input");
         return;
       }
 
       const results = data.results;
       
+      pipeline.stage(2);
       await insertPrepItems(results, session.user.id, supabase);
 
       // Refresh data
@@ -518,10 +548,12 @@ export default function RoundsPage() {
       
       if (prepData) setPrepSessions(prepData);
 
-      setAiInput('');
+      pipeline.complete();
+      setAiInput(current => current === aiInput ? '' : current);
     } catch (err) {
       console.error('Error processing AI input:', err);
       setAiError('Failed to process. Please try again or use a simpler prompt.');
+      pipeline.fail(err instanceof Error ? err.message : 'Could not save item');
     } finally {
       setIsProcessing(false);
     }
@@ -830,7 +862,7 @@ export default function RoundsPage() {
   if (authLoading) return null;
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden relative selection:bg-primary-accent/20">
+    <div className="venote-page flex h-screen bg-background overflow-hidden relative selection:bg-primary-accent/20">
       <AppSidebar 
         activePath="/app/rounds" 
         isMobileMenuOpen={isMobileMenuOpen} 
@@ -842,8 +874,8 @@ export default function RoundsPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full bg-background relative min-w-0">
         <AppMobileHeader onOpenMenu={() => setIsMobileMenuOpen(true)} />
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-          <div className="max-w-4xl mx-auto flex flex-col gap-8 min-h-full pb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+          <div className="max-w-4xl mx-auto flex flex-col gap-8 min-h-full pb-0 md:pb-8">
             
             <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
@@ -879,7 +911,7 @@ export default function RoundsPage() {
 
                 {inputMode === 'quick' ? (
                   <>
-                    <form onSubmit={handleAiSubmit} className="flex gap-3">
+                    <form id="jobs-ai-form" onSubmit={handleAiSubmit} className="flex gap-3">
                       <div className="flex-1 relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-text/50">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -890,13 +922,13 @@ export default function RoundsPage() {
                           type="text"
                           value={aiInput}
                           onChange={(e) => setAiInput(e.target.value)}
-                          disabled={isProcessing}
                           placeholder="Got an OA from Amazon due Friday... or Solved 3 LeetCode mediums today..."
                           className="w-full bg-card text-primary-text border border-card-border rounded-xl pl-10 pr-4 py-3.5 text-[15px] focus:outline-none focus:border-primary-accent/50 focus:ring-1 focus:ring-primary-accent/30 transition-all placeholder:text-muted-text/60 shadow-inner"
                         />
                       </div>
                       <button
                         type="submit"
+                        aria-busy={isProcessing}
                         disabled={isProcessing || !aiInput.trim()}
                         className="bg-primary-text text-background font-semibold px-6 py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0 flex items-center gap-2"
                       >
@@ -908,6 +940,7 @@ export default function RoundsPage() {
                         ) : 'Add'}
                       </button>
                     </form>
+                    <PipelineChips pipeline={pipeline} onRetry={() => (document.getElementById('jobs-ai-form') as HTMLFormElement)?.requestSubmit()} />
                     {aiError && (
                       <div className="mt-1 text-red-400 text-sm pl-2 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -987,11 +1020,9 @@ export default function RoundsPage() {
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center p-12">
-                <div className="w-8 h-8 border-4 border-primary-accent border-t-transparent rounded-full animate-spin"></div>
-              </div>
+              <DelayedSkeleton label="Loading cards"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[480px]">{[0, 1].map(n => <GlassSkeletonCard key={n} rows={6} className="min-h-[360px]" />)}</div></DelayedSkeleton>
             ) : (
-              <div className="flex flex-col gap-8">
+              <div className="flex flex-col gap-8 min-h-[480px] venote-content-enter">
                 
                 {/* Top 2-Column Grid: Left Col (Due Soon + Applications Cards) & Right Col (Prep Reps) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2005,6 +2036,8 @@ export default function RoundsPage() {
           </div>
         </div>
 
+        <MobileNav activePath="/app/rounds" />
+
         {/* Interview Prep Chat Modal */}
         {activeChat && (() => {
           const app = applications.find(a => a.id === activeChat.appId);
@@ -2059,11 +2092,7 @@ export default function RoundsPage() {
                     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
                   }}
                 >
-                  {chatMessages.length === 0 && chatLoading ? (
-                    <div className="flex justify-center p-4">
-                      <div className="animate-spin h-5 w-5 border-2 border-primary-accent border-t-transparent rounded-full"></div>
-                    </div>
-                  ) : (
+                  {
                     chatMessages.filter(msg => !msg.isSynthetic).map((msg, i) => (
                       <div key={i} className={`flex flex-col group ${msg.role === 'user' ? 'ml-auto items-end max-w-[85%]' : 'mr-auto items-start w-full relative'}`}>
                         {msg.role === 'user' && (
@@ -2134,18 +2163,11 @@ export default function RoundsPage() {
                         </div>
                       </div>
                     ))
-                  )}
-                  {chatLoading && chatMessages.length > 0 && (
-                    <div className="mr-auto">
-                      <div className="px-4 py-2 bg-surface-brown/30 rounded-2xl rounded-bl-sm border border-card-border/40 flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce"></span>
-                        <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-75"></span>
-                        <span className="w-1.5 h-1.5 bg-muted-text/50 rounded-full animate-bounce delay-150"></span>
-                      </div>
-                    </div>
-                  )}
+                  }
+
                   <div ref={chatMessagesEndRef} />
                 </div>
+
 
                 {/* Input Area */}
                 <form onSubmit={handleSendMessage} className="p-3 border-t border-card-border bg-surface-brown/10 flex gap-2">
@@ -2182,7 +2204,8 @@ export default function RoundsPage() {
                   ) : (
                     <button
                       type="submit"
-                      disabled={!chatInput.trim() || chatLoading}
+                      aria-busy={chatLoading || isStreaming || prepSaving}
+                      disabled={!chatInput.trim() || chatLoading || isStreaming || prepSaving}
                       className="p-2.5 bg-primary-accent text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-primary-accent/90 shrink-0"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -2191,6 +2214,7 @@ export default function RoundsPage() {
                     </button>
                   )}
                 </form>
+                <div className="px-3"><PipelineChips pipeline={prepPipeline} onRetry={() => retryPrepRef.current()} /></div>
               </div>
             </div>
           );
@@ -2200,7 +2224,7 @@ export default function RoundsPage() {
         {!activeChat && applications.length > 0 && (
           <button
             onClick={() => applications.length === 1 ? setActiveChat({ appId: applications[0].id, mode: 'research' }) : setIsChatPickerOpen(true)}
-            className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 p-3 bg-primary-accent text-white rounded-full shadow-lg shadow-primary-accent/20 hover:bg-primary-accent/90 transition-all hover:scale-105"
+            className="fixed bottom-[calc(var(--venote-bottom-nav-height,56px)+env(safe-area-inset-bottom)+16px)] right-6 md:bottom-8 md:right-8 z-40 p-3 bg-primary-accent text-white rounded-full shadow-lg shadow-primary-accent/20 hover:bg-primary-accent/90 transition-all hover:scale-105"
             title="Interview Prep Assistant"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

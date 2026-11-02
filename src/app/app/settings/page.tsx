@@ -114,7 +114,7 @@ export default function SettingsPage() {
   const isGoogle = provider === 'google';
 
   return (
-    <div className="flex h-[100dvh] md:h-screen bg-background overflow-hidden font-sans text-primary-text selection:bg-primary-accent/30 selection:text-primary-text relative">
+    <div className="venote-page flex h-[100dvh] md:h-screen bg-background overflow-hidden font-sans text-primary-text selection:bg-primary-accent/30 selection:text-primary-text relative">
       {/* Toast */}
       {toastMessage && (
         <div className="absolute top-4 right-4 z-50 glass-panel border border-primary-accent/40 text-primary-text px-4 py-2 rounded-xl shadow-lg transition-opacity animate-in fade-in slide-in-from-top-2">
@@ -236,7 +236,7 @@ export default function SettingsPage() {
                       className="appearance-none bg-card border border-card-border rounded-xl pl-3 pr-9 py-2 text-sm text-primary-text outline-none focus:border-primary-accent/50 transition-colors w-full"
                     >
                       <option value="/app">Organize</option>
-                      <option value="/app/this-week">Dashboard</option>
+                      <option value="/overview">Overview</option>
                       <option value="/app/schedule">Schedule</option>
                       <option value="/app/expenses">Wallet</option>
                       <option value="/app/rounds">Job</option>
