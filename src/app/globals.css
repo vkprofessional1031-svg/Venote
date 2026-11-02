@@ -75,7 +75,7 @@
 
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-plus-jakarta-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: "Space Mono", var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
@@ -746,4 +746,352 @@ li .glass-md-list {
   .venote-home-progress { order: -1; }
   .venote-home-progress:not(:has(.venote-progress > div)) { display: none; }
   [data-venote-keyboard="open"] .venote-input-dock { padding-bottom: 0; }
+}
+
+/* ==========================================================================
+   Public Landing Page — Aurora Mesh & Glass Bento System
+   ========================================================================== */
+:root, [data-theme="dark"] {
+  --landing-glass-bg: rgba(20, 17, 15, 0.62);
+  --landing-glass-bg-scrolled: rgba(18, 15, 13, 0.84);
+  --landing-glass-card: rgba(28, 23, 20, 0.72);
+  --landing-glass-subcard: rgba(245, 237, 217, 0.045);
+  --landing-edge-top: rgba(255, 255, 255, 0.22);
+  --landing-edge-side: rgba(245, 237, 217, 0.10);
+  --landing-edge-bottom: rgba(245, 237, 217, 0.04);
+  --landing-shadow: 0 20px 56px -16px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
+  --landing-nav-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.5), 0 8px 28px -6px rgba(255, 92, 56, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.20);
+  --landing-nav-shadow-scrolled: 0 18px 44px -8px rgba(0, 0, 0, 0.68), 0 10px 32px -6px rgba(255, 92, 56, 0.20), inset 0 1px 0 0 rgba(255, 255, 255, 0.24);
+  --landing-aurora-opacity: 0.34;
+  --landing-grain-opacity: 0.04;
+}
+
+[data-theme="light"] {
+  --landing-glass-bg: rgba(255, 252, 247, 0.64);
+  --landing-glass-bg-scrolled: rgba(255, 253, 249, 0.88);
+  --landing-glass-card: rgba(255, 255, 255, 0.80);
+  --landing-glass-subcard: rgba(28, 24, 22, 0.04);
+  --landing-edge-top: rgba(255, 255, 255, 0.95);
+  --landing-edge-side: rgba(28, 24, 22, 0.10);
+  --landing-edge-bottom: rgba(28, 24, 22, 0.05);
+  --landing-shadow: 0 20px 48px -16px rgba(74, 48, 24, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --landing-nav-shadow: 0 14px 34px -10px rgba(74, 48, 24, 0.14), 0 8px 26px -6px rgba(255, 92, 56, 0.14), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  --landing-nav-shadow-scrolled: 0 18px 42px -8px rgba(74, 48, 24, 0.20), 0 10px 30px -6px rgba(255, 92, 56, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  --landing-aurora-opacity: 0.24;
+  --landing-grain-opacity: 0.03;
+}
+
+.landing-nav-pill {
+  position: relative;
+  background:
+    linear-gradient(var(--landing-glass-bg), var(--landing-glass-bg)) padding-box,
+    linear-gradient(180deg, var(--landing-edge-top) 0%, var(--landing-edge-side) 55%, var(--landing-edge-bottom) 100%) border-box;
+  border: 1px solid transparent;
+  box-shadow: var(--landing-nav-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  backdrop-filter: blur(24px) saturate(175%);
+  transition: background 220ms ease, box-shadow 220ms ease;
+}
+
+.landing-nav-pill[data-scrolled="true"] {
+  background:
+    linear-gradient(var(--landing-glass-bg-scrolled), var(--landing-glass-bg-scrolled)) padding-box,
+    linear-gradient(180deg, var(--landing-edge-top) 0%, var(--landing-edge-side) 60%, var(--landing-edge-bottom) 100%) border-box;
+  box-shadow: var(--landing-nav-shadow-scrolled);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+}
+
+.landing-glass-shell {
+  background: var(--landing-glass-card);
+  border-top: 1px solid var(--landing-edge-top);
+  border-left: 1px solid var(--landing-edge-side);
+  border-right: 1px solid var(--landing-edge-side);
+  border-bottom: 1px solid var(--landing-edge-bottom);
+  box-shadow: var(--landing-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+/* Bento cards use solid-backed translucent glass + top highlight so we don't stack >6 backdrop-blur layers */
+.landing-bento-card {
+  position: relative;
+  background: var(--landing-glass-card);
+  border-top: 1px solid var(--landing-edge-top);
+  border-left: 1px solid var(--landing-edge-side);
+  border-right: 1px solid var(--landing-edge-side);
+  border-bottom: 1px solid var(--landing-edge-bottom);
+  box-shadow: var(--landing-shadow);
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), border-color 240ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-bento-card:hover {
+    transform: translateY(-2px);
+  }
+  .landing-bento-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: radial-gradient(
+      320px circle at var(--spot-x, -999px) var(--spot-y, -999px),
+      rgba(255, 92, 56, 0.55),
+      rgba(139, 92, 246, 0.25) 45%,
+      transparent 75%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 220ms ease;
+    pointer-events: none;
+  }
+  .landing-bento-card:hover::before {
+    opacity: 1;
+  }
+}
+
+.landing-subcard {
+  background: var(--landing-glass-subcard);
+  border: 1px solid var(--landing-edge-side);
+  box-shadow: inset 0 1px 0 0 var(--landing-edge-top);
+}
+
+.login-glass-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--landing-edge-side);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+[data-theme="light"] .login-glass-input {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(28, 24, 22, 0.12);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+.login-glass-input:focus {
+  outline: none;
+  border-color: rgba(255, 92, 56, 0.72);
+  box-shadow: 0 0 0 3px rgba(255, 92, 56, 0.20), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
+/* Unified Login Stage with Specular Border Spotlight */
+.login-stage-shell {
+  position: relative;
+  background:
+    linear-gradient(var(--landing-glass-card), var(--landing-glass-card)) padding-box,
+    linear-gradient(180deg, var(--landing-edge-top) 0%, var(--landing-edge-side) 55%, var(--landing-edge-bottom) 100%) border-box;
+  border: 1px solid transparent;
+  box-shadow: var(--landing-shadow), 0 12px 44px -12px rgba(255, 92, 56, 0.16);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  backdrop-filter: blur(22px) saturate(165%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .login-stage-shell::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: radial-gradient(
+      380px circle at var(--stage-spot-x, -999px) var(--stage-spot-y, -999px),
+      rgba(255, 255, 255, 0.55),
+      rgba(255, 92, 56, 0.48) 32%,
+      rgba(139, 92, 246, 0.28) 60%,
+      transparent 78%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 220ms ease;
+    pointer-events: none;
+    z-index: 30;
+  }
+  .login-stage-shell:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Conic-gradient focus sweep around input wrapper */
+.login-input-wrap {
+  position: relative;
+  border-radius: 16px;
+}
+
+.login-input-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 17px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg,
+    #FF5C38 0deg,
+    #8B5CF6 120deg,
+    #E8B86D 240deg,
+    #FF5C38 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-input-wrap:focus-within::before {
+  animation: loginConicSweep 680ms ease-out forwards;
+}
+
+@keyframes loginConicSweep {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.992);
+  }
+  65% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* Slow Idle Shimmer Sweep on Primary Button */
+.login-btn-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.26) 50%,
+    transparent 75%
+  );
+  transform: translateX(-120%);
+  animation: loginBtnShimmerSweep 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes loginBtnShimmerSweep {
+  0%, 55% {
+    transform: translateX(-120%);
+  }
+  90%, 100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Google Button Cursor Light Sweep */
+.login-google-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .login-google-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      180px circle at var(--g-spot-x, -999px) var(--g-spot-y, -999px),
+      rgba(255, 92, 56, 0.16),
+      rgba(255, 255, 255, 0.08) 45%,
+      transparent 75%
+    );
+    opacity: 0;
+    transition: opacity 180ms ease;
+    pointer-events: none;
+  }
+  .login-google-btn:hover::before {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-input-wrap:focus-within::before,
+  .login-btn-shimmer {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
+.landing-aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  opacity: var(--landing-aurora-opacity);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.landing-aurora-blob.orange {
+  background: radial-gradient(circle, #FF5C38 0%, transparent 70%);
+  animation: landingAurora1 26s ease-in-out infinite alternate;
+}
+
+.landing-aurora-blob.purple {
+  background: radial-gradient(circle, #8B5CF6 0%, transparent 70%);
+  animation: landingAurora2 32s ease-in-out infinite alternate;
+}
+
+.landing-aurora-blob.gold {
+  background: radial-gradient(circle, #E8B86D 0%, transparent 70%);
+  animation: landingAurora3 29s ease-in-out infinite alternate;
+}
+
+@keyframes landingAurora1 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5vw, 4vh, 0) scale(1.06); }
+  100% { transform: translate3d(-3vw, 8vh, 0) scale(0.95); }
+}
+
+@keyframes landingAurora2 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-6vw, -5vh, 0) scale(1.05); }
+  100% { transform: translate3d(4vw, -3vh, 0) scale(0.96); }
+}
+
+@keyframes landingAurora3 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(4vw, -6vh, 0) scale(1.04); }
+  100% { transform: translate3d(-5vw, 3vh, 0) scale(0.97); }
+}
+
+@keyframes landingFloatShard {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -10px, 0) rotate(6deg); }
+}
+
+.landing-shard {
+  animation: landingFloatShard 11s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (max-width: 767px) {
+  .landing-nav-pill,
+  .landing-glass-shell {
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    backdrop-filter: blur(12px) saturate(140%);
+  }
+  .landing-aurora-blob {
+    filter: blur(80px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-aurora-blob,
+  .landing-shard {
+    animation: none !important;
+    transform: none !important;
+  }
+  .landing-bento-card,
+  .landing-bento-card:hover {
+    transform: none !important;
+    transition: none !important;
+  }
 }

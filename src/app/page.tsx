@@ -1,6 +1,13 @@
 'use client';
 
 import BrandLogo from '@/components/BrandLogo';
+import AuroraBackground from '@/components/landing/AuroraBackground';
+import LandingNav from '@/components/landing/LandingNav';
+import HeroLiveDemo from '@/components/landing/HeroLiveDemo';
+import LogoAssemblyScroll from '@/components/landing/LogoAssemblyScroll';
+import RouterBeamSection from '@/components/landing/RouterBeamSection';
+import FeatureBento from '@/components/landing/FeatureBento';
+import HowItWorks from '@/components/landing/HowItWorks';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -30,47 +37,47 @@ export default function LandingPage() {
   }, [router]);
 
   const ActionButtons = () => (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mt-4">
+    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mt-2">
       {/* Main Web App CTA */}
-      <Link 
+      <Link
         href="/login"
-        className="px-10 py-4 bg-gradient-to-r from-[#FF5C38] to-[#FF451A] text-white font-bold rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_8px_28px_0_rgba(255,92,56,0.4),inset_0_1px_0_0_rgba(255,255,255,0.25)] text-xl w-full sm:w-auto text-center border border-white/15"
+        className="min-h-[48px] px-10 py-4 bg-gradient-to-r from-[#FF5C38] to-[#FF451A] text-white font-bold rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_8px_28px_0_rgba(255,92,56,0.4),inset_0_1px_0_0_rgba(255,255,255,0.25)] text-lg sm:text-xl w-full sm:w-auto text-center border border-white/15 focus-visible:outline-2 focus-visible:outline-primary-accent focus-visible:outline-offset-2"
       >
         Get Started in Browser
       </Link>
 
       <div className="flex items-center gap-4 w-full">
-        <div className="h-px bg-white/10 flex-1"></div>
-        <span className="text-muted-text text-xs font-mono uppercase tracking-widest">or download app</span>
-        <div className="h-px bg-white/10 flex-1"></div>
+        <div className="h-px bg-[var(--glass-hairline)] flex-1" />
+        <span className="glass-muted text-xs font-mono uppercase tracking-widest">or download app</span>
+        <div className="h-px bg-[var(--glass-hairline)] flex-1" />
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full">
         <a
           href="https://github.com/vkprofessional1031-svg/Venote/releases/download/v1.0.0/Venote-1.0.0-arm64.dmg"
           download
-          className={`w-full sm:w-auto px-6 py-3.5 rounded-2xl font-medium transition-all flex items-center justify-center gap-2 border shadow-lg ${
+          className={`min-h-[48px] w-full sm:w-auto px-6 py-3.5 rounded-2xl font-medium transition-all flex items-center justify-center gap-2 border shadow-lg focus-visible:outline-2 focus-visible:outline-primary-accent focus-visible:outline-offset-2 ${
             detectedOS === 'mac' || detectedOS === 'other'
-              ? 'glass-panel glass-panel-interactive border-white/15 hover:border-primary-accent/50 text-primary-text'
-              : 'glass-panel-subtle border-white/5 text-muted-text hover:text-primary-text'
+              ? 'landing-bento-card border-primary-accent/35 text-primary-text'
+              : 'landing-subcard glass-muted hover:text-primary-text'
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>
           Download for Mac
         </a>
-        
+
         <a
           href="https://github.com/vkprofessional1031-svg/Venote/releases/download/v1.0.0/Venote.Setup.1.0.0.exe"
           download
-          className={`w-full sm:w-auto px-6 py-3.5 rounded-2xl font-medium transition-all flex items-center justify-center gap-2 border shadow-lg ${
+          className={`min-h-[48px] w-full sm:w-auto px-6 py-3.5 rounded-2xl font-medium transition-all flex items-center justify-center gap-2 border shadow-lg focus-visible:outline-2 focus-visible:outline-primary-accent focus-visible:outline-offset-2 ${
             detectedOS === 'windows'
-              ? 'glass-panel glass-panel-interactive border-white/15 hover:border-primary-accent/50 text-primary-text'
-              : 'glass-panel-subtle border-white/5 text-muted-text hover:text-primary-text'
+              ? 'landing-bento-card border-primary-accent/35 text-primary-text'
+              : 'landing-subcard glass-muted hover:text-primary-text'
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>
           Download for Windows
@@ -84,185 +91,132 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-primary-text font-sans selection:bg-primary-accent selection:text-white relative overflow-hidden">
-      {/* Background ambient orbs for refraction */}
-      <div 
-        aria-hidden="true" 
-        className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full pointer-events-none -z-10 opacity-70" 
-        style={{ 
-          background: `
-            radial-gradient(circle at 45% 45%, rgba(255,92,56,0.1) 0%, rgba(255,92,56,0.07) 20%, rgba(255,92,56,0.035) 45%, rgba(255,92,56,0.01) 70%, transparent 100%),
-            radial-gradient(circle at 55% 55%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%)
-          `
-        }}
-      />
-      <div 
-        aria-hidden="true" 
-        className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full pointer-events-none -z-10 opacity-70" 
-        style={{ 
-          background: `
-            radial-gradient(circle at 40% 50%, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.07) 20%, rgba(139,92,246,0.035) 45%, rgba(139,92,246,0.01) 70%, transparent 100%),
-            radial-gradient(circle at 60% 50%, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.05) 20%, rgba(139,92,246,0.02) 45%, rgba(139,92,246,0.005) 70%, transparent 100%)
-          `
-        }}
-      />
+    <div className="min-h-screen bg-background text-primary-text font-sans selection:bg-primary-accent selection:text-white relative overflow-x-clip">
+      <AuroraBackground />
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 h-20 glass-nav z-50 flex items-center justify-between px-6 md:px-12">
-        <div className="flex items-center gap-3">
-          <BrandLogo className="h-10" />
-        </div>
-        <div>
-          <Link 
-            href="/login" 
-            className="text-sm font-medium text-primary-text glass-panel-subtle hover:bg-surface-brown/50 border border-hairline px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
-          >
-            Sign In
-          </Link>
-        </div>
-      </nav>
+      {/* Floating Glass Pill Navigation (16px from top) */}
+      <LandingNav />
 
-      {/* Hero Section */}
-      <main className="pt-36 pb-24 px-6 md:px-12 max-w-5xl mx-auto flex flex-col items-center text-center mt-10 md:mt-16 relative">
-        {/* Subtle Ambient Glow */}
-        <div 
-          aria-hidden="true" 
-          className="ambient-glow-hero"
-        />
+      {/* Main Content */}
+      <main>
+        {/* Hero Section */}
+        <section className="pt-32 sm:pt-36 pb-16 md:pb-24 px-4 sm:px-6 md:px-12 max-w-5xl mx-auto flex flex-col items-center text-center relative">
+          <div aria-hidden="true" className="ambient-glow-hero" />
 
-        <div className="relative z-10 flex flex-col items-center">
-          <h1 className="font-serif italic font-bold text-5xl md:text-7xl lg:text-8xl tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
-            What's on your mind?<br />
-            <span className="text-primary-accent">We'll organize it.</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-text max-w-2xl mb-8 leading-relaxed font-normal">
-            Type, speak, or brain dump anything. Our AI automatically turns your messy thoughts into beautifully structured tasks, notes, tables, and roadmaps.
-          </p>
-          <ActionButtons />
-        </div>
+          <div className="relative z-10 flex flex-col items-center w-full">
+            <span className="font-mono text-xs uppercase tracking-widest px-3.5 py-1.5 rounded-full landing-subcard glass-muted mb-6">
+              Messy thoughts → Structured glass cards
+            </span>
+
+            <h1 className="font-serif italic font-bold text-4xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight leading-[1.08] mb-6 drop-shadow-sm">
+              What&apos;s on your mind?
+              <br />
+              <span className="text-primary-accent">We&apos;ll organize it.</span>
+            </h1>
+
+            <p className="text-base sm:text-lg md:text-xl glass-muted max-w-2xl mb-8 leading-relaxed font-normal">
+              Type, speak, or brain dump anything. Our AI automatically turns your messy thoughts into beautifully structured tasks, notes, tables, and roadmaps.
+            </p>
+
+            {/* Code-Built Animated Hero Live Demo */}
+            <HeroLiveDemo />
+
+            {/* CTA Buttons below the Demo */}
+            <ActionButtons />
+          </div>
+        </section>
+
+        {/* Pinned Scroll Scene: Scattered Shards Converge into Venote V Mark */}
+        <LogoAssemblyScroll />
+
+        {/* Interactive Router Beam Section */}
+        <RouterBeamSection />
+
+        {/* Glass Bento Features Section */}
+        <section
+          id="features"
+          aria-labelledby="features-heading"
+          className="scroll-mt-24 py-20 md:py-24 px-4 sm:px-6 md:px-12 relative"
+        >
+          <div className="max-w-6xl mx-auto relative z-10">
+            <div className="text-center mb-12 md:mb-16">
+              <span className="font-mono text-xs uppercase tracking-widest px-3 py-1 rounded-full landing-subcard glass-muted inline-block mb-3">
+                Five tools in one workspace
+              </span>
+              <h2
+                id="features-heading"
+                className="font-serif italic font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight mb-4 text-primary-text"
+              >
+                Focus on thinking, not sorting.
+              </h2>
+              <p className="glass-muted max-w-xl mx-auto text-base md:text-lg">
+                Venote handles the tedious part of note-taking by instantly giving structure to your brain dumps.
+              </p>
+            </div>
+
+            <FeatureBento />
+          </div>
+        </section>
+
+        {/* How It Works Strip */}
+        <HowItWorks />
+
+        {/* Final Glass CTA & Download Section */}
+        <section
+          id="download"
+          aria-labelledby="final-cta-heading"
+          className="scroll-mt-24 py-20 md:py-28 px-4 sm:px-6 md:px-12 relative"
+        >
+          <div className="max-w-4xl mx-auto relative">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-10 rounded-[32px] blur-3xl opacity-30 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle at 35% 50%, rgba(255,92,56,0.45), rgba(139,92,246,0.25) 60%, transparent 80%)',
+              }}
+            />
+            <div className="landing-glass-shell rounded-[32px] px-6 py-12 sm:p-14 md:p-16 text-center flex flex-col items-center relative overflow-hidden">
+              <h2
+                id="final-cta-heading"
+                className="font-serif italic font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight mb-6 text-primary-text"
+              >
+                Ready to clear your mind?
+              </h2>
+              <ActionButtons />
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* Feature Highlights */}
-      <section className="py-24 px-6 md:px-12 border-y border-hairline relative overflow-hidden">
-        {/* Ambient background refraction glow */}
-        <div 
-          aria-hidden="true" 
-          className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[450px] h-[350px] rounded-full pointer-events-none opacity-60" 
-          style={{ 
-            background: `
-              radial-gradient(circle at 45% 45%, rgba(232,184,109,0.08) 0%, rgba(232,184,109,0.05) 20%, rgba(232,184,109,0.02) 45%, rgba(232,184,109,0.005) 70%, transparent 100%),
-              radial-gradient(circle at 55% 55%, rgba(232,184,109,0.06) 0%, rgba(232,184,109,0.04) 20%, rgba(232,184,109,0.015) 45%, rgba(232,184,109,0.003) 70%, transparent 100%)
-            `
-          }}
-        />
-        <div 
-          aria-hidden="true" 
-          className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] rounded-full pointer-events-none opacity-60" 
-          style={{ 
-            background: `
-              radial-gradient(circle at 48% 40%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%),
-              radial-gradient(circle at 52% 60%, rgba(255,92,56,0.06) 0%, rgba(255,92,56,0.04) 20%, rgba(255,92,56,0.015) 45%, rgba(255,92,56,0.003) 70%, transparent 100%)
-            `
-          }}
-        />
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="text-center mb-16 md:mb-20">
-            <h2 className="font-serif italic font-bold text-4xl md:text-5xl tracking-tight mb-4">Focus on thinking, not sorting.</h2>
-            <p className="text-muted-text max-w-xl mx-auto text-base md:text-lg">Venote handles the tedious part of note-taking by instantly giving structure to your brain dumps.</p>
+      {/* Minimal Glass Footer */}
+      <footer className="border-t border-hairline py-8 px-4 sm:px-6 md:px-12 glass-panel-subtle">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm glass-muted">
+          <div className="flex items-center gap-3">
+            <BrandLogo variant="icon" className="h-6" />
+            <span>&copy; {new Date().getFullYear()} Venote. All rights reserved.</span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            
-            {/* Feature 1 */}
-            <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="w-12 h-12 rounded-2xl bg-tertiary-accent/15 border border-tertiary-accent/30 flex items-center justify-center mb-6 text-tertiary-accent shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">AI-Powered Structuring</h3>
-              <p className="text-muted-text leading-relaxed text-base">
-                Just start typing. Our engine instantly analyzes your input and formats it into actionable checklists, rich contextual notes, or clean data tables.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="w-12 h-12 rounded-2xl bg-secondary-accent/15 border border-secondary-accent/30 flex items-center justify-center mb-6 text-secondary-accent shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Dynamic Roadmaps</h3>
-              <p className="text-muted-text leading-relaxed text-base">
-                Need a plan? Ask for a roadmap and watch it generate an interactive, winding SVG journey to help you track milestones toward your final goal.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="w-12 h-12 rounded-2xl bg-secondary-accent/15 border border-secondary-accent/30 flex items-center justify-center mb-6 text-secondary-accent shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-              </div>
-              <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Smart Wallet</h3>
-              <p className="text-muted-text leading-relaxed text-base">
-                Set category budgets with visual limits, track split bills to see who owes you what, and get AI-generated summaries of your spending patterns.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="w-12 h-12 rounded-2xl bg-primary-accent/15 border border-primary-accent/30 flex items-center justify-center mb-6 text-primary-accent shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Voice Input</h3>
-              <p className="text-muted-text leading-relaxed text-base">
-                Sometimes typing is too slow. Use our built-in speech recognition to instantly transcribe your brainstorms right into the app.
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="glass-panel glass-panel-interactive rounded-[24px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col md:col-span-2 md:w-[calc(50%-1rem)] md:mx-auto">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center mb-6 text-purple-700 dark:text-[#8B5CF6] shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="font-sans font-bold text-2xl mb-3 text-primary-text">Interview Prep</h3>
-              <p className="text-muted-text leading-relaxed text-base">
-                Track job applications through multiple rounds and see upcoming deadlines in a dedicated "Due Soon" view. AI automatically parses your updates.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+            <a
+              href="#features"
+              className="min-h-[44px] px-2 inline-flex items-center hover:text-primary-text transition-colors focus-visible:outline-2 focus-visible:outline-primary-accent rounded-lg"
+            >
+              Features
+            </a>
+            <a
+              href="#how-it-works"
+              className="min-h-[44px] px-2 inline-flex items-center hover:text-primary-text transition-colors focus-visible:outline-2 focus-visible:outline-primary-accent rounded-lg"
+            >
+              How it works
+            </a>
+            <Link
+              href="/login"
+              className="min-h-[44px] px-2 inline-flex items-center hover:text-primary-text transition-colors focus-visible:outline-2 focus-visible:outline-primary-accent rounded-lg"
+            >
+              Sign In
+            </Link>
           </div>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-28 px-6 text-center flex flex-col items-center relative">
-        <div 
-          aria-hidden="true" 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none" 
-          style={{ 
-            background: `
-              radial-gradient(circle at 45% 50%, rgba(255,92,56,0.1) 0%, rgba(255,92,56,0.07) 20%, rgba(255,92,56,0.035) 45%, rgba(255,92,56,0.01) 70%, transparent 100%),
-              radial-gradient(circle at 55% 50%, rgba(255,92,56,0.08) 0%, rgba(255,92,56,0.05) 20%, rgba(255,92,56,0.02) 45%, rgba(255,92,56,0.005) 70%, transparent 100%)
-            `,
-            mixBlendMode: 'screen'
-          }}
-        />
-        <div className="relative z-10 flex flex-col items-center">
-          <h2 className="font-serif italic font-bold text-4xl md:text-5xl tracking-tight mb-8">Ready to clear your mind?</h2>
-          <ActionButtons />
-        </div>
-      </section>
-      
-      <footer className="border-t border-white/5 py-8 text-center text-muted-text text-sm glass-panel-subtle">
-        &copy; {new Date().getFullYear()} Venote. All rights reserved.
       </footer>
     </div>
   );
